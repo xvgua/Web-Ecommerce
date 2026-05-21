@@ -125,8 +125,7 @@ import {
   ArrowRight, CircleCheck, Van, Headset, Lock,
   Goods, ShoppingBag, Star, Present,
 } from '@element-plus/icons-vue'
-import { getHotProducts, getNewProducts } from '@/api/product'
-import { getCategoryList } from '@/api/product'
+import { getHotProducts, getNewProducts, getCategories } from '@/api/product'
 import type { Product, Category } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
 
@@ -161,7 +160,7 @@ const banners = [
 
 onMounted(async () => {
   try {
-    const cats = await getCategoryList()
+    const cats = await getCategories()
     categories.value = cats.data
   } catch { /* handled by interceptor */ }
 
