@@ -1,108 +1,418 @@
 <template>
   <div class="home">
-    <section class="banner">
-      <el-carousel height="360px" :interval="5000">
-        <el-carousel-item v-for="item in banners" :key="item.id">
-          <img :src="item.imageUrl" :alt="item.title" class="banner__img" />
-        </el-carousel-item>
-      </el-carousel>
+    <!-- Category Nav + Banner -->
+    <section class="hero">
+      <div class="hero__categories">
+        <div
+          v-for="cat in categories"
+          :key="cat.id"
+          class="hero__cat-item"
+          @click="$router.push(`/products?categoryId=${cat.id}`)"
+        >
+          <span class="hero__cat-icon">
+            <component :is="catIcons[cat.id % catIcons.length]" />
+          </span>
+          <span class="hero__cat-name">{{ cat.name }}</span>
+          <el-icon class="hero__cat-arrow"><ArrowRight /></el-icon>
+        </div>
+      </div>
+      <div class="hero__banner">
+        <el-carousel height="400px" :interval="5000" arrow="always">
+          <el-carousel-item v-for="(b, i) in banners" :key="i">
+            <div class="hero__slide" :style="{ background: b.bg }">
+              <div class="hero__slide-text">
+                <h2>{{ b.title }}</h2>
+                <p>{{ b.subtitle }}</p>
+                <el-button type="primary" size="large" round @click="$router.push('/products')">
+                  立即选购
+                </el-button>
+              </div>
+              <div class="hero__slide-art">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="100" cy="100" r="80" fill="rgba(255,255,255,0.15)" />
+                  <circle cx="100" cy="100" r="55" fill="rgba(255,255,255,0.2)" />
+                  <text x="100" y="95" text-anchor="middle" font-size="48" fill="rgba(255,255,255,0.6)">&#{{ b.iconCode }};</text>
+                </svg>
+              </div>
+            </div>
+          </el-carousel-item>
+        </el-carousel>
+      </div>
     </section>
 
+    <!-- Trust Features -->
+    <section class="features">
+      <div class="feature-item">
+        <el-icon size="32"><CircleCheck /></el-icon>
+        <div>
+          <strong>品质保证</strong>
+          <p>正品保障 假一赔十</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <el-icon size="32"><Van /></el-icon>
+        <div>
+          <strong>免费配送</strong>
+          <p>满99元包邮</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <el-icon size="32"><Headset /></el-icon>
+        <div>
+          <strong>售后无忧</strong>
+          <p>7天无理由退换</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <el-icon size="32"><Lock /></el-icon>
+        <div>
+          <strong>安全支付</strong>
+          <p>多重加密保障</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hot Products -->
     <section class="section">
       <div class="section__header">
-        <h2>热门商品</h2>
-        <router-link to="/products?sort=sales_desc">查看更多</router-link>
+        <div class="section__title">
+          <span class="section__icon">&#x1F525;</span>
+          <h2>热门商品</h2>
+        </div>
+        <router-link to="/products?sort=sales_desc" class="section__more">
+          查看更多 <el-icon><ArrowRight /></el-icon>
+        </router-link>
       </div>
-      <div class="product-grid">
+      <div class="product-grid" v-loading="hotLoading">
         <product-card v-for="item in hotProducts" :key="item.id" :product="item" />
       </div>
-      <el-empty v-if="!hotProducts.length" description="暂无热门商品" />
+      <el-empty v-if="!hotLoading && !hotProducts.length" description="暂无热门商品" />
     </section>
 
+    <!-- New Arrivals -->
     <section class="section">
       <div class="section__header">
-        <h2>新品推荐</h2>
-        <router-link to="/products?sort=newest">查看更多</router-link>
+        <div class="section__title">
+          <span class="section__icon">&#x2728;</span>
+          <h2>新品推荐</h2>
+        </div>
+        <router-link to="/products?sort=newest" class="section__more">
+          查看更多 <el-icon><ArrowRight /></el-icon>
+        </router-link>
       </div>
-      <div class="product-grid">
+      <div class="product-grid" v-loading="newLoading">
         <product-card v-for="item in newProducts" :key="item.id" :product="item" />
       </div>
-      <el-empty v-if="!newProducts.length" description="暂无新品" />
+      <el-empty v-if="!newLoading && !newProducts.length" description="暂无新品" />
+    </section>
+
+    <!-- Promo Banner -->
+    <section class="promo" @click="$router.push('/products')">
+      <div class="promo__inner">
+        <div>
+          <h2>限时特惠</h2>
+          <p>精选好物低至5折，数量有限，先到先得</p>
+        </div>
+        <el-button type="danger" size="large" round>去抢购</el-button>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import {
+  ArrowRight, CircleCheck, Van, Headset, Lock,
+  Goods, ShoppingBag, Star, Present,
+} from '@element-plus/icons-vue'
 import { getHotProducts, getNewProducts } from '@/api/product'
-import type { Product } from '@shared/types/product'
+import { getCategoryList } from '@/api/product'
+import type { Product, Category } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
 
-const banners = ref([
-  { id: 1, title: 'Banner 1', imageUrl: '/images/banner1.jpg' },
-])
+const catIcons = [Goods, ShoppingBag, Star, Present]
 
+const categories = ref<Category[]>([])
 const hotProducts = ref<Product[]>([])
 const newProducts = ref<Product[]>([])
+const hotLoading = ref(false)
+const newLoading = ref(false)
+
+const banners = [
+  {
+    title: '新品首发',
+    subtitle: '春季新品限时特惠，全场低至5折',
+    bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    iconCode: 'x2728',
+  },
+  {
+    title: '品质数码',
+    subtitle: '品牌授权 正品保障 闪电发货',
+    bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    iconCode: 'x1F4F1',
+  },
+  {
+    title: '限时秒杀',
+    subtitle: '每日10点开抢 超值好货不容错过',
+    bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    iconCode: 'x26A1',
+  },
+]
 
 onMounted(async () => {
   try {
-    const [hotRes, newRes] = await Promise.all([getHotProducts(), getNewProducts()])
+    const cats = await getCategoryList()
+    categories.value = cats.data
+  } catch { /* handled by interceptor */ }
+
+  hotLoading.value = true
+  newLoading.value = true
+  try {
+    const [hotRes, newRes] = await Promise.all([
+      getHotProducts(),
+      getNewProducts(),
+    ])
     hotProducts.value = hotRes.data
     newProducts.value = newRes.data
-  } catch {
-    // handled by interceptor
+  } catch { /* handled by interceptor */ }
+  finally {
+    hotLoading.value = false
+    newLoading.value = false
   }
 })
 </script>
 
 <style lang="scss" scoped>
 .home {
-  .banner {
-    margin-bottom: 32px;
-    border-radius: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Hero ── */
+.hero {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  border-radius: 12px;
+  overflow: hidden;
+
+  &__categories {
+    width: 240px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+
+  &__cat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background .15s;
+    font-size: 14px;
+
+    &:hover {
+      background: #f5f7fa;
+      color: #409eff;
+    }
+  }
+
+  &__cat-icon {
+    font-size: 18px;
+    color: #909399;
+    display: flex;
+  }
+
+  &__cat-name {
+    flex: 1;
+  }
+
+  &__cat-arrow {
+    color: #c0c4cc;
+    font-size: 12px;
+  }
+
+  &__banner {
+    flex: 1;
+    border-radius: 12px;
     overflow: hidden;
+    min-width: 0;
+  }
 
-    &__img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+  &__slide {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 64px;
+    color: #fff;
+  }
+
+  &__slide-text {
+    h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 16px;
+      opacity: .85;
+      margin-bottom: 24px;
     }
   }
 
-  .section {
-    margin-bottom: 40px;
+  &__slide-art {
+    width: 180px;
+    flex-shrink: 0;
+  }
+}
 
-    &__header {
+/* ── Features ── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+
+  .feature-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+
+    .el-icon { color: #409eff; flex-shrink: 0; }
+
+    strong { font-size: 15px; display: block; margin-bottom: 4px; }
+    p     { font-size: 12px; color: #999; margin: 0; }
+  }
+}
+
+/* ── Section ── */
+.section {
+  margin-bottom: 40px;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+    }
+  }
+
+  &__icon {
+    font-size: 24px;
+  }
+
+  &__more {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #909399;
+    font-size: 14px;
+    transition: color .15s;
+
+    &:hover { color: #409eff; }
+  }
+}
+
+/* ── Product Grid ── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Promo ── */
+.promo {
+  margin-bottom: 40px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+
+  &__inner {
+    background: linear-gradient(135deg, #ff6f3f 0%, #e6423a 100%);
+    padding: 40px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+
+    h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    p  { font-size: 15px; opacity: .85; }
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .hero {
+    flex-direction: column;
+
+    &__categories {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+      width: 100%;
+      overflow-x: auto;
+      padding: 8px;
+      gap: 4px;
 
-      h2 {
-        font-size: 20px;
-        font-weight: 600;
-      }
-
-      a {
-        color: #409eff;
-        font-size: 14px;
-      }
+      &::-webkit-scrollbar { display: none; }
     }
+
+    &__cat-item {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 20px;
+      background: #f5f7fa;
+    }
+
+    &__cat-arrow { display: none; }
+
+    &__banner { min-height: 240px; }
+
+    &__slide { padding: 0 32px; }
+    &__slide-text h2 { font-size: 26px; }
   }
 
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+  .features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero__slide-art { display: none; }
+  .hero__slide-text h2 { font-size: 22px; }
+
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  .promo__inner {
+    flex-direction: column;
+    text-align: center;
     gap: 16px;
-
-    @media (max-width: 1024px) {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    @media (max-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
   }
 }
 </style>

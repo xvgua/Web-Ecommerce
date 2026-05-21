@@ -1,8 +1,8 @@
 <template>
   <div class="order-list-page">
-    <h1>我的订单</h1>
+    <h1 class="page-title">我的订单</h1>
 
-    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+    <el-tabs v-model="activeTab" @tab-change="handleTabChange" class="order-tabs">
       <el-tab-pane label="全部" name="" />
       <el-tab-pane label="待支付" name="0" />
       <el-tab-pane label="待发货" name="1" />
@@ -11,31 +11,37 @@
       <el-tab-pane label="已取消" name="4" />
     </el-tabs>
 
-    <div v-loading="loading">
-      <div v-for="order in orders" :key="order.id" class="order-card">
+    <div v-loading="loading" class="order-list">
+      <div v-for="order in orders" :key="order.id" class="order-card" @click="$router.push(`/orders/${order.id}`)">
         <div class="order-card__header">
-          <span>订单号: {{ order.orderNo }}</span>
+          <span class="order-card__no">订单号：{{ order.orderNo }}</span>
           <span class="order-card__time">{{ order.createTime }}</span>
-          <el-tag :type="ORDER_STATUS_COLOR[order.status]">{{ order.statusText }}</el-tag>
+          <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark" size="small">
+            {{ order.statusText }}
+          </el-tag>
         </div>
-        <div class="order-card__items">
-          <div v-for="item in order.items" :key="item.id" class="order-card__item">
-            <el-image :src="item.productImage" fit="cover" class="order-card__item-img" />
-            <div class="order-card__item-info">
-              <div>{{ item.productName }}</div>
-              <div class="order-card__item-spec">{{ item.specDesc }}</div>
+        <div class="order-card__body">
+          <div class="order-card__items">
+            <div v-for="item in order.items" :key="item.id" class="order-card__item">
+              <div class="order-card__item-img">
+                <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
+              </div>
+              <div class="order-card__item-info">
+                <div class="order-card__item-name">{{ item.productName }}</div>
+                <div class="order-card__item-spec" v-if="item.specDesc">{{ item.specDesc }}</div>
+              </div>
+              <div class="order-card__item-price">{{ formatPrice(item.price) }}</div>
+              <div class="order-card__item-qty">x{{ item.quantity }}</div>
             </div>
-            <div class="order-card__item-price">{{ formatPrice(item.price) }}</div>
-            <div class="order-card__item-qty">x{{ item.quantity }}</div>
           </div>
         </div>
-        <div class="order-card__footer">
-          <span>共 {{ order.items.length }} 件，合计: <strong>{{ formatPrice(order.totalAmount) }}</strong></span>
+        <div class="order-card__footer" @click.stop>
+          <span>共 {{ order.items.length }} 件商品，合计：<strong>{{ formatPrice(order.totalAmount) }}</strong></span>
           <div class="order-card__actions">
             <el-button v-if="order.status === 0" type="primary" size="small" @click="handlePay(order.id)">去支付</el-button>
-            <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消订单</el-button>
+            <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消</el-button>
             <el-button v-if="order.status === 2" type="success" size="small" @click="handleConfirm(order.id)">确认收货</el-button>
-            <el-button size="small" @click="$router.push(`/orders/${order.id}`)">查看详情</el-button>
+            <el-button size="small" @click="$router.push(`/orders/${order.id}`)">详情</el-button>
           </div>
         </div>
       </div>
@@ -50,6 +56,7 @@
         :total="total"
         :page-sizes="[20, 40]"
         layout="total, sizes, prev, pager, next, jumper"
+        background
         @current-change="loadOrders"
         @size-change="loadOrders"
       />
@@ -64,6 +71,7 @@ import { getOrderList, cancelOrder, confirmReceive } from '@/api/order'
 import { formatPrice } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
+import ProductImage from '@/components/common/ProductImage.vue'
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
@@ -110,104 +118,113 @@ function handlePay(id: number) {
   ElMessage.info('支付功能开发中')
 }
 
-onMounted(() => {
-  loadOrders()
-})
+onMounted(() => { loadOrders() })
 </script>
 
 <style lang="scss" scoped>
 .order-list-page {
-  h1 {
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
+  max-width: 1000px;
+  margin: 0 auto;
+}
 
-  .order-card {
-    background: #fff;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    overflow: hidden;
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
 
-    &__header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 12px 20px;
-      background: #fafafa;
-      font-size: 14px;
-    }
+.order-tabs {
+  background: #fff;
+  padding: 4px 20px 0;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
+}
 
-    &__time {
-      color: #999;
-      flex: 1;
-    }
+.order-list {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  padding: 0 20px 20px;
+}
 
-    &__items {
-      padding: 0 20px;
-    }
+.order-card {
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  margin-top: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow .2s;
 
-    &__item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid #f5f5f5;
+  &:hover { box-shadow: 0 4px 16px rgba(0,0,0,.06); }
 
-      &:last-child {
-        border-bottom: none;
-      }
-
-      &-img {
-        width: 60px;
-        height: 60px;
-        border-radius: 4px;
-        flex-shrink: 0;
-      }
-
-      &-info {
-        flex: 1;
-      }
-
-      &-spec {
-        font-size: 12px;
-        color: #999;
-        margin-top: 4px;
-      }
-
-      &-price {
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      &-qty {
-        color: #999;
-        font-size: 14px;
-      }
-    }
-
-    &__footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 20px;
-      border-top: 1px solid #f5f5f5;
-
-      strong {
-        color: #e6423a;
-        font-size: 16px;
-      }
-    }
-
-    &__actions {
-      display: flex;
-      gap: 8px;
-    }
-  }
-
-  .pagination-wrap {
+  &__header {
     display: flex;
-    justify-content: center;
-    margin-top: 24px;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #fafafa;
+    font-size: 13px;
+    color: #666;
   }
+
+  &__time { flex: 1; color: #999; }
+
+  &__body { padding: 0 16px; }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f8f8f8;
+
+    &:last-child { border-bottom: none; }
+
+    &-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    &-info { flex: 1; min-width: 0; }
+
+    &-name {
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &-spec {
+      font-size: 12px;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    &-price { font-size: 14px; font-weight: 600; }
+    &-qty   { font-size: 13px; color: #999; }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid #f5f5f5;
+
+    strong { color: #e6423a; font-size: 16px; }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
 }
 </style>

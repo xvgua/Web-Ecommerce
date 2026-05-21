@@ -6,9 +6,11 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif;
+    'Noto Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: #333;
   background: #f5f7fa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -21,17 +23,42 @@ img {
   height: auto;
 }
 
+/* Element Plus overrides */
 .el-empty {
   padding: 60px 0;
 }
 
-// Responsive breakpoints
-@media (max-width: 768px) {
-  .default-layout .header__inner {
-    padding: 0 12px;
-    gap: 12px;
-  }
-  .default-layout .main {
-    padding: 12px;
-  }
+.el-button {
+  border-radius: 6px;
+}
+
+.el-button--primary {
+  --el-button-bg-color: #409eff;
+  --el-button-border-color: #409eff;
+}
+
+.el-card {
+  border-radius: 10px;
+  border: none;
+}
+
+.el-table {
+  --el-table-border-color: #f0f0f0;
+}
+
+.el-tabs__nav-wrap::after {
+  height: 1px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

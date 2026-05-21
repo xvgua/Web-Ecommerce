@@ -1,54 +1,51 @@
 <template>
   <div class="order-detail-page" v-loading="loading">
     <div class="order-detail" v-if="order">
-      <h1>订单详情</h1>
+      <h1 class="page-title">订单详情</h1>
 
-      <div class="detail-section">
-        <h2>订单信息</h2>
+      <div class="detail-block">
+        <div class="detail-block__header">
+          <h2>订单信息</h2>
+          <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark">{{ order.statusText }}</el-tag>
+        </div>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="订单号">{{ order.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="订单状态">
-            <el-tag :type="ORDER_STATUS_COLOR[order.status]">{{ order.statusText }}</el-tag>
-          </el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ order.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="支付时间">{{ order.payTime || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="订单金额">{{ formatPrice(order.totalAmount) }}</el-descriptions-item>
+          <el-descriptions-item label="支付时间">{{ order.payTime || '---' }}</el-descriptions-item>
+          <el-descriptions-item label="订单金额">
+            <span class="highlight-price">{{ formatPrice(order.totalAmount) }}</span>
+          </el-descriptions-item>
         </el-descriptions>
       </div>
 
-      <div class="detail-section">
-        <h2>收货地址</h2>
-        <p v-if="order.address">
-          {{ order.address.name }} {{ order.address.phone }}
-          {{ order.address.province }}{{ order.address.city }}{{ order.address.district }}
-          {{ order.address.detail }}
-        </p>
+      <div class="detail-block" v-if="order.address">
+        <h2 class="detail-block__title">收货信息</h2>
+        <div class="address-box">
+          <span class="address-box__name">{{ order.address.name }}</span>
+          <span class="address-box__phone">{{ order.address.phone }}</span>
+          <div class="address-box__detail">
+            {{ order.address.province }}{{ order.address.city }}{{ order.address.district }}
+            {{ order.address.detail }}
+          </div>
+        </div>
       </div>
 
-      <div class="detail-section">
-        <h2>商品清单</h2>
-        <el-table :data="order.items">
-          <el-table-column label="商品" min-width="300">
-            <template #default="{ row }">
-              <div class="order-product">
-                <el-image :src="row.productImage" fit="cover" class="order-product__img" />
-                <div>
-                  <div>{{ row.productName }}</div>
-                  <div class="order-product__spec">{{ row.specDesc }}</div>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="单价" width="120">
-            <template #default="{ row }">{{ formatPrice(row.price) }}</template>
-          </el-table-column>
-          <el-table-column label="数量" width="80">
-            <template #default="{ row }">{{ row.quantity }}</template>
-          </el-table-column>
-          <el-table-column label="小计" width="120">
-            <template #default="{ row }">{{ formatPrice(row.price * row.quantity) }}</template>
-          </el-table-column>
-        </el-table>
+      <div class="detail-block">
+        <h2 class="detail-block__title">商品清单</h2>
+        <div class="product-list">
+          <div v-for="item in order.items" :key="item.id" class="product-item">
+            <div class="product-item__img">
+              <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
+            </div>
+            <div class="product-item__info">
+              <div class="product-item__name">{{ item.productName }}</div>
+              <div class="product-item__spec" v-if="item.specDesc">{{ item.specDesc }}</div>
+            </div>
+            <div class="product-item__price">{{ formatPrice(item.price) }}</div>
+            <div class="product-item__qty">x{{ item.quantity }}</div>
+            <div class="product-item__subtotal">{{ formatPrice(item.price * item.quantity) }}</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -63,9 +60,9 @@ import { getOrderById } from '@/api/order'
 import { formatPrice } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
+import ProductImage from '@/components/common/ProductImage.vue'
 
 const route = useRoute()
-
 const order = ref<Order | null>(null)
 const loading = ref(false)
 
@@ -82,40 +79,90 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .order-detail-page {
-  h1 {
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-  .detail-section {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.detail-block {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 16px;
 
-    h2 {
-      font-size: 16px;
-      margin-bottom: 16px;
-    }
+    h2 { font-size: 16px; font-weight: 600; }
   }
 
-  .order-product {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+}
 
-    &__img {
-      width: 50px;
-      height: 50px;
-      border-radius: 4px;
-      flex-shrink: 0;
-    }
+.highlight-price {
+  color: #e6423a;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'SF Mono', monospace;
+}
 
-    &__spec {
-      font-size: 12px;
-      color: #999;
-      margin-top: 4px;
-    }
+.address-box {
+  &__name { font-weight: 600; margin-right: 12px; }
+  &__phone { color: #666; }
+  &__detail { font-size: 13px; color: #888; margin-top: 6px; }
+}
+
+.product-list {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f5f5;
+
+  &:last-child { border-bottom: none; }
+
+  &__img {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__info { flex: 1; min-width: 0; }
+
+  &__name { font-size: 14px; font-weight: 500; }
+
+  &__spec { font-size: 12px; color: #999; margin-top: 2px; }
+
+  &__price { width: 90px; font-size: 14px; font-weight: 600; text-align: center; }
+
+  &__qty { width: 50px; color: #999; text-align: center; }
+
+  &__subtotal {
+    width: 100px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6423a;
+    text-align: right;
   }
 }
 </style>
