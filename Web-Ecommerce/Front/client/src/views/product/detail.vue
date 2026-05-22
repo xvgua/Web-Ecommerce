@@ -271,7 +271,7 @@ onMounted(() => { loadProduct() })
       border-radius: 10px;
       background: linear-gradient(135deg, #f2b5a2, #e89789);
       border: none;
-      color: #fff;
+      color: #5d3a30;
 
       &:hover {
         background: linear-gradient(135deg, #eba593, #e08878);

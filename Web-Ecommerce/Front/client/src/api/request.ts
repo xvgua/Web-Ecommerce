@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { TOKEN_KEY } from '@shared/constants'
+import { handleResponseError } from '@shared/utils/handleResponseError'
 import router from '@/router'
 
 const request = axios.create({
@@ -32,21 +33,7 @@ request.interceptors.response.use(
     }
     return res
   },
-  (error) => {
-    if (error.response) {
-      const { status, data } = error.response
-      if (status === 401) {
-        localStorage.removeItem(TOKEN_KEY)
-        router.push('/login')
-        ElMessage.error(data?.message || '请先登录')
-        return Promise.reject(error)
-      }
-      ElMessage.error(data?.message || error.message || '请求失败')
-    } else {
-      ElMessage.error('网络异常，请稍后重试')
-    }
-    return Promise.reject(error)
-  },
+  (error) => handleResponseError(error, TOKEN_KEY, router),
 )
 
 export default request

@@ -4,3 +4,4 @@ dist/
 *.log
 .env.local
 screenshot-*.png
+.claude/settings.local.json
