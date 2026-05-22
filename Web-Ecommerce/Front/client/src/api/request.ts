@@ -33,7 +33,18 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
-    ElMessage.error(error.message || '网络异常，请稍后重试')
+    if (error.response) {
+      const { status, data } = error.response
+      if (status === 401) {
+        localStorage.removeItem(TOKEN_KEY)
+        router.push('/login')
+        ElMessage.error(data?.message || '请先登录')
+        return Promise.reject(error)
+      }
+      ElMessage.error(data?.message || error.message || '请求失败')
+    } else {
+      ElMessage.error('网络异常，请稍后重试')
+    }
     return Promise.reject(error)
   },
 )

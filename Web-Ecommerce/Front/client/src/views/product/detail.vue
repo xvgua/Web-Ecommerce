@@ -269,12 +269,12 @@ onMounted(() => { loadProduct() })
       height: 50px;
       font-size: 16px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #ff6f3f, #e6423a);
+      background: linear-gradient(135deg, #f2b5a2, #e89789);
       border: none;
       color: #fff;
 
       &:hover {
-        background: linear-gradient(135deg, #e85d2f, #d63a32);
+        background: linear-gradient(135deg, #eba593, #e08878);
       }
     }
 
