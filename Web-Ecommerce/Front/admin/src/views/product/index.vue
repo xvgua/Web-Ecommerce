@@ -8,7 +8,7 @@
     </div>
 
     <div class="toolbar">
-      <el-input v-model="keyword" placeholder="搜索商品名称" clearable class="toolbar-search" @keyup.enter="handleSearch">
+      <el-input v-model="keyword" placeholder="搜索商品名称" clearable maxlength="100" class="toolbar-search" @input="debouncedSearch" @keyup.enter="handleSearch">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
       <el-select v-model="categoryId" placeholder="选择分类" clearable @change="handleSearch" class="toolbar-select">
@@ -83,6 +83,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
+import { useDebounceFn } from '@vueuse/core'
 import { getProductList, deleteProduct, updateProduct, getCategoryList } from '@/api/admin'
 import { formatPrice } from '@/utils/format'
 import type { Product, Category, ProductForm } from '@shared/types/product'
@@ -104,7 +105,7 @@ async function loadProducts() {
     const res = await getProductList({
       page: page.value,
       pageSize: pageSize.value,
-      keyword: keyword.value || undefined,
+      keyword: keyword.value.trim() || undefined,
       categoryId: categoryId.value || undefined,
       status: statusFilter.value !== '' ? (statusFilter.value as number) : undefined,
     })
@@ -119,6 +120,10 @@ function handleSearch() {
   page.value = 1
   loadProducts()
 }
+
+const debouncedSearch = useDebounceFn(() => {
+  handleSearch()
+}, 300)
 
 async function handleDelete(id: number) {
   await ElMessageBox.confirm('确定要删除该商品吗？', '提示', { type: 'warning' })

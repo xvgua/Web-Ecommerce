@@ -5,3 +5,4 @@ dist/
 .env.local
 screenshot-*.png
 .claude/settings.local.json
+target/

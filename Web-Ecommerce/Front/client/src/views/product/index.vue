@@ -8,6 +8,8 @@
           placeholder="搜索你想要的商品..."
           size="large"
           clearable
+          maxlength="100"
+          @input="debouncedSearch"
           @keyup.enter="handleSearch"
         >
           <template #prefix>
@@ -59,6 +61,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
+import { useDebounceFn } from '@vueuse/core'
 import { getProductList } from '@/api/product'
 import type { Product, ProductQuery } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
@@ -87,7 +90,7 @@ async function loadProducts() {
     const res = await getProductList({
       page: page.value,
       pageSize: pageSize.value,
-      keyword: keyword.value || undefined,
+      keyword: keyword.value.trim() || undefined,
       sort: (sort.value || undefined) as ProductQuery['sort'],
     })
     products.value = res.data.records
@@ -101,6 +104,10 @@ function handleSearch() {
   page.value = 1
   loadProducts()
 }
+
+const debouncedSearch = useDebounceFn(() => {
+  handleSearch()
+}, 300)
 
 function handleSort(val: string) {
   sort.value = val

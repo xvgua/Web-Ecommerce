@@ -4,7 +4,7 @@
 
     <div class="toolbar">
       <div class="toolbar-left">
-        <el-input v-model="keyword" placeholder="搜索用户名/手机号" clearable class="tbar-input" @keyup.enter="handleSearch">
+        <el-input v-model="keyword" placeholder="搜索用户名/手机号" clearable maxlength="100" class="tbar-input" @input="debouncedSearch" @keyup.enter="handleSearch">
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -77,6 +77,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { useDebounceFn } from '@vueuse/core'
 import { getUserList, toggleUserStatus } from '@/api/admin'
 import type { User } from '@shared/types/user'
 
@@ -93,7 +94,7 @@ async function loadUsers() {
     const res = await getUserList({
       page: page.value,
       pageSize: pageSize.value,
-      keyword: keyword.value || undefined,
+      keyword: keyword.value.trim() || undefined,
     })
     users.value = res.data.records
     total.value = res.data.total
@@ -106,6 +107,10 @@ function handleSearch() {
   page.value = 1
   loadUsers()
 }
+
+const debouncedSearch = useDebounceFn(() => {
+  handleSearch()
+}, 300)
 
 async function handleToggleStatus(row: User) {
   const newStatus = row.status === 1 ? 0 : 1

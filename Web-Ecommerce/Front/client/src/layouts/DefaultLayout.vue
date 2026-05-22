@@ -18,6 +18,7 @@
             placeholder="搜索商品..."
             size="large"
             clearable
+            maxlength="100"
             @keyup.enter="handleSearch"
           >
             <template #prefix>
