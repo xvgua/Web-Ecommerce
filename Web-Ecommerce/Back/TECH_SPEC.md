@@ -236,7 +236,8 @@ CREATE TABLE product (
   status      TINYINT        DEFAULT 1 COMMENT '1=上架 0=下架',
   sales       INT            DEFAULT 0,
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
-  update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram
 );
 ```
 
@@ -509,41 +510,166 @@ upload:
 
 ## 十、模糊搜索规范
 
-### 10.1 适用范围
+### 10.1 技术选型
+
+#### 方案对比
+
+MySQL 生态下实现模糊搜索有三种主流方案：
+
+| 维度 | LIKE '%keyword%' | FULLTEXT + ngram | Elasticsearch |
+|------|:---:|:---:|:---:|
+| 中文支持 | 差（逐字符匹配，无语义） | 好（ngram 字符级分词） | 好（ik/jieba 词典分词） |
+| 性能（10万行） | 全表扫描，~1s+ | 倒排索引，~10ms | 倒排索引，~5ms |
+| 性能（100万行） | 全表扫描，~10s+ | 倒排索引，~50ms | 倒排索引，~10ms |
+| 数据一致性 | ACID（同一 DB） | ACID（同一 DB） | 最终一致（需同步） |
+| 额外依赖 | 无 | 无（MySQL 8.0 内置） | ES 集群 + DTS/Canal |
+| 运维复杂度 | 零 | 零 | 高 |
+| 相关性排序 | 不支持 | 支持（MATCH score） | 支持（BM25） |
+| 拼写纠错 / 同义词 | 不支持 | 不支持 | 支持 |
+
+#### 选型结论
+
+**本项目采用 MySQL 8.0 InnoDB FULLTEXT 索引 + ngram 解析器。**
+
+理由：
+
+1. **MySQL 8.0 已内置** — InnoDB FULLTEXT 自 5.6 引入，ngram 解析器自 5.7.6 引入，本项目最低要求 MySQL 8.0，无需任何额外组件
+2. **中文友好** — ngram 将文本切分为连续 N 字符片段（默认 `n=2`），对中文、日文、韩文有原生支持；`LIKE '%keyword%'` 对中文只是逐字符暴力匹配，无分词能力
+3. **性能跨越式提升** — 倒排索引替代全表扫描，搜索延迟从秒级降至毫秒级
+4. **零运维成本** — 索引在同一个 MySQL 实例内，写入立即可搜索（无同步延迟），ACID 事务保障
+5. **规模适配** — 当前数据量虽小，但 FULLTEXT 索引的 DDL 和查询语法与 LIKE 的改动量相近，直接采用规范做法避免后续迁移
+
+**不选 Elasticsearch 的原因：** 本项目数据规模远未达到需要独立搜索引擎的量级，引入 ES 会带来集群部署、数据同步、双写一致性等问题，超过当前收益。
+
+**不选 LIKE 的原因：** 全表扫描不可控，中文匹配效果差，随着数据增长性能线性恶化。仅保留作为 FULLTEXT 的降级兜底（见 10.8）。
+
+---
+
+### 10.2 适用范围
 
 以下接口通过 `keyword` 参数支持模糊搜索：
 
-| 接口 | 搜索字段 | 匹配方式 |
+| 接口 | 搜索字段 | 索引方式 |
 |------|---------|----------|
-| `GET /api/products` | `product.name` | 前后模糊 |
-| `GET /api/admin/products` | `product.name` | 前后模糊 |
-| `GET /api/admin/users` | `user.username`, `user.nickname` | 前后模糊 |
+| `GET /api/products` | `product.name` | FULLTEXT (ngram) |
+| `GET /api/admin/products` | `product.name` | FULLTEXT (ngram) |
+| `GET /api/admin/users` | `user.username`, `user.nickname` | LIKE（见 10.3 说明） |
 
-> 订单搜索（`/api/admin/orders`）中的 `orderNo`、`userId` 为精确匹配，不属于模糊搜索范畴。
+> **说明：**
+> - 订单搜索（`/api/admin/orders`）中的 `orderNo`、`userId` 为精确匹配，不属于模糊搜索范畴
+> - 用户搜索 (`username`, `nickname`) 字段值通常较短（≤20 字符），ngram token 粒度过细反而降低准确度，维持 LIKE 匹配
 
-### 10.2 SQL 实现标准
+---
 
-使用 MyBatis-Plus `like()` 方法，底层生成 `LIKE '%keyword%'`：
+### 10.3 DDL — 全文索引定义
 
-```java
-// 正确：参数化查询，自动处理 % 包裹
-lambdaQueryWrapper.like(StringUtils.hasText(keyword), Product::getName, keyword);
-// 等价 SQL：WHERE name LIKE CONCAT('%', ?, '%')
+```sql
+-- product 表：对 name 字段建立 FULLTEXT 索引，使用 ngram 解析器
+ALTER TABLE product ADD FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram;
+
+-- 确认 ngram token 大小（默认 2，适合中文双字片段匹配）
+-- SHOW VARIABLES LIKE 'ngram_token_size';  -- 预期: 2
 ```
 
-### 10.3 硬性约束
+**索引维护说明：**
+- FULLTEXT 索引由 InnoDB 自动维护，INSERT/UPDATE/DELETE 时同步更新，无需手动重建
+- 初始建表时可直接在 CREATE TABLE 中定义：
+  ```sql
+  CREATE TABLE product (
+    -- ... 其他列 ...
+    name VARCHAR(200) NOT NULL,
+    FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram
+  );
+  ```
 
-| 约束 | 说明 |
-|------|------|
-| **参数化查询** | 必须使用 `#{}` 或 MyBatis-Plus `like()`，禁止 `${}` 拼接用户输入 |
-| **必须分页** | 搜索接口必须配合 `page` + `pageSize`，禁止无分页的全量模糊搜索 |
-| **前后模糊** | 统一使用 `%keyword%`（前后均模糊匹配），不要求精确前缀匹配 |
-| **空结果** | 搜索无结果返回 `{ records: [], total: 0 }`，不返回 404 |
-| **最小输入** | 前端输入长度 ≥1 才发起请求，空字符串或纯空格不传 `keyword` 参数 |
+---
 
-### 10.4 前端搜索规范
+### 10.4 后端实现规范
+
+#### 10.4.1 Mapper 层
+
+需在 `ProductMapper` 中新增自定义查询方法，因 MyBatis-Plus 的 `like()` 生成的是 `LIKE` 语法，无法利用 FULLTEXT 索引：
+
+```java
+// ProductMapper.java
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+public interface ProductMapper extends BaseMapper<Product> {
+
+    /**
+     * 使用 FULLTEXT 全文索引搜索商品，支持分页。
+     * MATCH ... AGAINST 使用 IN BOOLEAN MODE 以支持 + 前缀匹配
+     */
+    @Select("SELECT p.* FROM product p " +
+            "WHERE MATCH(p.name) AGAINST(CONCAT('+', #{keyword}) IN BOOLEAN MODE) " +
+            "ORDER BY MATCH(p.name) AGAINST(CONCAT('+', #{keyword}) IN BOOLEAN MODE) DESC, p.sales DESC")
+    List<Product> searchByKeyword(@Param("keyword") String keyword, Page<Product> page);
+}
+```
+
+> MATCH ... AGAINST 底层走倒排索引，不等同于 LIKE。MyBatis-Plus 的 `wrapper.like()` 生成的 SQL 是 `LIKE '%keyword%'`，会绕过 FULLTEXT 索引并退化为全表扫描，因此必须使用自定义查询。
+
+#### 10.4.2 Service 层
+
+```java
+// ProductServiceImpl.java
+
+@Override
+public PageResult<Product> getProductPage(ProductQuery query) {
+    String keyword = query.getKeyword();
+    Page<Product> page = new Page<>(query.getPage(), query.getPageSize());
+
+    if (StringUtils.hasText(keyword) && keyword.trim().length() > 0) {
+        // 走 FULLTEXT 索引
+        String kw = keyword.trim();
+        productMapper.searchByKeyword(kw, page);
+    } else {
+        // 无 keyword 时走普通查询，支持分类、排序、价格区间筛选
+        LambdaQueryWrapper<Product> wrapper = buildProductWrapper(query);
+        productMapper.selectPage(page, wrapper);
+    }
+    return PageResult.of(page);
+}
+
+// buildProductWrapper 封装分类/排序/价格筛选逻辑，与 keyword 搜索互斥
+private LambdaQueryWrapper<Product> buildProductWrapper(ProductQuery query) {
+    LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+    wrapper.eq(query.getCategoryId() != null, Product::getCategoryId, query.getCategoryId());
+    wrapper.eq(query.getStatus() != null, Product::getStatus, query.getStatus());
+    if (query.getMinPrice() != null) wrapper.ge(Product::getPrice, query.getMinPrice());
+    if (query.getMaxPrice() != null) wrapper.le(Product::getPrice, query.getMaxPrice());
+    // sort 映射见 PRODUCT_SORT_MAP
+    return wrapper;
+}
+```
+
+> 注意：FULLTEXT 搜索与分类/价格筛选**不可同时叠加**（MySQL 优化器在混合 MATCH 和普通 WHERE 条件时可能选择全表扫描）。当 keyword 存在时，FULLTEXT 结果优先；无 keyword 时走普通筛选逻辑。
+
+#### 10.4.3 用户搜索（保持 LIKE）
+
+```java
+// AdminServiceImpl.java — 用户搜索维持 LIKE
+if (StringUtils.hasText(query.getKeyword())) {
+    wrapper.and(w -> w
+        .like(User::getUsername, query.getKeyword())
+        .or().like(User::getNickname, query.getKeyword())
+    );
+}
+```
+
+> username、nickname 字段较短（≤50 字符），数据量有限，LIKE 即可满足。ngram 对极短文本分词效果不佳，反而引入噪音。
+
+---
+
+### 10.5 前端搜索规范
+
+前端搜索入口集中于**导航栏搜索框**（`DefaultLayout.vue`），用户在所有页面均可通过该搜索框发起搜索。
 
 ```ts
+// useSearchHistory.ts — 搜索历史（纯前端，localStorage）
 import { useDebounceFn } from '@vueuse/core'
 
 const keyword = ref('')
@@ -555,24 +681,104 @@ const debouncedSearch = useDebounceFn(() => {
 }, 300)
 ```
 
-- 搜索时重置页码为 1
-- 输入内容 `trim()` 后再传参，纯空格视为无 keyword
-- keyword 为空时参数传 `undefined`（不发送该字段），后端忽略该条件
+| 规范 | 说明 |
+|------|------|
+| **防抖** | 输入 300ms 后才发起请求（`useDebounceFn`） |
+| **重置页码** | 搜索时页码重置为 1 |
+| **trim 处理** | 输入内容 `trim()` 后传参，纯空格视为无 keyword |
+| **空值处理** | keyword 为空时传 `undefined`（不发送该字段），后端忽略该条件 |
+| **回显** | 产品列表页从 `route.query.keyword` 读取 keyword 回显到搜索框，watch 变化后重新加载 |
 
-### 10.5 安全约束
+---
+
+### 10.6 安全约束
 
 | 约束 | 说明 |
 |------|------|
-| **防 SQL 注入** | keyword 使用参数绑定，MyBatis-Plus `like()` 内部对 `%`、`_` 等 SQL 通配符做转义 |
-| **防 XSS** | 搜索框输入不直接回显到 HTML，Vue 模板 `{{ }}` 默认转义即可 |
-| **防 DOS** | 依赖分页限制单次返回量，禁止超长 keyword（前端限制 ≤100 字符） |
+| **防 SQL 注入** | FULLTEXT 查询使用 MyBatis 参数绑定 `#{keyword}`，不拼接字符串 |
+| **防 XSS** | 搜索关键词在 Vue 模板中通过 `{{ }}` 默认转义，不通过 `v-html` 回显 |
+| **防 DOS** | 分页限制单次返回量（默认 20 条）；前端限制输入 ≤100 字符（`maxlength="100"`） |
+| **特殊字符** | FULLTEXT IN BOOLEAN MODE 中 `+ - > < ( ) ~ * " @` 为保留字符，后端需使用 `escapeKeyword()` 转义： |
 
-### 10.6 禁止事项
+```java
+/**
+ * 转义 FULLTEXT BOOLEAN MODE 保留字符，防止用户输入被误解析为操作符
+ */
+private static final Pattern BOOLEAN_SPECIAL = Pattern.compile("[+\\-><\\(\\)~\\*\"@]");
 
-- 禁止对 `description`（TEXT 长文本字段）做模糊搜索
-- 禁止引入 MySQL FULLTEXT 全文索引 — 当前数据规模不需要
-- 禁止前端一次性加载全部数据后本地 filter 模拟搜索
-- 禁止后端做分词、拼音搜索、拼写纠错 — 保持简单 LIKE 匹配
+public static String escapeKeyword(String keyword) {
+    if (keyword == null || keyword.isEmpty()) return "";
+    return BOOLEAN_SPECIAL.matcher(keyword.trim()).replaceAll("\\\\$0");
+}
+```
+
+---
+
+### 10.7 搜索历史记录
+
+搜索历史为纯前端特性，基于浏览器 `localStorage` 实现，无需后端接口。
+
+| 约束 | 说明 |
+|------|------|
+| **存储位置** | 浏览器 `localStorage`，key = `search_history` |
+| **数据格式** | `[{ keyword: string, timestamp: number }]` |
+| **最大条数** | 20 条（超出截断最早记录） |
+| **去重策略** | 同 `keyword` 去重，最新搜索移至顶部 |
+| **触发方式** | 点击搜索框（focus）弹出历史列表，输入内容后隐藏 |
+| **持久化** | 页面刷新后保留，清除浏览器数据后丢失 |
+| **删除方式** | 支持逐条删除（点击 ✕ 图标）和「清除全部历史」一键清空 |
+| **异常处理** | `JSON.parse` / `localStorage` 异常时静默降级为空数组，不阻塞搜索 |
+| **记录时机** | 仅当按 Enter 键触发搜索时写入历史，trim 后为空不记录 |
+
+**实现方式：**
+- Composables：`client/src/composables/useSearchHistory.ts`，导出 `getAll()` / `add()` / `remove()` / `clear()` 四个纯函数
+- 组件：`DefaultLayout.vue` 使用 `el-autocomplete` + `trigger-on-focus="true"`，`fetchSuggestions` 内部调用 `getHistory()` 读取历史
+- 下拉列表末位追加「清除全部历史」行（特殊 item `type: 'clear'`）
+
+**禁止事项：**
+- 禁止将搜索历史上传至后端
+- 禁止在 `localStorage` 中存储敏感信息
+- 禁止在 product 页面搜索框中展示历史（仅 navbar 搜索框生效）
+
+---
+
+### 10.8 降级策略
+
+当 FULLTEXT 索引因故不可用（如 MySQL 版本 < 5.7、ngram 插件未加载）时，回退至 LIKE 查询：
+
+```java
+// ProductServiceImpl.java — 降级逻辑
+private static boolean fulltextAvailable = true;
+
+private void searchProduct(ProductQuery query, Page<Product> page) {
+    String kw = query.getKeyword().trim();
+
+    if (fulltextAvailable) {
+        try {
+            productMapper.searchByKeyword(escapeKeyword(kw), page);
+            return;
+        } catch (Exception e) {
+            log.warn("FULLTEXT search failed, falling back to LIKE: {}", e.getMessage());
+            fulltextAvailable = false;
+        }
+    }
+
+    // 降级：MyBatis-Plus LIKE
+    LambdaQueryWrapper<Product> wrapper = buildProductWrapper(query);
+    wrapper.like(Product::getName, kw);
+    productMapper.selectPage(page, wrapper);
+}
+```
+
+---
+
+### 10.9 禁止事项
+
+- 禁止对 `description`（TEXT 长文本字段，通常数千字）建立 FULLTEXT 索引 — 索引体积过大，且用户不按描述搜索商品
+- 禁止前端一次性加载全部数据后在本地 filter 模拟搜索
+- 禁止后端做拼音搜索、拼写纠错、同义词扩展 — 保持 ngram 字符级匹配即可
+- 禁止引入 Elasticsearch — 当前及可预见的规模不需要
+- 禁止在 `%keyword%` 前缀通配场景中依赖 B+ 树索引 — 前缀 `%` 会使 B+ 树失效
 
 ---
 

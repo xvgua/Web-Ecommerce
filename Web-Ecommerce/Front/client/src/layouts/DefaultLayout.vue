@@ -13,18 +13,35 @@
         </div>
 
         <div class="header__search">
-          <el-input
+          <el-autocomplete
             v-model="keyword"
-            placeholder="搜索商品..."
+            value-key="keyword"
+            :fetch-suggestions="fetchSuggestions"
+            :trigger-on-focus="true"
+            placeholder="搜索你想要的商品..."
             size="large"
             clearable
             maxlength="100"
+            @select="handleSelect"
             @keyup.enter="handleSearch"
+            @clear="handleSearch"
+            popper-class="search-history-popper"
+            class="header-search-input"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
-          </el-input>
+            <template #default="{ item }">
+              <div v-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
+                清除全部历史
+              </div>
+              <div v-else class="history-item">
+                <el-icon class="history-item__clock"><Clock /></el-icon>
+                <span class="history-item__text">{{ item.keyword }}</span>
+                <el-icon class="history-item__del" @click.stop="handleRemoveHistory(item.keyword)"><Close /></el-icon>
+              </div>
+            </template>
+          </el-autocomplete>
         </div>
 
         <div class="header__actions">
@@ -101,21 +118,49 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Search, ShoppingCart,
+  Search, ShoppingCart, Clock, Close,
   User, Document, SwitchButton,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
+import { useSearchHistory } from '@/composables/useSearchHistory'
+import type { SearchHistoryItem } from '@/composables/useSearchHistory'
 
 const router = useRouter()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
+const { getAll: getHistory, add: addHistory, remove: removeHistory, clear: clearHistory } = useSearchHistory()
+
+function fetchSuggestions(queryString: string, callback: (data: any[]) => void) {
+  if (queryString.trim()) {
+    callback([])
+    return
+  }
+  const history = getHistory()
+  callback([...history, { type: 'clear' }])
+}
+
+function handleSelect(item: any) {
+  if (item.type === 'clear') return
+  router.push({ path: '/products', query: { keyword: item.keyword } })
+}
+
+function handleRemoveHistory(keyword: string) {
+  removeHistory([keyword])
+}
+
+function handleClearHistory() {
+  clearHistory()
+  keyword.value = ''
+}
 
 function handleSearch() {
-  if (keyword.value.trim()) {
-    router.push({ path: '/products', query: { keyword: keyword.value.trim() } })
+  const kw = keyword.value.trim()
+  if (kw) {
+    addHistory(kw)
+    router.push({ path: '/products', query: { keyword: kw } })
   }
 }
 
@@ -185,7 +230,7 @@ function handleLogout() {
 
   &__search {
     flex: 1;
-    max-width: 360px;
+    max-width: 480px;
   }
 
   &__actions {
@@ -217,6 +262,44 @@ function handleLogout() {
   &:hover {
     color: #409eff;
     border-color: #409eff;
+  }
+}
+
+.header-search-input {
+  :deep(.el-input__wrapper) {
+    border: 2px solid #409eff;
+    border-radius: 24px;
+    background: #f0f7ff;
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+    padding-left: 8px;
+    transition: all 0.25s ease;
+
+    &:hover {
+      border-color: #66b1ff;
+      box-shadow: 0 4px 14px rgba(64, 158, 255, 0.2);
+      background: #ecf5ff;
+    }
+
+    &.is-focus {
+      border-color: #337ecc;
+      box-shadow: 0 4px 18px rgba(64, 158, 255, 0.28);
+      background: #fff;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    color: #333;
+    font-size: 15px;
+
+    &::placeholder {
+      color: #a0c4e8;
+      font-weight: 400;
+    }
+  }
+
+  :deep(.el-input__prefix) {
+    color: #409eff;
+    font-size: 18px;
   }
 }
 
@@ -270,7 +353,7 @@ function handleLogout() {
   .header {
     &__inner { gap: 10px; padding: 0 12px; }
     &__nav { display: none; }
-    &__search { max-width: 200px; }
+    &__search { max-width: 260px; }
     &__logo { font-size: 16px; }
   }
 
@@ -279,6 +362,83 @@ function handleLogout() {
   .footer__inner {
     grid-template-columns: repeat(2, 1fr);
     gap: 24px;
+  }
+}
+</style>
+
+<style lang="scss">
+.search-history-popper {
+  margin-top: 4px !important;
+
+  .el-autocomplete-suggestion__wrap {
+    padding: 4px 0;
+  }
+
+  li {
+    padding: 0;
+    line-height: normal;
+
+    &:hover {
+      background: #f5f7fa;
+    }
+
+    &.highlighted {
+      background: #eef1f6;
+    }
+
+    &:last-child {
+      border-top: 1px solid #ebeef5;
+    }
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+
+    &__clock {
+      color: #a8abb2;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    &__text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+      color: #333;
+    }
+
+    &__del {
+      color: #c0c4cc;
+      font-size: 12px;
+      flex-shrink: 0;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      transition: all .15s;
+
+      &:hover {
+        color: #f56c6c;
+        background: rgba(245,108,108,.08);
+      }
+    }
+  }
+
+  .history-clear {
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #909399;
+    cursor: pointer;
+    transition: color .15s;
+
+    &:hover {
+      color: #f56c6c;
+    }
   }
 }
 </style>

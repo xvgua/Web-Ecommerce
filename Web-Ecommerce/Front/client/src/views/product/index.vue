@@ -1,25 +1,7 @@
 <template>
   <div class="product-list-page">
-    <!-- Search & Sort Bar -->
+    <!-- Sort Bar -->
     <div class="filter-bar">
-      <div class="filter-bar__search">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索你想要的商品..."
-          size="large"
-          clearable
-          maxlength="100"
-          @input="debouncedSearch"
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-          <template #append>
-            <el-button @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
-      </div>
       <div class="filter-bar__sort">
         <span
           v-for="opt in sortOptions"
@@ -58,10 +40,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
-import { useDebounceFn } from '@vueuse/core'
 import { getProductList } from '@/api/product'
 import type { Product, ProductQuery } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
@@ -73,7 +53,6 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
-const keyword = ref((route.query.keyword as string) || '')
 const sort = ref('')
 
 const sortOptions = [
@@ -87,10 +66,11 @@ const sortOptions = [
 async function loadProducts() {
   loading.value = true
   try {
+    const kw = (route.query.keyword as string) || ''
     const res = await getProductList({
       page: page.value,
       pageSize: pageSize.value,
-      keyword: keyword.value.trim() || undefined,
+      keyword: kw.trim() || undefined,
       sort: (sort.value || undefined) as ProductQuery['sort'],
     })
     products.value = res.data.records
@@ -100,20 +80,16 @@ async function loadProducts() {
   }
 }
 
-function handleSearch() {
-  page.value = 1
-  loadProducts()
-}
-
-const debouncedSearch = useDebounceFn(() => {
-  handleSearch()
-}, 300)
-
 function handleSort(val: string) {
   sort.value = val
   page.value = 1
   loadProducts()
 }
+
+watch(() => route.query.keyword, () => {
+  page.value = 1
+  loadProducts()
+})
 
 onMounted(() => { loadProducts() })
 </script>
@@ -130,11 +106,6 @@ onMounted(() => { loadProducts() })
   padding: 20px 24px;
   margin-bottom: 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
-
-  &__search {
-    max-width: 560px;
-    margin-bottom: 16px;
-  }
 
   &__sort {
     display: flex;

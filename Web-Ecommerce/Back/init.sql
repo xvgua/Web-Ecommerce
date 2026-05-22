@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS `product` (
   update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 全文索引：商品名称模糊搜索（ngram 解析器，支持中文）
+ALTER TABLE `product` ADD FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram;
+
 -- ============================================
 -- 5. 商品 SKU 表
 -- ============================================
