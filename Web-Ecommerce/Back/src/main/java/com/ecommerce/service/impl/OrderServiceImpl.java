@@ -233,7 +233,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void payOrder(Long userId, Long id) {
+    public void payOrder(Long userId, Long id, String payMethod) {
         Order order = orderMapper.selectById(id);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(404, "订单不存在");
@@ -244,7 +244,7 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING_SHIP);
         order.setPayTime(LocalDateTime.now());
         orderMapper.updateById(order);
-        log.info("Order paid: orderNo={}", order.getOrderNo());
+        log.info("Order paid: orderNo={}, payMethod={}", order.getOrderNo(), payMethod);
     }
 
     @Override

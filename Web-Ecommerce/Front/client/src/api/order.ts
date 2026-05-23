@@ -18,6 +18,10 @@ export function cancelOrder(id: number): Promise<ApiResponse<null>> {
   return request.put(`/orders/${id}/cancel`)
 }
 
+export function payOrder(id: number, payMethod: string): Promise<ApiResponse<null>> {
+  return request.put(`/orders/${id}/pay`, { payMethod })
+}
+
 export function confirmReceive(id: number): Promise<ApiResponse<null>> {
   return request.put(`/orders/${id}/confirm`)
 }

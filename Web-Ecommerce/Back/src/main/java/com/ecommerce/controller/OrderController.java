@@ -4,6 +4,7 @@ import com.ecommerce.common.PageResult;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.OrderQuery;
+import com.ecommerce.dto.PayOrderRequest;
 import com.ecommerce.entity.Order;
 import com.ecommerce.security.UserContext;
 import com.ecommerce.service.OrderService;
@@ -34,8 +35,9 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/pay")
-    public Result<Void> pay(@PathVariable Long id) {
-        orderService.payOrder(UserContext.getUserId(), id);
+    public Result<Void> pay(@PathVariable Long id, @RequestBody(required = false) PayOrderRequest req) {
+        String payMethod = req != null ? req.getPayMethod() : null;
+        orderService.payOrder(UserContext.getUserId(), id, payMethod);
         return Result.success();
     }
 

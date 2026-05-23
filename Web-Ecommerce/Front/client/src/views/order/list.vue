@@ -83,6 +83,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getOrderList, cancelOrder, confirmReceive } from '@/api/order'
 import { formatPrice } from '@/utils/format'
@@ -90,6 +91,7 @@ import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
 
+const router = useRouter()
 const orders = ref<Order[]>([])
 const loading = ref(false)
 const page = ref(1)
@@ -153,7 +155,7 @@ async function handleConfirm(id: number) {
 }
 
 function handlePay(id: number) {
-  ElMessage.info('支付功能开发中')
+  router.push(`/orders/${id}/pay`)
 }
 
 onMounted(() => { loadOrders() })

@@ -83,14 +83,14 @@ const submitting = ref(false)
 async function handleSubmit() {
   submitting.value = true
   try {
-    await createOrder({
+    const res = await createOrder({
       addressId: selectedAddressId.value,
       cartItemIds: cartStore.checkedItems.map((item) => item.id),
       remark: '',
     })
     ElMessage.success('订单已提交')
     cartStore.fetchCart()
-    router.push('/orders')
+    router.push(`/orders/${res.data.id}/pay`)
   } finally {
     submitting.value = false
   }

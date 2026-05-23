@@ -10,7 +10,7 @@ public interface OrderService {
     Order createOrder(Long userId, CreateOrderRequest req);
     PageResult<Order> getOrderPage(Long userId, OrderQuery query);
     Order getOrderById(Long userId, Long id);
-    void payOrder(Long userId, Long id);
+    void payOrder(Long userId, Long id, String payMethod);
     void cancelOrder(Long userId, Long id);
     void confirmReceive(Long userId, Long id);
 
