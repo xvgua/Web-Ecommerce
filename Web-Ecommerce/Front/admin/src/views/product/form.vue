@@ -49,6 +49,9 @@
             <el-radio-button :value="0">下架</el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="详细参数" prop="detail">
+          <el-input v-model="form.detail" type="textarea" :rows="8" placeholder="请输入商品详细参数（支持 HTML 表格）" />
+        </el-form-item>
         <el-form-item label="商品详情" prop="description">
           <el-input v-model="form.description" type="textarea" :rows="8" placeholder="请输入商品描述（支持 HTML）" />
         </el-form-item>
@@ -83,6 +86,7 @@ const form = reactive<ProductForm>({
   categoryId: 0,
   price: 0,
   stock: 0,
+  detail: '',
   description: '',
   mainImage: '',
   images: [],
@@ -136,6 +140,7 @@ onMounted(async () => {
     form.categoryId = p.categoryId
     form.price = p.price
     form.stock = p.stock
+    form.detail = p.detail || ''
     form.description = p.description
     form.mainImage = p.mainImage
     form.images = p.images

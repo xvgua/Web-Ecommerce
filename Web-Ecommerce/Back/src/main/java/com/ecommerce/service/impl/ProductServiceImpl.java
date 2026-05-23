@@ -187,6 +187,7 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(form.getPrice());
         product.setStock(form.getStock() != null ? form.getStock() : 0);
         product.setDescription(form.getDescription());
+        product.setDetail(form.getDetail());
         product.setMainImage(form.getMainImage());
         product.setImages(form.getImages());
         product.setStatus(form.getStatus() != null ? form.getStatus() : ProductStatus.ON_SALE);
@@ -204,6 +205,7 @@ public class ProductServiceImpl implements ProductService {
         if (form.getPrice() != null) product.setPrice(form.getPrice());
         if (form.getStock() != null) product.setStock(form.getStock());
         if (form.getDescription() != null) product.setDescription(form.getDescription());
+        if (form.getDetail() != null) product.setDetail(form.getDetail());
         if (form.getMainImage() != null) product.setMainImage(form.getMainImage());
         if (form.getImages() != null) product.setImages(form.getImages());
         if (form.getStatus() != null) product.setStatus(form.getStatus());

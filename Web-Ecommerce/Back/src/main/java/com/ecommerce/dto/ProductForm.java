@@ -15,6 +15,7 @@ public class ProductForm {
     private BigDecimal price;
     private Integer stock;
     private String description;
+    private String detail;
     private String mainImage;
     private String images;
     private Integer status;

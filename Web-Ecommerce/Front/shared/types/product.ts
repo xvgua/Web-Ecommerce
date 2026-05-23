@@ -15,6 +15,7 @@ export interface Product {
   price: number
   stock: number
   description: string
+  detail: string
   mainImage: string
   images: string[]
   status: number
@@ -46,6 +47,7 @@ export interface ProductForm {
   price: number
   stock: number
   description: string
+  detail: string
   mainImage: string
   images: string[]
   status: number

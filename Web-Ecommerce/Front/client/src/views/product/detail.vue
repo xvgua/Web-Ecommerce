@@ -83,9 +83,15 @@
       </div>
     </div>
 
-    <div class="detail-section" v-if="product">
-      <h2 class="detail-section__title">商品详情</h2>
-      <div class="detail-section__body" v-html="product.description || '<p style=\'text-align:center;color:#999;padding:40px\'>暂无详细描述</p>'" />
+    <div class="detail-tabs" v-if="product">
+      <el-tabs v-model="detailTab" class="detail-tabs__el">
+        <el-tab-pane label="商品详情" name="desc">
+          <div class="detail-tabs__body" v-html="product.description || '<p style=\'text-align:center;color:#999;padding:40px\'>暂无详细描述</p>'" />
+        </el-tab-pane>
+        <el-tab-pane label="详细参数" name="params">
+          <div class="detail-tabs__body" v-html="product.detail || '<p style=\'text-align:center;color:#999;padding:40px\'>暂无详细参数</p>'" />
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
     <!-- ═══ 评价区域 ═══ -->
@@ -209,6 +215,7 @@ const quantity = ref(1)
 const addLoading = ref(false)
 const activeImg = ref('')
 const selectedSkuId = ref(0)
+const detailTab = ref('desc')
 
 // ── 评价状态 ──
 const reviews = ref<Review[]>([])
@@ -479,23 +486,59 @@ onMounted(() => {
   }
 }
 
-/* ── Description ── */
-.detail-section {
+/* ── Detail Tabs ── */
+.detail-tabs {
   background: #fff;
   padding: 32px;
   border-radius: 12px;
+  margin-bottom: 24px;
 
-  &__title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    padding-bottom: 14px;
-    border-bottom: 2px solid #409eff;
+  &__el {
+    :deep(.el-tabs__header) {
+      margin-bottom: 20px;
+    }
+
+    :deep(.el-tabs__item) {
+      font-size: 16px;
+      font-weight: 600;
+    }
   }
 
   &__body {
     line-height: 1.8;
     color: #555;
+    min-height: 120px;
+
+    :deep(.param-table) {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+
+      tr {
+        &:nth-child(odd) {
+          background: #fafafa;
+        }
+        &:hover {
+          background: #f0f7ff;
+        }
+      }
+
+      td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+
+        &:first-child {
+          width: 140px;
+          color: #888;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        &:last-child {
+          color: #333;
+        }
+      }
+    }
   }
 }
 
