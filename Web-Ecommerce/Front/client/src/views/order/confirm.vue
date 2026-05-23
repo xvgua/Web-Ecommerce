@@ -32,7 +32,9 @@
         <el-table-column label="商品" min-width="300">
           <template #default="{ row }">
             <div class="order-product">
-              <el-image :src="row.productImage" fit="cover" class="order-product__img" />
+              <div class="order-product__img">
+                <ProductImage :src="row.productImage" :seed="row.productName + row.productId" fit="cover" />
+              </div>
               <div>
                 <div>{{ row.productName }}</div>
                 <div class="order-product__spec">{{ row.specDesc }}</div>
@@ -72,6 +74,7 @@ import { getAddressList } from '@/api/user'
 import { createOrder } from '@/api/order'
 import { formatPrice } from '@/utils/format'
 import type { Address } from '@shared/types/user'
+import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()

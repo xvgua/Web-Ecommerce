@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, Close } from '@element-plus/icons-vue'
@@ -103,9 +103,9 @@ const imageUrls = ref<string[]>([])
 const rateTexts = ['非常差', '差', '一般', '好', '非常好']
 
 const uploadUrl = '/api/upload'
-const uploadHeaders = {
+const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY) || ''}`,
-}
+}))
 
 function beforeUpload(file: File) {
   const isValid = /^image\/(jpeg|png|gif|webp)$/.test(file.type)

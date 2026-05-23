@@ -6,7 +6,14 @@
       <div class="detail-block">
         <div class="detail-block__header">
           <h2>订单信息</h2>
-          <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark">{{ order.statusText }}</el-tag>
+          <div class="detail-block__header-right">
+            <div class="detail-block__actions">
+              <el-button v-if="order.status === 0" type="primary" size="small" @click="handlePay">去支付</el-button>
+              <el-button v-if="order.status === 0" size="small" :loading="actionLoading === 'cancel'" @click="handleCancel">取消订单</el-button>
+              <el-button v-if="order.status === 2" type="success" size="small" :loading="actionLoading === 'confirm'" @click="handleConfirm">确认收货</el-button>
+            </div>
+            <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark">{{ order.statusText }}</el-tag>
+          </div>
         </div>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="订单号">{{ order.orderNo }}</el-descriptions-item>
@@ -60,18 +67,60 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { getOrderById } from '@/api/order'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import { getOrderById, cancelOrder, confirmReceive } from '@/api/order'
 import { formatPrice } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const route = useRoute()
+const router = useRouter()
 const order = ref<Order | null>(null)
 const loading = ref(false)
+const actionLoading = ref('')
 
-onMounted(async () => {
+async function handlePay() {
+  if (!order.value) return
+  router.push(`/orders/${order.value.id}/pay`)
+}
+
+async function handleCancel() {
+  if (!order.value) return
+  try {
+    await ElMessageBox.confirm('确定要取消该订单吗？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  actionLoading.value = 'cancel'
+  try {
+    await cancelOrder(order.value.id)
+    ElMessage.success('订单已取消')
+    loadOrder()
+  } finally {
+    actionLoading.value = ''
+  }
+}
+
+async function handleConfirm() {
+  if (!order.value) return
+  try {
+    await ElMessageBox.confirm('确认已收到商品吗？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  actionLoading.value = 'confirm'
+  try {
+    await confirmReceive(order.value.id)
+    ElMessage.success('已确认收货')
+    loadOrder()
+  } finally {
+    actionLoading.value = ''
+  }
+}
+
+async function loadOrder() {
   loading.value = true
   try {
     const res = await getOrderById(Number(route.params.id))
@@ -79,7 +128,9 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(() => { loadOrder() })
 </script>
 
 <style lang="scss" scoped>
@@ -107,6 +158,17 @@ onMounted(async () => {
     margin-bottom: 16px;
 
     h2 { font-size: 16px; font-weight: 600; }
+  }
+
+  &__header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
   }
 
   &__title {
