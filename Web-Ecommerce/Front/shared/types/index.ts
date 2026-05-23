@@ -11,6 +11,7 @@ export interface PageResponse<T> {
   total: number
   page: number
   pageSize: number
+  extra?: Record<string, unknown>
 }
 
 export interface PageQuery {

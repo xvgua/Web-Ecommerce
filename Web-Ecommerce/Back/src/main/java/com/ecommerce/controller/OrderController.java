@@ -3,7 +3,7 @@ package com.ecommerce.controller;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.CreateOrderRequest;
-import com.ecommerce.dto.ProductQuery;
+import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.entity.Order;
 import com.ecommerce.security.UserContext;
 import com.ecommerce.service.OrderService;
@@ -19,7 +19,7 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping
-    public Result<PageResult<Order>> list(ProductQuery query) {
+    public Result<PageResult<Order>> list(OrderQuery query) {
         return Result.success(orderService.getOrderPage(UserContext.getUserId(), query));
     }
 

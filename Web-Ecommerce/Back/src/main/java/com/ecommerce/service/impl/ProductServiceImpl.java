@@ -11,14 +11,19 @@ import com.ecommerce.mapper.CategoryMapper;
 import com.ecommerce.mapper.ProductMapper;
 import com.ecommerce.mapper.ProductSkuMapper;
 import com.ecommerce.service.ProductService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
+import java.util.*;
+import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class ProductServiceImpl implements ProductService {
+
+    private static final Pattern BOOLEAN_SPECIAL = Pattern.compile("[+><()~*\"@\\\\-]");
 
     @Autowired
     private ProductMapper productMapper;
@@ -29,6 +34,43 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public PageResult<Product> getProductPage(ProductQuery query) {
+        if (StringUtils.hasText(query.getKeyword())) {
+            return keywordSearch(query);
+        }
+        return filterSearch(query);
+    }
+
+    /**
+     * Keyword search: FULLTEXT (ngram) + LIKE + Levenshtein.
+     * Always ordered by relevance (MATCH score, then LIKE match, then sales);
+     * user-selected sort only applies to filterSearch (browsing without keyword).
+     */
+    private PageResult<Product> keywordSearch(ProductQuery query) {
+        String keyword = query.getKeyword().trim();
+        String escapedKeyword = escapeBooleanMode(keyword);
+        String likeKeyword = escapeLikeWildcards(keyword);
+        Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
+
+        // Skip Levenshtein for very short keywords (≤2 chars):
+        // edit distance ≤2 would match almost everything, making it noise
+        String fuzzyKeyword = keyword.length() > 2 ? keyword.toLowerCase() : null;
+
+        int page = query.getPage() != null ? query.getPage() : 1;
+        int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
+        int offset = (page - 1) * pageSize;
+
+        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status);
+        List<Product> records = productMapper.searchByKeyword(
+                escapedKeyword, likeKeyword, fuzzyKeyword, status, offset, pageSize);
+
+        fillCategoryNames(records);
+        return PageResult.of(records, total, page, pageSize);
+    }
+
+    /**
+     * Standard filter search: category, price range, status (no keyword).
+     */
+    private PageResult<Product> filterSearch(ProductQuery query) {
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         if (query.getStatus() != null) {
             wrapper.eq(Product::getStatus, query.getStatus());
@@ -36,9 +78,6 @@ public class ProductServiceImpl implements ProductService {
             wrapper.eq(Product::getStatus, ProductStatus.ON_SALE);
         }
 
-        if (StringUtils.hasText(query.getKeyword())) {
-            wrapper.like(Product::getName, query.getKeyword());
-        }
         if (query.getCategoryId() != null && query.getCategoryId() > 0) {
             wrapper.eq(Product::getCategoryId, query.getCategoryId());
         }
@@ -49,7 +88,34 @@ public class ProductServiceImpl implements ProductService {
             wrapper.le(Product::getPrice, query.getMaxPrice());
         }
 
-        String sort = query.getSort();
+        applySort(wrapper, query.getSort());
+
+        Page<Product> page = new Page<>(query.getPage(), query.getPageSize());
+        Page<Product> result = productMapper.selectPage(page, wrapper);
+
+        fillCategoryNames(result.getRecords());
+        return PageResult.of(result.getRecords(), result.getTotal(),
+                query.getPage(), query.getPageSize());
+    }
+
+    /**
+     * Escape FULLTEXT BOOLEAN MODE reserved characters: + - > < ( ) ~ * " @
+     */
+    private String escapeBooleanMode(String keyword) {
+        return BOOLEAN_SPECIAL.matcher(keyword).replaceAll("\\\\$0");
+    }
+
+    /**
+     * Escape LIKE special chars: backslash (ESCAPE char), %, _.
+     * Prevents user input like "50% off" from being treated as wildcards.
+     */
+    private String escapeLikeWildcards(String keyword) {
+        return keyword.replace("\\", "\\\\")
+                      .replace("%", "\\%")
+                      .replace("_", "\\_");
+    }
+
+    private void applySort(LambdaQueryWrapper<Product> wrapper, String sort) {
         if ("price_asc".equals(sort)) {
             wrapper.orderByAsc(Product::getPrice);
         } else if ("price_desc".equals(sort)) {
@@ -59,20 +125,24 @@ public class ProductServiceImpl implements ProductService {
         } else {
             wrapper.orderByDesc(Product::getCreateTime);
         }
+    }
 
-        Page<Product> page = new Page<>(query.getPage(), query.getPageSize());
-        Page<Product> result = productMapper.selectPage(page, wrapper);
-
-        // Fill category names
-        for (Product p : result.getRecords()) {
-            if (p.getCategoryId() != null) {
-                Category c = categoryMapper.selectById(p.getCategoryId());
-                if (c != null) p.setCategoryName(c.getName());
-            }
+    private void fillCategoryNames(List<Product> products) {
+        if (products.isEmpty()) return;
+        Set<Long> categoryIds = new HashSet<>();
+        for (Product p : products) {
+            if (p.getCategoryId() != null) categoryIds.add(p.getCategoryId());
         }
+        if (categoryIds.isEmpty()) return;
 
-        return PageResult.of(result.getRecords(), result.getTotal(),
-                query.getPage(), query.getPageSize());
+        Map<Long, String> nameMap = new HashMap<>();
+        List<Category> categories = categoryMapper.selectBatchIds(categoryIds);
+        for (Category c : categories) {
+            nameMap.put(c.getId(), c.getName());
+        }
+        for (Product p : products) {
+            p.setCategoryName(nameMap.get(p.getCategoryId()));
+        }
     }
 
     @Override

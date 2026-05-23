@@ -64,6 +64,7 @@ PUT    /api/resource/:id/cancel|confirm|ship  → 特殊动作
 | GET | `/products/:id` | 无 | — | `Product`（含 skus[]） |
 | GET | `/products/hot` | 无 | `?limit` | `Product[]` |
 | GET | `/products/new` | 无 | `?limit` | `Product[]` |
+| GET | `/products/:id/reviews` | 无 | `?page, pageSize, rating?` | `PageResponse<Review> + ratingStats` |
 
 ### 2.4 分类 — `/api/categories`
 
@@ -96,7 +97,31 @@ PUT    /api/resource/:id/cancel|confirm|ship  → 特殊动作
 
 > 创建订单事务内完成：生成订单号 → 创建 order + order_item → 扣减库存 → 清空购物车已选。支付接口为模拟支付，调用后订单状态 0→1。
 
-### 2.7 文件上传 — `/api/admin/upload`
+### 2.7 评价 — `/api/reviews`
+
+| 方法 | 路径 | 鉴权 | 请求体 | 响应 data |
+|------|------|------|--------|-----------|
+| POST | `/reviews` | 用户 | `{ orderId, productId, rating (1-5), content, images? }` | `Review` |
+
+> 仅可对已完成的订单商品评价，一个订单商品仅可评价一次。评价后更新 product 表 `avg_rating` 和 `review_count`。
+
+### 2.8 订单评价查询 — `/api/orders`
+
+| 方法 | 路径 | 鉴权 | 响应 data |
+|------|------|------|-----------|
+| GET | `/orders/:id/reviewable-items` | 用户 | `ReviewableItem[]`，含 `{ productId, productName, productImage, reviewed }` |
+
+> 仅已完成订单返回数据。`reviewed` 字段表示该商品是否已评价。
+
+### 2.9 用户文件上传 — `/api/upload`
+
+| 方法 | 路径 | 鉴权 | 请求体 | 响应 data |
+|------|------|------|--------|-----------|
+| POST | `/upload` | 用户 | `multipart/form-data` | `{ url: string }` |
+
+> 校验规则同管理员上传（仅允许 jpg/jpeg/png/gif/webp，≤2MB）。用于评价图片上传等用户端场景。
+
+### 2.10 文件上传 — `/api/admin/upload`
 
 | 方法 | 路径 | 鉴权 | 请求体 | 响应 data |
 |------|------|------|--------|-----------|
@@ -235,6 +260,8 @@ CREATE TABLE product (
   images      VARCHAR(2000)  DEFAULT '' COMMENT 'JSON array of URLs',
   status      TINYINT        DEFAULT 1 COMMENT '1=上架 0=下架',
   sales       INT            DEFAULT 0,
+  avg_rating  DECIMAL(2,1)   DEFAULT 0 COMMENT '平均评分 0.0~5.0',
+  review_count INT           DEFAULT 0 COMMENT '评价总数',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram
@@ -331,8 +358,11 @@ CREATE TABLE review (
   order_id    BIGINT         NOT NULL,
   rating      TINYINT        NOT NULL COMMENT '1-5星',
   content     TEXT,
-  images      VARCHAR(2000)  DEFAULT '' COMMENT 'JSON array',
-  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
+  images      VARCHAR(2000)  DEFAULT '' COMMENT 'JSON array，最多3张',
+  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_product_id (product_id),
+  INDEX idx_user_id (user_id),
+  UNIQUE KEY uk_order_product (order_id, product_id)
 );
 ```
 
@@ -503,7 +533,7 @@ upload:
 | 一、基础设施 | Spring Boot 项目 + pom.xml + 建表 + Result/异常/JWT/拦截器/跨域/分页 |
 | 二、核心业务 | 用户注册登录 → 商品分类/列表/详情 → 购物车 CRUD → 订单（事务+库存）→ 地址 CRUD |
 | 三、管理后台 | 管理员认证 → 数据看板 → 商品管理 → 分类管理 → 订单管理 → 用户管理 |
-| 四、辅助功能 | 文件上传 → 轮播图 CRUD → 公告 CRUD → 评价 → 收藏 |
+| 四、辅助功能 | 文件上传 → 轮播图 CRUD → 公告 CRUD → ~~评价~~（已迁至独立章节 [十一](#十一商品评价系统)）→ 收藏 |
 | 五、联调测试 | 前后端联调 → Postman/JUnit → 异常场景 → 数据一致性 |
 
 ---
@@ -782,7 +812,178 @@ private void searchProduct(ProductQuery query, Page<Product> page) {
 
 ---
 
-## 十一、环境变量
+## 十一、商品评价系统
+
+### 11.1 功能概述
+
+- 用户可对已购买且已完成的订单商品进行评价（1-5 星 + 文字评论 + 可选图片）
+- 商品详情页展示评价列表，支持按星级分类筛选
+- 商品列表/详情页展示平均评分和评价总数
+- 每个订单商品仅可评价一次，评价后不可修改或删除
+
+### 11.2 数据库变更
+
+#### 11.2.1 product 表新增字段
+
+```sql
+ALTER TABLE product
+  ADD COLUMN avg_rating   DECIMAL(2,1) DEFAULT 0 COMMENT '平均评分' AFTER sales,
+  ADD COLUMN review_count INT          DEFAULT 0 COMMENT '评价总数' AFTER avg_rating;
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `avg_rating` | `DECIMAL(2,1)` | 平均星级（0.0 ~ 5.0），新增评价时实时重算 |
+| `review_count` | `INT` | 累计评价数，新增评价时 +1 |
+
+> 反范式设计：避免每次商品列表查询都 JOIN + COUNT + AVG review 表。`avg_rating` 在新增评价时通过 `AVG(rating) FROM review WHERE product_id = ?` 重算并写回 product 表。
+
+#### 11.2.2 review 表索引补充
+
+```sql
+-- 商品评价列表查询（WHERE product_id = ? ORDER BY create_time DESC）
+ALTER TABLE review ADD INDEX idx_product_id (product_id);
+
+-- 防重复评价：同一用户对同一订单的同一商品只能评价一次
+ALTER TABLE review ADD UNIQUE KEY uk_order_product (order_id, product_id);
+
+-- 用户查询自己的评价列表
+ALTER TABLE review ADD INDEX idx_user_id (user_id);
+```
+
+### 11.3 API 端点
+
+#### 11.3.1 商品评价列表 — `GET /api/products/:id/reviews`
+
+| 项目 | 说明 |
+|------|------|
+| 鉴权 | 无（公开） |
+| Query 参数 | `page`（默认 1）, `pageSize`（默认 10）, `rating?`（1-5，筛选指定星级） |
+| 响应 | `PageResponse<Review>`，每条记录含 `username`, `avatar`, `rating`, `content`, `images`, `createTime` |
+| 排序 | 按 `create_time DESC`（最新在前） |
+
+响应 data 结构（ratingStats 通过 PageResult.extra 返回）：
+
+```json
+{
+  "records": [ ... ],
+  "total": 25,
+  "page": 1,
+  "pageSize": 10,
+  "extra": {
+    "avgRating": 4.3,
+    "reviewCount": 25,
+    "distribution": { "5": 12, "4": 8, "3": 3, "2": 1, "1": 1 }
+  }
+}
+```
+
+#### 11.3.2 发表评价 — `POST /api/reviews`
+
+| 项目 | 说明 |
+|------|------|
+| 鉴权 | 用户登录 |
+| 请求体 | `{ orderId: number, productId: number, rating: number (1-5), content: string, images?: string[] }` |
+| 响应 | `Review` |
+
+**业务校验（任一不通过返回 400）：**
+
+1. 订单必须存在且属于当前用户
+2. 订单状态必须为「已完成」（`status = 3`）
+3. 该订单中必须包含该商品（`order_item` 中存在对应记录）
+4. 该订单商品未被评价过（`uk_order_product` 唯一约束兜底）
+5. `rating` 取值 1-5，`content` 长度 ≥ 1 且 ≤ 500
+
+**后端处理流程（事务内）：**
+
+```
+1. 校验订单归属 + 状态 + 包含该商品 + 未重复评价
+2. INSERT INTO review
+3. UPDATE product SET avg_rating = (SELECT AVG(rating) FROM review WHERE product_id = ?),
+                     review_count = review_count + 1
+                 WHERE id = ?
+4. 返回 Review 对象
+```
+
+#### 11.3.3 待评价订单商品 — `GET /api/orders/:id/reviewable-items`
+
+| 项目 | 说明 |
+|------|------|
+| 鉴权 | 用户登录 |
+| 响应 | `ReviewableItem[]`，含 `{ productId, productName, productImage, reviewed: boolean }` |
+
+> 仅当订单状态为「已完成」时返回数据，否则返回空数组。前端根据 `reviewed` 字段决定展示「评价」按钮还是「已评价」标签。
+
+### 11.4 前端页面规范
+
+#### 11.4.1 商品详情页 — 评价区域
+
+商品详情页（`product/detail.vue`）底部增加评价模块：
+
+| UI 要素 | 说明 |
+|------|------|
+| **评分概览** | 展示平均分（大字号 + 星级条）+ 评价总数 |
+| **星级分布** | 5 条进度条（5 星 ~ 1 星），每行格式：`5 星 ████████ 12` |
+| **评价筛选** | 标签页/按钮组：全部 | 好评(4-5星) | 中评(3星) | 差评(1-2星)，或按 1-5 星逐级筛选 |
+| **评价列表** | 每条评价展示：用户头像 + 用户名（脱敏中间字符）+ 星级 + 日期 + 文字内容 + 图片（若有） |
+| **分页** | `el-pagination`，每页 10 条 |
+| **空状态** | 暂无评价时展示 `el-empty`，提示"暂无评价" |
+
+#### 11.4.2 订单详情页 — 评价入口
+
+| UI 要素 | 说明 |
+|------|------|
+| **评价按钮** | 已完成订单的每个商品行末展示「评价」按钮（`reviewed = false` 时）或「已评价」标签（`reviewed = true` 时） |
+| **评价弹窗** | `el-dialog` 内含：星级选择（`el-rate` 组件，整数星级，`allow-half="false"`）、文字输入（`el-input type="textarea"`，maxlength=500）、图片上传（可选，最多 3 张，调用 `POST /api/upload`） |
+| **提交** | 按钮带 loading 锁，成功后关闭弹窗 + toast 提示 + 刷新订单详情 |
+
+#### 11.4.3 商品列表页 — 评分展示
+
+商品卡片（`ProductCard.vue`）上已有信息中增加评分展示：
+- 若 `reviewCount > 0`：展示星级 + 平均分（如 ★ 4.3）+ 评价数（如 25 条评价）
+- 若 `reviewCount === 0`：展示灰色文字"暂无评价"
+
+### 11.5 安全约束
+
+| 约束 | 说明 |
+|------|------|
+| **防刷评价** | 一个订单商品仅可评价一次（数据库唯一约束 + Service 层预校验） |
+| **防越权** | 评价时必须校验订单归属（`order.userId === UserContext.getUserId()`） |
+| **防 XSS** | `content` 文本在 Vue 模板中通过 `{{ }}` 默认转义，禁止 `v-html` 渲染用户评论 |
+| **图片安全** | 评价图片通过 `POST /api/upload`（用户登录）上传，校验规则同管理员上传（类型白名单 + 大小限制） |
+| **脱敏** | 前端展示用户名时中间字符替换为 `*`（如「张**三」） |
+
+### 11.6 性能约束
+
+| 约束 | 说明 |
+|------|------|
+| **评价列表分页** | 每页 10 条，禁止一次性加载全部评价 |
+| **评分聚合** | `avg_rating` 和 `review_count` 反范式存储在 product 表，商品列表查询无需 JOIN review 表 |
+| **图片懒加载** | 评价图片使用 `el-image` 的 `lazy` 属性懒加载 |
+| **索引覆盖** | `idx_product_id` 索引覆盖评价列表的分页排序查询 |
+
+### 11.7 兼容性约束
+
+| 约束 | 说明 |
+|------|------|
+| **已有商品** | 执行 `ALTER TABLE` 后 `avg_rating = 0`, `review_count = 0`，前端按 0 条评价展示 |
+| **已有订单** | 已完成的订单对应用户可以评价，但需从 `reviewable-items` 接口判断是否已评价 |
+| **用户删除** | `review.username` 和 `review.avatar` 为冗余字段，用户被删除后评价仍可展示 |
+| **商品删除** | 商品删除后其评价保留在 `review` 表中（不设外键），但不影响正常查询（商品已不可见） |
+
+### 11.8 禁止事项
+
+- 禁止用户修改或删除已发表的评价（一锤定音，保持评价公信力）
+- 禁止匿名评价（必须登录且购买后评价）
+- 禁止对未完成的订单（待支付/待发货/待收货/已取消）发表评价
+- 禁止评价内容为空或纯空格
+- 禁止前端直接计算平均分（以后端 product.avg_rating 为准）
+- 禁止在商品列表 API 中 JOIN review 表做实时聚合（用反范式字段）
+- 禁止评价上传视频（仅支持图片，最多 3 张）
+
+---
+
+## 十二、环境变量
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|

@@ -20,6 +20,8 @@ public class Product {
     private String images;
     private Integer status;
     private Integer sales;
+    private BigDecimal avgRating;
+    private Integer reviewCount;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

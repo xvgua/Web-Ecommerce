@@ -29,4 +29,6 @@ public class Order {
     private List<OrderItem> items;
     @TableField(exist = false)
     private Object address;
+    @TableField(exist = false)
+    private Long reviewCount;
 }

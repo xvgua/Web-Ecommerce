@@ -4,14 +4,23 @@
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange" class="order-tabs">
       <el-tab-pane label="全部" name="" />
-      <el-tab-pane label="待支付" name="0" />
+      <el-tab-pane label="待付款" name="0" />
       <el-tab-pane label="待发货" name="1" />
       <el-tab-pane label="待收货" name="2" />
-      <el-tab-pane label="已完成" name="3" />
-      <el-tab-pane label="已取消" name="4" />
+      <el-tab-pane label="退款/售后" name="5" />
+      <el-tab-pane label="评价" name="review" />
     </el-tabs>
 
-    <div v-loading="loading" class="order-list">
+    <!-- 评价子标签 -->
+    <div class="review-subtabs" v-if="activeTab === 'review'">
+      <el-radio-group v-model="reviewSubTab" size="small" @change="handleSubTabChange">
+        <el-radio-button value="pending">待评价</el-radio-button>
+        <el-radio-button value="followup">可追评</el-radio-button>
+        <el-radio-button value="reviewed">已评价</el-radio-button>
+      </el-radio-group>
+    </div>
+
+    <div v-loading="loading" class="order-list" :class="{ 'order-list--review': activeTab === 'review' }">
       <div v-for="order in orders" :key="order.id" class="order-card" @click="$router.push(`/orders/${order.id}`)">
         <div class="order-card__header">
           <span class="order-card__no">订单号：{{ order.orderNo }}</span>
@@ -36,11 +45,19 @@
           </div>
         </div>
         <div class="order-card__footer" @click.stop>
-          <span>共 {{ order.items.length }} 件商品，合计：<strong>{{ formatPrice(order.totalAmount) }}</strong></span>
+          <div class="order-card__footer-left">
+            <span v-if="activeTab === 'review' && order._reviewInfo" class="order-card__review-info">
+              已评价 {{ order._reviewInfo.reviewed }} / {{ order._reviewInfo.total }} 件
+            </span>
+            <span v-else>
+              共 {{ order.items.length }} 件商品，合计：<strong>{{ formatPrice(order.totalAmount) }}</strong>
+            </span>
+          </div>
           <div class="order-card__actions">
             <el-button v-if="order.status === 0" type="primary" size="small" @click="handlePay(order.id)">去支付</el-button>
             <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消</el-button>
             <el-button v-if="order.status === 2" type="success" size="small" @click="handleConfirm(order.id)">确认收货</el-button>
+            <el-button v-if="activeTab === 'review'" type="warning" size="small" @click="$router.push(`/orders/${order.id}`)">评价</el-button>
             <el-button size="small" @click="$router.push(`/orders/${order.id}`)">详情</el-button>
           </div>
         </div>
@@ -79,23 +96,44 @@ const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const activeTab = ref('')
+const reviewSubTab = ref('pending')
 
 async function loadOrders() {
   loading.value = true
   try {
+    const status = activeTab.value === 'review' ? 3
+      : activeTab.value ? Number(activeTab.value) : undefined
+    const reviewFilter = activeTab.value === 'review' ? reviewSubTab.value : undefined
+
     const res = await getOrderList({
       page: page.value,
       pageSize: pageSize.value,
-      status: activeTab.value ? Number(activeTab.value) : undefined,
+      status,
+      reviewFilter,
     })
-    orders.value = res.data.records
+    orders.value = res.data.records.map(enrichReviewInfo)
     total.value = res.data.total
   } finally {
     loading.value = false
   }
 }
 
+function enrichReviewInfo(order: Order): Order & { _reviewInfo?: { reviewed: number; total: number } } {
+  if (activeTab.value !== 'review') return order as Order & { _reviewInfo?: any }
+  const total = order.items?.length || 0
+  const reviewed = order.reviewCount ?? 0
+  return { ...order, _reviewInfo: { reviewed, total } }
+}
+
 function handleTabChange() {
+  page.value = 1
+  if (activeTab.value === 'review') {
+    reviewSubTab.value = 'pending'
+  }
+  loadOrders()
+}
+
+function handleSubTabChange() {
   page.value = 1
   loadOrders()
 }
@@ -140,10 +178,20 @@ onMounted(() => { loadOrders() })
   margin-bottom: 0;
 }
 
+.review-subtabs {
+  background: #fff;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
 .order-list {
   background: #fff;
   border-radius: 0 0 12px 12px;
   padding: 0 20px 20px;
+
+  &--review {
+    border-radius: 0 0 12px 12px;
+  }
 }
 
 .order-card {
@@ -214,6 +262,17 @@ onMounted(() => { loadOrders() })
     border-top: 1px solid #f5f5f5;
 
     strong { color: #e6423a; font-size: 16px; }
+
+    &-left {
+      font-size: 13px;
+      color: #666;
+    }
+  }
+
+  &__review-info {
+    color: #409eff;
+    font-weight: 500;
+    font-size: 13px;
   }
 
   &__actions {

@@ -11,6 +11,9 @@
       </div>
       <div class="product-card__meta">
         <span>已售 {{ product.sales }}</span>
+        <span v-if="product.reviewCount > 0" class="product-card__rating">
+          ★ {{ product.avgRating }}
+        </span>
       </div>
     </div>
   </div>
@@ -116,6 +119,14 @@ function goDetail() {
     font-size: 12px;
     color: #999;
     margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__rating {
+    color: #f7ba2a;
+    font-weight: 600;
   }
 }
 </style>

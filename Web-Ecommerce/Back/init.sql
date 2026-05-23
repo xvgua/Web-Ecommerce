@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS `product` (
   images      VARCHAR(2000)  DEFAULT '' COMMENT 'JSON array of URLs',
   status      TINYINT        DEFAULT 1 COMMENT '1=上架 0=下架',
   sales       INT            DEFAULT 0,
+  avg_rating  DECIMAL(2,1)   DEFAULT 0 COMMENT '平均评分 0.0~5.0',
+  review_count INT           DEFAULT 0 COMMENT '评价总数',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -153,7 +155,10 @@ CREATE TABLE IF NOT EXISTS `review` (
   rating      TINYINT        NOT NULL COMMENT '1-5星',
   content     TEXT,
   images      VARCHAR(2000)  DEFAULT '',
-  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
+  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_product_id (product_id),
+  INDEX idx_user_id (user_id),
+  UNIQUE KEY uk_order_product (order_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -237,3 +242,74 @@ INSERT INTO `banner` (title, image_url, link_url, sort_order) VALUES
 ('五一狂欢节', '', '', 1),
 ('新品首发', '', '', 2),
 ('数码焕新季', '', '', 3);
+
+-- 示例评价（需先有已完成的订单，此处为演示数据）
+-- 用户 user_demo / 密码 123456
+INSERT INTO `user` (username, password, email, nickname, status) VALUES
+('user_demo', '$2b$12$Ep/yDhIzfHNsC2Bt0GiJNOul.Gi1O6tkimFmmcE9PLUMHp9ek9w0C', 'demo@example.com', 'Demo用户', 1);
+
+INSERT INTO `review` (user_id, username, avatar, product_id, order_id, rating, content, images, create_time) VALUES
+(1, 'Demo用户', '', 1, 1, 5, '手机非常好用，拍照效果一流，续航也很给力！', '', NOW() - INTERVAL 3 DAY),
+(1, 'Demo用户', '', 2, 2, 4, '三星屏幕果然名不虚传，显示效果很棒。', '', NOW() - INTERVAL 2 DAY),
+(1, 'Demo用户', '', 3, 3, 5, '性价比超高！徕卡拍照真的厉害，充电也快。', '', NOW() - INTERVAL 4 DAY),
+(1, 'Demo用户', '', 3, 4, 3, '用了一个月，系统偶尔卡顿，待优化。', '', NOW() - INTERVAL 6 DAY),
+(1, 'Demo用户', '', 6, 5, 5, '降噪效果惊艳，地铁上也能安静听歌。', '', NOW() - INTERVAL 1 DAY),
+(1, 'Demo用户', '', 6, 6, 4, '音质很好，佩戴舒适，续航也不错。', '', NOW() - INTERVAL 3 DAY),
+(1, 'Demo用户', '', 8, 7, 5, 'M3 Pro 性能炸裂，剪辑视频一点不卡。', '', NOW() - INTERVAL 2 DAY),
+(1, 'Demo用户', '', 11, 8, 4, '内存稳定运行，兼容性好，价格实惠。', '', NOW() - INTERVAL 1 DAY),
+(1, 'Demo用户', '', 12, 9, 5, '读取速度飞快，安装游戏秒开，强烈推荐！', '', NOW() - INTERVAL 1 DAY);
+
+-- 更新商品的评分和评价数
+UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 1;
+UPDATE product SET avg_rating = 4.0, review_count = 1 WHERE id = 2;
+UPDATE product SET avg_rating = 4.0, review_count = 2 WHERE id = 3;
+UPDATE product SET avg_rating = 4.5, review_count = 2 WHERE id = 6;
+UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 8;
+UPDATE product SET avg_rating = 4.0, review_count = 1 WHERE id = 11;
+UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 12;
+
+-- ============================================
+-- 14. Levenshtein 编辑距离函数（模糊搜索）
+-- ============================================
+DROP FUNCTION IF EXISTS levenshtein;
+DELIMITER //
+
+CREATE FUNCTION levenshtein(s1 VARCHAR(255), s2 VARCHAR(255))
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+  DECLARE s1_len, s2_len, i, j, c, c_temp, cost INT;
+  DECLARE s1_char CHAR(1);
+  DECLARE cv0, cv1 VARBINARY(256);
+
+  SET s1_len = CHAR_LENGTH(s1), s2_len = CHAR_LENGTH(s2);
+  IF s1 = s2 THEN RETURN 0;
+  ELSEIF s1_len = 0 THEN RETURN s2_len;
+  ELSEIF s2_len = 0 THEN RETURN s1_len;
+  END IF;
+
+  SET cv1 = 0x00, j = 1;
+  WHILE j <= s2_len DO
+    SET cv1 = CONCAT(cv1, UNHEX(HEX(j))), j = j + 1;
+  END WHILE;
+
+  SET i = 1;
+  WHILE i <= s1_len DO
+    SET s1_char = SUBSTRING(s1, i, 1), c = i;
+    SET cv0 = UNHEX(HEX(i)), j = 1;
+    WHILE j <= s2_len DO
+      SET c = c + 1;
+      IF s1_char = SUBSTRING(s2, j, 1) THEN SET cost = 0; ELSE SET cost = 1; END IF;
+      SET c_temp = CONV(HEX(SUBSTRING(cv1, j, 1)), 16, 10) + cost;
+      IF c > c_temp THEN SET c = c_temp; END IF;
+      SET c_temp = CONV(HEX(SUBSTRING(cv1, j+1, 1)), 16, 10) + 1;
+      IF c > c_temp THEN SET c = c_temp; END IF;
+      SET cv0 = CONCAT(cv0, UNHEX(HEX(c))), j = j + 1;
+    END WHILE;
+    SET cv1 = cv0, i = i + 1;
+  END WHILE;
+  RETURN c;
+END //
+
+DELIMITER ;

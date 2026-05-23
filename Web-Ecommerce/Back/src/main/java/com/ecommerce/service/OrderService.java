@@ -2,12 +2,13 @@ package com.ecommerce.service;
 
 import com.ecommerce.common.PageResult;
 import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.entity.Order;
 
 public interface OrderService {
     Order createOrder(Long userId, CreateOrderRequest req);
-    PageResult<Order> getOrderPage(Long userId, ProductQuery query);
+    PageResult<Order> getOrderPage(Long userId, OrderQuery query);
     Order getOrderById(Long userId, Long id);
     void payOrder(Long userId, Long id);
     void cancelOrder(Long userId, Long id);

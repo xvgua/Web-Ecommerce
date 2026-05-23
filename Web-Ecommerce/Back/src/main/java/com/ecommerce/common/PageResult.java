@@ -14,8 +14,13 @@ public class PageResult<T> {
     private long total;
     private int page;
     private int pageSize;
+    private Object extra;
 
     public static <T> PageResult<T> of(List<T> records, long total, int page, int pageSize) {
-        return new PageResult<>(records, total, page, pageSize);
+        return new PageResult<>(records, total, page, pageSize, null);
+    }
+
+    public static <T> PageResult<T> of(List<T> records, long total, int page, int pageSize, Object extra) {
+        return new PageResult<>(records, total, page, pageSize, extra);
     }
 }

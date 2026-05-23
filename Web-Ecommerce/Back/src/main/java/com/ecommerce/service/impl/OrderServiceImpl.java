@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
@@ -39,6 +40,8 @@ public class OrderServiceImpl implements OrderService {
     private AddressMapper addressMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private ReviewMapper reviewMapper;
 
     @Override
     @Transactional
@@ -147,7 +150,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public PageResult<Order> getOrderPage(Long userId, ProductQuery query) {
+    public PageResult<Order> getOrderPage(Long userId, OrderQuery query) {
+        // Review-filter mode: completed orders filtered by review completion
+        if (query.getReviewFilter() != null) {
+            return getOrderPageByReviewFilter(userId, query);
+        }
+
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
         if (query.getStatus() != null) {
@@ -163,6 +171,55 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return PageResult.of(result.getRecords(), result.getTotal(), query.getPage(), query.getPageSize());
+    }
+
+    private PageResult<Order> getOrderPageByReviewFilter(Long userId, OrderQuery query) {
+        // Fetch all completed orders for this user
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Order::getUserId, userId);
+        wrapper.eq(Order::getStatus, OrderStatus.COMPLETED);
+        wrapper.orderByDesc(Order::getCreateTime);
+
+        java.util.List<Order> allOrders = orderMapper.selectList(wrapper);
+        for (Order order : allOrders) {
+            fillOrderDetail(order);
+        }
+
+        // Calculate review status for each order
+        String filter = query.getReviewFilter();
+        java.util.List<Order> filtered = new java.util.ArrayList<>();
+        for (Order order : allOrders) {
+            int itemCount = order.getItems() != null ? order.getItems().size() : 0;
+            if (itemCount == 0) continue;
+
+            long reviewCount = reviewMapper.selectCount(
+                    new LambdaQueryWrapper<Review>().eq(Review::getOrderId, order.getId()));
+            order.setReviewCount(reviewCount);
+
+            if ("pending".equals(filter) && reviewCount == 0) {
+                filtered.add(order);
+            } else if ("followup".equals(filter) && reviewCount > 0 && reviewCount < itemCount) {
+                filtered.add(order);
+            } else if ("reviewed".equals(filter) && reviewCount == itemCount) {
+                filtered.add(order);
+            }
+        }
+
+        // Manual pagination
+        int page = query.getPage() != null ? query.getPage() : 1;
+        int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
+        int offset = (page - 1) * pageSize;
+        long total = filtered.size();
+
+        java.util.List<Order> paged = filtered;
+        if (offset < filtered.size()) {
+            int toIndex = Math.min(offset + pageSize, filtered.size());
+            paged = filtered.subList(offset, toIndex);
+        } else {
+            paged = java.util.List.of();
+        }
+
+        return PageResult.of(paged, total, page, pageSize);
     }
 
     @Override

@@ -23,11 +23,13 @@ export interface Order {
   statusText: string
   payTime: string
   createTime: string
+  reviewCount?: number
   items: OrderItem[]
 }
 
 export interface OrderQuery extends PageQuery {
   status?: number
+  reviewFilter?: string  // 'pending' | 'followup' | 'reviewed'
 }
 
 export interface CreateOrderForm {

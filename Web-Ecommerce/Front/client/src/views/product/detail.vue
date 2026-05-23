@@ -88,6 +88,100 @@
       <div class="detail-section__body" v-html="product.description || '<p style=\'text-align:center;color:#999;padding:40px\'>暂无详细描述</p>'" />
     </div>
 
+    <!-- ═══ 评价区域 ═══ -->
+    <div class="review-section" v-if="product">
+      <h2 class="review-section__title">
+        商品评价
+        <span class="review-section__count" v-if="product.reviewCount > 0">（{{ product.reviewCount }}）</span>
+      </h2>
+
+      <!-- 评分概览 + 分布 -->
+      <div class="review-overview" v-if="reviewStats && reviewStats.reviewCount > 0">
+        <div class="review-overview__score">
+          <span class="review-overview__num">{{ reviewStats.avgRating }}</span>
+          <el-rate
+            :model-value="reviewStats.avgRating"
+            disabled
+            :max="5"
+            :allow-half="true"
+            class="review-overview__stars"
+          />
+          <span class="review-overview__total">{{ reviewStats.reviewCount }} 条评价</span>
+        </div>
+        <div class="review-overview__bars">
+          <div
+            v-for="star in 5"
+            :key="star"
+            class="review-bar"
+            @click="ratingFilter = star"
+            :class="{ 'review-bar--active': ratingFilter === star }"
+          >
+            <span class="review-bar__label">{{ star }} 星</span>
+            <div class="review-bar__track">
+              <div
+                class="review-bar__fill"
+                :style="{ width: barPercent(star) + '%' }"
+              />
+            </div>
+            <span class="review-bar__count">{{ reviewStats.distribution[star] || 0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 评价筛选 -->
+      <div class="review-filters" v-if="product.reviewCount > 0">
+        <el-radio-group v-model="ratingFilter" size="small" @change="onFilterChange">
+          <el-radio-button value="all">全部</el-radio-button>
+          <el-radio-button value="latest">最新</el-radio-button>
+          <el-radio-button value="positive">好评</el-radio-button>
+          <el-radio-button value="neutral">中评</el-radio-button>
+          <el-radio-button value="negative">差评</el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <!-- 评价列表 -->
+      <div class="review-list" v-if="reviews.length > 0" v-loading="reviewLoading">
+        <div class="review-item" v-for="r in reviews" :key="r.id">
+          <div class="review-item__avatar">
+            <el-avatar :size="40" :src="r.avatar || undefined">
+              {{ maskName(r.username).charAt(0) }}
+            </el-avatar>
+          </div>
+          <div class="review-item__body">
+            <div class="review-item__header">
+              <span class="review-item__user">{{ maskName(r.username) }}</span>
+              <el-rate :model-value="r.rating" disabled :max="5" size="small" />
+              <span class="review-item__time">{{ formatDate(r.createTime) }}</span>
+            </div>
+            <p class="review-item__content">{{ r.content }}</p>
+            <div class="review-item__images" v-if="r.images?.length">
+              <el-image
+                v-for="(img, i) in r.images"
+                :key="i"
+                :src="img"
+                fit="cover"
+                :preview-src-list="r.images"
+                :initial-index="i"
+                class="review-item__img"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-pagination" v-if="reviewTotal > 0">
+        <el-pagination
+          v-model:current-page="reviewPage"
+          :page-size="reviewPageSize"
+          :total="reviewTotal"
+          layout="total, prev, pager, next"
+          @current-change="loadReviews"
+        />
+      </div>
+
+      <el-empty v-if="!reviewLoading && reviews.length === 0" description="暂无评价" :image-size="80" />
+    </div>
+
     <el-empty v-if="!loading && !product" description="商品不存在">
       <el-button type="primary" @click="$router.push('/products')">浏览其他商品</el-button>
     </el-empty>
@@ -99,10 +193,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Box, TrendCharts, ShoppingCart } from '@element-plus/icons-vue'
-import { getProductById } from '@/api/product'
+import { getProductById, getProductReviews } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
 import { formatPrice } from '@/utils/format'
-import type { Product } from '@shared/types/product'
+import type { Product, Review, ReviewRatingStats } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const route = useRoute()
@@ -116,6 +210,15 @@ const addLoading = ref(false)
 const activeImg = ref('')
 const selectedSkuId = ref(0)
 
+// ── 评价状态 ──
+const reviews = ref<Review[]>([])
+const reviewStats = ref<ReviewRatingStats | null>(null)
+const reviewLoading = ref(false)
+const reviewPage = ref(1)
+const reviewPageSize = ref(10)
+const reviewTotal = ref(0)
+const ratingFilter = ref<string | number>('all')
+
 async function loadProduct() {
   loading.value = true
   try {
@@ -125,6 +228,68 @@ async function loadProduct() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadReviews() {
+  reviewLoading.value = true
+  try {
+    const range = filterToRange(ratingFilter.value)
+    const res = await getProductReviews(
+      Number(route.params.id), reviewPage.value, reviewPageSize.value,
+      range.ratingMin, range.ratingMax
+    )
+    reviews.value = res.data.records.map(r => ({
+      ...r,
+      images: typeof r.images === 'string' ? JSON.parse(r.images || '[]') : (r.images || [])
+    }))
+    reviewTotal.value = res.data.total
+    if (res.data.extra) {
+      reviewStats.value = res.data.extra as unknown as ReviewRatingStats
+    }
+  } finally {
+    reviewLoading.value = false
+  }
+}
+
+function filterToRange(filter: string | number): { ratingMin?: number; ratingMax?: number } {
+  if (typeof filter === 'number') {
+    return { ratingMin: filter, ratingMax: filter }
+  }
+  switch (filter) {
+    case 'positive': return { ratingMin: 4, ratingMax: 5 }
+    case 'neutral':  return { ratingMin: 3, ratingMax: 3 }
+    case 'negative': return { ratingMin: 1, ratingMax: 2 }
+    default:         return {}
+  }
+}
+
+function onFilterChange(val: string | number) {
+  reviewPage.value = 1
+  ratingFilter.value = val
+  loadReviews()
+}
+
+function barPercent(star: number): number {
+  if (!reviewStats.value || reviewStats.value.reviewCount === 0) return 0
+  return ((reviewStats.value.distribution[star] || 0) / reviewStats.value.reviewCount) * 100
+}
+
+function maskName(name: string): string {
+  if (!name || name.length <= 1) return name || '匿名'
+  if (name.length === 2) return name[0] + '*'
+  return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1]
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days === 0) return '今天'
+  if (days === 1) return '昨天'
+  if (days < 30) return `${days} 天前`
+  return dateStr.substring(0, 10)
 }
 
 async function handleAddToCart() {
@@ -142,7 +307,10 @@ function handleBuyNow() {
   router.push('/cart')
 }
 
-onMounted(() => { loadProduct() })
+onMounted(() => {
+  loadProduct()
+  loadReviews()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -329,6 +497,183 @@ onMounted(() => { loadProduct() })
     line-height: 1.8;
     color: #555;
   }
+}
+
+/* ── 评价区域 ── */
+.review-section {
+  background: #fff;
+  padding: 32px;
+  border-radius: 12px;
+  margin-top: 24px;
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #409eff;
+    color: #1a1a1a;
+  }
+
+  &__count {
+    font-size: 14px;
+    font-weight: 400;
+    color: #999;
+  }
+}
+
+.review-overview {
+  display: flex;
+  gap: 48px;
+  padding: 24px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
+
+  &__score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 140px;
+  }
+
+  &__num {
+    font-size: 48px;
+    font-weight: 700;
+    color: #e6423a;
+    line-height: 1;
+    font-family: 'SF Mono', monospace;
+  }
+
+  &__stars {
+    margin: 8px 0;
+  }
+
+  &__total {
+    font-size: 13px;
+    color: #999;
+  }
+
+  &__bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+.review-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background .2s;
+
+  &:hover { background: #f5f7fa; }
+
+  &--active {
+    background: rgba(64,158,255,.08);
+    .review-bar__label { color: #409eff; font-weight: 600; }
+  }
+
+  &__label {
+    width: 36px;
+    color: #666;
+    flex-shrink: 0;
+  }
+
+  &__track {
+    flex: 1;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    background: #f7ba2a;
+    border-radius: 4px;
+    transition: width .4s;
+  }
+
+  &__count {
+    width: 30px;
+    color: #999;
+    text-align: right;
+    flex-shrink: 0;
+  }
+}
+
+.review-filters {
+  margin-bottom: 20px;
+}
+
+.review-list {
+  min-height: 120px;
+}
+
+.review-item {
+  display: flex;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid #f5f5f5;
+
+  &:last-child { border-bottom: none; }
+
+  &__avatar { flex-shrink: 0; }
+
+  &__body { flex: 1; min-width: 0; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__user {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  &__time {
+    font-size: 12px;
+    color: #c0c4cc;
+    margin-left: auto;
+  }
+
+  &__content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #555;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+
+  &__images {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__img {
+    width: 80px;
+    height: 80px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    cursor: pointer;
+  }
+}
+
+.review-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
 }
 
 @media (max-width: 1024px) {

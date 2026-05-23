@@ -19,6 +19,8 @@ export interface Product {
   images: string[]
   status: number
   sales: number
+  avgRating: number
+  reviewCount: number
   createTime: string
 }
 
@@ -60,4 +62,10 @@ export interface Review {
   content: string
   images: string[]
   createTime: string
+}
+
+export interface ReviewRatingStats {
+  avgRating: number
+  reviewCount: number
+  distribution: Record<number, number>
 }

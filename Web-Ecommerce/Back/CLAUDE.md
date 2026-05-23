@@ -47,6 +47,8 @@ Back/src/main/java/com/ecommerce/
 /api/auth/**          → 公开
 /api/products/**      → 公开
 /api/categories/**    → 公开
+/api/upload           → 用户登录（POST 上传文件，用于评价图片等）
+/api/reviews          → 用户登录（POST 发表评价）
 /api/cart/**          → 用户登录
 /api/user/**          → 用户登录
 /api/orders/**        → 用户登录
