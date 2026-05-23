@@ -49,6 +49,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '订单详情', requiresAuth: true },
       },
       {
+        path: 'orders/:orderId/review/:productId',
+        name: 'OrderReview',
+        component: () => import('@/views/order/review.vue'),
+        meta: { title: '发表评价', requiresAuth: true },
+      },
+      {
         path: 'user/profile',
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),

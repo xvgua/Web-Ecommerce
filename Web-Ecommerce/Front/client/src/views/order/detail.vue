@@ -44,6 +44,11 @@
             <div class="product-item__price">{{ formatPrice(item.price) }}</div>
             <div class="product-item__qty">x{{ item.quantity }}</div>
             <div class="product-item__subtotal">{{ formatPrice(item.price * item.quantity) }}</div>
+            <div class="product-item__action" v-if="order.status === 3">
+              <el-button size="small" type="warning" @click.stop="$router.push(`/orders/${order.id}/review/${item.productId}`)">
+                评价
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -162,6 +167,11 @@ onMounted(async () => {
     font-size: 14px;
     font-weight: 600;
     color: #e6423a;
+    text-align: right;
+  }
+
+  &__action {
+    width: 70px;
     text-align: right;
   }
 }

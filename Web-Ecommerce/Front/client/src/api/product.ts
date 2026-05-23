@@ -20,6 +20,16 @@ export function getProductReviews(
   return request.get(`/products/${id}/reviews`, { params: { page, pageSize, ratingMin, ratingMax } })
 }
 
+export function createReview(data: {
+  productId: number
+  orderId: number
+  rating: number
+  content: string
+  images: string[]
+}): Promise<ApiResponse<Review>> {
+  return request.post('/reviews', data)
+}
+
 export function getCategories(): Promise<ApiResponse<Category[]>> {
   return request.get('/categories')
 }
