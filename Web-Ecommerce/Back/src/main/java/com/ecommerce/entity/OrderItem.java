@@ -17,4 +17,7 @@ public class OrderItem {
     private String specDesc;
     private Integer quantity;
     private BigDecimal price;
+
+    @TableField(exist = false)
+    private boolean isReviewed;
 }

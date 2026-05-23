@@ -51,7 +51,7 @@
             <div class="product-item__price">{{ formatPrice(item.price) }}</div>
             <div class="product-item__qty">x{{ item.quantity }}</div>
             <div class="product-item__subtotal">{{ formatPrice(item.price * item.quantity) }}</div>
-            <div class="product-item__action" v-if="order.status === 3">
+            <div class="product-item__action" v-if="order.status === 3 && !item.isReviewed">
               <el-button size="small" type="warning" @click.stop="$router.push(`/orders/${order.id}/review/${item.productId}`)">
                 评价
               </el-button>

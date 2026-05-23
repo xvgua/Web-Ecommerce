@@ -103,6 +103,14 @@
               >
                 立即支付
               </el-button>
+              <el-button
+                size="large"
+                class="pay-summary__cancel-btn"
+                :loading="cancelling"
+                @click="handleCancel"
+              >
+                取消订单
+              </el-button>
             </div>
           </div>
         </div>
@@ -114,9 +122,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, ChatDotSquare, Wallet, CreditCard } from '@element-plus/icons-vue'
-import { getOrderById, payOrder } from '@/api/order'
+import { getOrderById, payOrder, cancelOrder } from '@/api/order'
 import { formatPrice } from '@/utils/format'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -127,6 +135,7 @@ const router = useRouter()
 const order = ref<Order | null>(null)
 const loading = ref(false)
 const paying = ref(false)
+const cancelling = ref(false)
 const selectedMethod = ref('')
 
 const payMethods = [
@@ -161,6 +170,22 @@ async function handlePay() {
     router.push(`/orders/${order.value!.id}`)
   } finally {
     paying.value = false
+  }
+}
+
+async function handleCancel() {
+  try {
+    await ElMessageBox.confirm('确定要取消该订单吗？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  cancelling.value = true
+  try {
+    await cancelOrder(order.value!.id)
+    ElMessage.success('订单已取消')
+    router.push(`/orders/${order.value!.id}`)
+  } finally {
+    cancelling.value = ''
   }
 }
 
@@ -421,6 +446,13 @@ onMounted(() => { loadOrder() })
     margin-top: 16px;
     font-size: 16px;
     height: 44px;
+  }
+
+  &__cancel-btn {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 14px;
+    height: 40px;
   }
 }
 </style>

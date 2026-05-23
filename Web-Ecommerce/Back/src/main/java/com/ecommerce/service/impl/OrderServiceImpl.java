@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -338,6 +339,17 @@ public class OrderServiceImpl implements OrderService {
     private void fillOrderDetail(Order order) {
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
+
+        // Mark items that have been reviewed
+        List<Review> reviews = reviewMapper.selectList(
+                new LambdaQueryWrapper<Review>().eq(Review::getOrderId, order.getId()));
+        Set<Long> reviewedProductIds = reviews.stream()
+                .map(Review::getProductId)
+                .collect(Collectors.toSet());
+        for (OrderItem item : items) {
+            item.setReviewed(reviewedProductIds.contains(item.getProductId()));
+        }
+
         order.setItems(items);
 
         Address address = addressMapper.selectById(order.getAddressId());

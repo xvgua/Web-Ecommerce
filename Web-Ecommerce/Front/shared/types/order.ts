@@ -10,6 +10,7 @@ export interface OrderItem {
   specDesc: string
   quantity: number
   price: number
+  isReviewed?: boolean
 }
 
 export interface Order {
