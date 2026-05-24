@@ -14,6 +14,7 @@
           <div class="profile-nav__item profile-nav__item--active">个人信息</div>
           <div class="profile-nav__item" @click="$router.push('/user/address')">收货地址</div>
           <div class="profile-nav__item" @click="$router.push('/orders')">我的订单</div>
+          <div class="profile-nav__item" @click="$router.push('/user/favorites')">我的收藏</div>
         </div>
       </div>
 

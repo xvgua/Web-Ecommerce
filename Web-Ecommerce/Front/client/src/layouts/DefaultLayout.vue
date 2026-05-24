@@ -63,6 +63,9 @@
                   <el-dropdown-item @click="$router.push('/orders')">
                     <el-icon><Document /></el-icon> 我的订单
                   </el-dropdown-item>
+                  <el-dropdown-item @click="$router.push('/user/favorites')">
+                    <el-icon><Star /></el-icon> 我的收藏
+                  </el-dropdown-item>
                   <el-dropdown-item divided @click="handleLogout">
                     <el-icon><SwitchButton /></el-icon> 退出登录
                   </el-dropdown-item>
@@ -119,7 +122,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Search, ShoppingCart, Clock, Close,
-  User, Document, SwitchButton,
+  User, Document, SwitchButton, Star,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'

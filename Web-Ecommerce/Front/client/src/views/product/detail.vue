@@ -32,6 +32,19 @@
           <span class="detail-info__original" v-if="product.price < 99999">
             {{ formatPrice(product.price * 1.2) }}
           </span>
+          <el-button
+            class="favorite-btn"
+            :class="{ 'favorite-btn--active': favorited }"
+            :loading="favLoading"
+            circle
+            size="large"
+            @click="handleToggleFavorite"
+          >
+            <el-icon size="20">
+              <StarFilled v-if="favorited" />
+              <Star v-else />
+            </el-icon>
+          </el-button>
         </div>
 
         <div class="detail-info__meta">
@@ -198,9 +211,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Box, TrendCharts, ShoppingCart } from '@element-plus/icons-vue'
+import { Box, TrendCharts, ShoppingCart, Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductById, getProductReviews } from '@/api/product'
+import { checkFavorite, addFavorite, removeFavorite } from '@/api/favorite'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
 import { formatPrice } from '@/utils/format'
 import type { Product, Review, ReviewRatingStats } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -208,6 +223,7 @@ import ProductImage from '@/components/common/ProductImage.vue'
 const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
+const userStore = useUserStore()
 
 const product = ref<Product | null>(null)
 const loading = ref(false)
@@ -225,6 +241,40 @@ const reviewPage = ref(1)
 const reviewPageSize = ref(10)
 const reviewTotal = ref(0)
 const ratingFilter = ref<string | number>('all')
+
+// ── 收藏状态 ──
+const favorited = ref(false)
+const favLoading = ref(false)
+
+async function checkFavStatus() {
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await checkFavorite(Number(route.params.id))
+    favorited.value = res.data.favorited
+  } catch { /* ignore */ }
+}
+
+async function handleToggleFavorite() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  favLoading.value = true
+  try {
+    if (favorited.value) {
+      await removeFavorite(Number(route.params.id))
+      favorited.value = false
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite(Number(route.params.id))
+      favorited.value = true
+      ElMessage.success('已收藏')
+    }
+  } finally {
+    favLoading.value = false
+  }
+}
 
 async function loadProduct() {
   loading.value = true
@@ -317,6 +367,7 @@ function handleBuyNow() {
 onMounted(() => {
   loadProduct()
   loadReviews()
+  checkFavStatus()
 })
 </script>
 
@@ -401,6 +452,24 @@ onMounted(() => {
     font-size: 16px;
     color: #c0c4cc;
     text-decoration: line-through;
+  }
+
+  .favorite-btn {
+    margin-left: auto;
+    border: 2px solid #eee;
+    color: #999;
+    transition: all .2s;
+
+    &:hover {
+      border-color: #f0a020;
+      color: #f0a020;
+    }
+
+    &--active {
+      border-color: #f0a020;
+      color: #f0a020;
+      background: rgba(240, 160, 32, .08);
+    }
   }
 
   &__meta {

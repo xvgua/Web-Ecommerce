@@ -50,6 +50,7 @@ Back/src/main/java/com/ecommerce/
 /api/upload           → 用户登录（POST 上传文件，用于评价图片等）
 /api/reviews          → 用户登录（POST 发表评价）
 /api/cart/**          → 用户登录
+/api/favorites/**     → 用户登录
 /api/user/**          → 用户登录
 /api/orders/**        → 用户登录
 /api/admin/auth/**    → 公开
@@ -89,6 +90,57 @@ Back/src/main/java/com/ecommerce/
 
 - 支付操作不是事务（单表单行更新，无需 @Transactional）
 - 取消订单与支付并发时，依赖 MySQL 行锁 + 状态前置校验保证一致性
+
+## 收藏模块
+
+### 收藏接口
+
+| 方法 | 路径 | 鉴权 | 请求体 | 响应 data | 说明 |
+|------|------|------|--------|-----------|------|
+| POST | `/favorites` | 用户 | `{ productId }` | `Favorite` | 添加收藏 |
+| DELETE | `/favorites/:productId` | 用户 | — | `null` | 取消收藏 |
+| GET | `/favorites` | 用户 | — | `Product[]` | 收藏列表 |
+| GET | `/favorites/:productId` | 用户 | — | `{ favorited: boolean }` | 检查是否已收藏 |
+
+### 响应类型
+
+```ts
+// POST /favorites 返回
+interface Favorite {
+  id: number
+  userId: number
+  productId: number
+  createTime: string
+}
+```
+
+### 收藏约束
+
+1. **用户隔离** — 从 `UserContext` 取 userId，用户只能操作自己的收藏
+2. **幂等添加** — 重复收藏同一商品不报错，利用数据库 `UNIQUE KEY uk_user_product (user_id, product_id)` 保证不重复
+3. **取消收藏** — 未收藏的商品调用 DELETE 返回友好提示，不抛异常
+4. **收藏列表** — 返回关联的 `Product` 完整信息（名称、价格、主图、状态），已下架商品仍展示但标记不可购买
+5. **收藏检查** — 提供 `GET /favorites/:productId` 轻量端点，供商品详情页判断单个商品收藏状态，避免加载全量列表
+6. **不涉及分页** — 收藏为个人轻量数据，直接返回全部列表
+7. **日志** — 收藏/取消操作打印 `log.info("Favorite: userId={}, productId={}, action={}")`
+
+### 数据表
+
+```sql
+CREATE TABLE favorite (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT   NOT NULL,
+  product_id  BIGINT   NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_product (user_id, product_id)
+);
+```
+
+### 拦截器配置
+
+```
+/api/favorites/**  → 用户登录
+```
 
 ## 验收检查清单
 
