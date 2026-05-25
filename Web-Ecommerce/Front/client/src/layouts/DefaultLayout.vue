@@ -6,12 +6,18 @@
         <div class="header__bar-inner">
           <div class="header__bar-left">
             <router-link to="/" class="header__logo">
-              &#x1F6D2; 电商平台
+              <svg class="header__logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="10" width="24" height="19" rx="3" fill="currentColor"/>
+                <path d="M10 10V8a6 6 0 0 1 12 0v2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="12" cy="22" r="1.5" fill="#fff"/>
+                <circle cx="20" cy="22" r="1.5" fill="#fff"/>
+              </svg>
+              <span>乐购电商平台</span>
             </router-link>
             <nav class="header__nav">
-              <router-link to="/products" class="header__nav-link">全部商品</router-link>
+              <router-link to="/" class="header__nav-link">首页</router-link>
               <router-link to="/products?sort=newest" class="header__nav-link">新品</router-link>
-              <router-link to="/products?sort=sales_desc" class="header__nav-link">热销</router-link>
+              <router-link to="/products?tag=discount" class="header__nav-link">折扣</router-link>
             </nav>
           </div>
 
@@ -48,6 +54,14 @@
           </div>
 
           <div class="header__bar-right">
+            <router-link to="/user/favorites" class="header__quick-link">
+              <el-icon><Star /></el-icon>
+              <span>我的收藏</span>
+            </router-link>
+            <router-link to="/orders" class="header__quick-link">
+              <el-icon><Document /></el-icon>
+              <span>我的订单</span>
+            </router-link>
             <template v-if="userStore.isLoggedIn">
               <el-dropdown>
                 <span class="header__user">
@@ -62,12 +76,6 @@
                   <el-dropdown-menu>
                     <el-dropdown-item @click="$router.push('/user/profile')">
                       <el-icon><User /></el-icon> 个人中心
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="$router.push('/orders')">
-                      <el-icon><Document /></el-icon> 我的订单
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="$router.push('/user/favorites')">
-                      <el-icon><Star /></el-icon> 我的收藏
                     </el-dropdown-item>
                     <el-dropdown-item divided @click="handleLogout">
                       <el-icon><SwitchButton /></el-icon> 退出登录
@@ -258,11 +266,13 @@ function handleLogout() {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
 
   &-search {
-    flex: 0 0 520px;
+    flex: 0 0 460px;
   }
 
   &-right {
@@ -270,28 +280,46 @@ function handleLogout() {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 6px;
   }
 }
 
 .header__logo {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
   white-space: nowrap;
+
+  span {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #409eff, #667eea);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  &-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--brand-primary);
+    flex-shrink: 0;
+  }
 }
 
 .header__nav {
   display: flex;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 2px;
 
   &-link {
-    padding: 6px 12px;
-    font-size: 14px;
+    padding: 5px 10px;
+    font-size: 13px;
     color: var(--text2);
     border-radius: var(--radius-sm);
+    white-space: nowrap;
     transition: all var(--transition-fast);
 
     &:hover {
@@ -303,6 +331,26 @@ function handleLogout() {
       color: var(--brand-primary);
       font-weight: 600;
     }
+  }
+}
+
+.header__quick-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--brand-primary);
+    background: rgba(var(--brand-primary-rgb), 0.06);
+  }
+
+  .el-icon {
+    font-size: 16px;
   }
 }
 
@@ -333,29 +381,30 @@ function handleLogout() {
 /* ── Search input ── */
 .header-search-input {
   :deep(.el-input__wrapper) {
-    border: 2px solid var(--line-regular);
+    border: 2px solid rgba(var(--brand-primary-rgb), 0.25);
     border-radius: var(--radius-full);
-    background: var(--bg2);
-    box-shadow: none;
-    padding-left: 8px;
+    background: rgba(var(--brand-primary-rgb), 0.04);
+    box-shadow: 0 2px 12px rgba(var(--brand-primary-rgb), 0.08);
+    padding-left: 12px;
+    height: 44px;
     transition: all var(--transition-normal);
 
     &:hover {
-      border-color: var(--brand-primary-hover);
-      background: #ecf5ff;
-      box-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.08);
+      border-color: rgba(var(--brand-primary-rgb), 0.45);
+      background: rgba(var(--brand-primary-rgb), 0.07);
+      box-shadow: 0 4px 18px rgba(var(--brand-primary-rgb), 0.14);
     }
 
     &.is-focus {
       border-color: var(--brand-primary);
       background: #fff;
-      box-shadow: 0 4px 16px rgba(var(--brand-primary-rgb), 0.15);
+      box-shadow: 0 6px 24px rgba(var(--brand-primary-rgb), 0.22);
     }
   }
 
   :deep(.el-input__inner) {
     color: var(--text2);
-    font-size: 15px;
+    font-size: 16px;
 
     &::placeholder {
       color: var(--text4);
@@ -365,7 +414,7 @@ function handleLogout() {
 
   :deep(.el-input__prefix) {
     color: var(--brand-primary);
-    font-size: 18px;
+    font-size: 20px;
   }
 }
 
@@ -417,33 +466,40 @@ function handleLogout() {
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .header__bar {
-    &-search {
-      flex: 0 0 360px;
-    }
+    &-left { gap: 16px; }
+    &-search { flex: 0 0 320px; }
   }
+
+  .header__nav-link { padding: 4px 8px; font-size: 13px; }
+  .header__quick-link span { display: none; }
 }
 
 @media (max-width: 768px) {
   .header__bar {
     &-inner {
-      gap: 10px;
+      gap: 8px;
       padding: 0 12px;
       height: 56px;
     }
 
+    &-left { gap: 8px; }
     &-search {
       flex: 1 1 auto;
-      max-width: 260px;
+      max-width: 220px;
     }
   }
 
   .header__logo {
-    font-size: 16px;
+    &-icon { width: 24px; height: 24px; }
+
+    span {
+      font-size: 15px;
+      letter-spacing: 0;
+    }
   }
 
-  .header__nav {
-    display: none;
-  }
+  .header__nav { display: none; }
+  .header__quick-link { padding: 4px 6px; font-size: 12px; }
 
   .main {
     padding: 12px;
