@@ -1,87 +1,92 @@
 <template>
   <div class="default-layout">
     <header class="header">
-      <div class="header__inner">
-        <router-link to="/" class="header__logo">
-          &#x1F6D2; 电商平台
-        </router-link>
+      <!-- Row 1: Main bar -->
+      <div class="header__bar">
+        <div class="header__bar-inner">
+          <div class="header__bar-left">
+            <router-link to="/" class="header__logo">
+              &#x1F6D2; 电商平台
+            </router-link>
+            <nav class="header__nav">
+              <router-link to="/products" class="header__nav-link">全部商品</router-link>
+              <router-link to="/products?sort=newest" class="header__nav-link">新品</router-link>
+              <router-link to="/products?sort=sales_desc" class="header__nav-link">热销</router-link>
+            </nav>
+          </div>
 
-        <div class="header__nav">
-          <router-link to="/products" class="header__nav-link">全部商品</router-link>
-          <router-link to="/products?sort=newest" class="header__nav-link">新品</router-link>
-          <router-link to="/products?sort=sales_desc" class="header__nav-link">热销</router-link>
-        </div>
-
-        <div class="header__search">
-          <el-autocomplete
-            v-model="keyword"
-            value-key="keyword"
-            :fetch-suggestions="fetchSuggestions"
-            :trigger-on-focus="true"
-            placeholder="搜索你想要的商品..."
-            size="large"
-            clearable
-            maxlength="100"
-            @select="handleSelect"
-            @keyup.enter="handleSearch"
-            @clear="handleSearch"
-            popper-class="search-history-popper"
-            class="header-search-input"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-            <template #default="{ item }">
-              <div v-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
-                清除全部历史
-              </div>
-              <div v-else class="history-item">
-                <el-icon class="history-item__clock"><Clock /></el-icon>
-                <span class="history-item__text">{{ item.keyword }}</span>
-                <el-icon class="history-item__del" @click.stop="handleRemoveHistory(item.keyword)"><Close /></el-icon>
-              </div>
-            </template>
-          </el-autocomplete>
-        </div>
-
-        <div class="header__actions">
-          <template v-if="userStore.isLoggedIn">
-            <el-dropdown>
-              <span class="header__user">
-                <el-avatar :size="32">
-                  <span>{{ (userStore.user?.nickname || userStore.user?.username)?.[0]?.toUpperCase() }}</span>
-                </el-avatar>
-                <span class="header__user-name">
-                  {{ userStore.user?.nickname || userStore.user?.username }}
-                </span>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item @click="$router.push('/user/profile')">
-                    <el-icon><User /></el-icon> 个人中心
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="$router.push('/orders')">
-                    <el-icon><Document /></el-icon> 我的订单
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="$router.push('/user/favorites')">
-                    <el-icon><Star /></el-icon> 我的收藏
-                  </el-dropdown-item>
-                  <el-dropdown-item divided @click="handleLogout">
-                    <el-icon><SwitchButton /></el-icon> 退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
+          <div class="header__bar-search">
+            <el-autocomplete
+              v-model="keyword"
+              value-key="keyword"
+              :fetch-suggestions="fetchSuggestions"
+              :trigger-on-focus="true"
+              placeholder="搜索你想要的商品..."
+              size="large"
+              clearable
+              maxlength="100"
+              @select="handleSelect"
+              @keyup.enter="handleSearch"
+              @clear="handleSearch"
+              popper-class="search-history-popper"
+              class="header-search-input"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
               </template>
-            </el-dropdown>
-          </template>
-          <template v-else>
-            <el-button text @click="$router.push('/login')">登录</el-button>
-            <el-button type="primary" size="small" @click="$router.push('/register')">注册</el-button>
-          </template>
-          <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
-            <el-button circle :icon="ShoppingCart" class="cart-btn" @click="$router.push('/cart')" />
-          </el-badge>
+              <template #default="{ item }">
+                <div v-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
+                  清除全部历史
+                </div>
+                <div v-else class="history-item">
+                  <el-icon class="history-item__clock"><Clock /></el-icon>
+                  <span class="history-item__text">{{ item.keyword }}</span>
+                  <el-icon class="history-item__del" @click.stop="handleRemoveHistory(item.keyword)"><Close /></el-icon>
+                </div>
+              </template>
+            </el-autocomplete>
+          </div>
+
+          <div class="header__bar-right">
+            <template v-if="userStore.isLoggedIn">
+              <el-dropdown>
+                <span class="header__user">
+                  <el-avatar :size="32">
+                    <span>{{ (userStore.user?.nickname || userStore.user?.username)?.[0]?.toUpperCase() }}</span>
+                  </el-avatar>
+                  <span class="header__user-name">
+                    {{ userStore.user?.nickname || userStore.user?.username }}
+                  </span>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="$router.push('/user/profile')">
+                      <el-icon><User /></el-icon> 个人中心
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/orders')">
+                      <el-icon><Document /></el-icon> 我的订单
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/user/favorites')">
+                      <el-icon><Star /></el-icon> 我的收藏
+                    </el-dropdown-item>
+                    <el-dropdown-item divided @click="handleLogout">
+                      <el-icon><SwitchButton /></el-icon> 退出登录
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+            <template v-else>
+              <el-button text @click="$router.push('/login')">登录</el-button>
+              <el-button type="primary" size="small" @click="$router.push('/register')">注册</el-button>
+            </template>
+            <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
+              <el-button circle :icon="ShoppingCart" class="cart-btn" @click="$router.push('/cart')" />
+            </el-badge>
+          </div>
         </div>
       </div>
+
     </header>
 
     <main class="main">
@@ -172,14 +177,59 @@ function handleLogout() {
   ElMessage.success('已退出登录')
   router.push('/')
 }
+
 </script>
+
+<style lang="scss">
+/* ═══════════════════════════════════════════════════════════
+   CSS Design Tokens — global via :root (unscoped so variables
+   cascade to all components)
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --brand-primary: #409eff;
+  --brand-primary-rgb: 64, 158, 255;
+  --brand-primary-hover: #66b1ff;
+  --brand-primary-active: #337ecc;
+
+  /* Text */
+  --text1: #1d1d1f;
+  --text2: #555;
+  --text3: #909399;
+  --text4: #c0c4cc;
+
+  /* Background */
+  --bg1: #fff;
+  --bg2: #f5f7fa;
+  --bg3: #eef1f6;
+
+  /* Border */
+  --line-light: #e8e8e8;
+  --line-regular: #dcdfe6;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-full: 24px;
+
+  /* Transition */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
+}
+</style>
 
 <style lang="scss" scoped>
 .default-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: var(--bg2);
 }
 
 /* ── Header ── */
@@ -188,120 +238,133 @@ function handleLogout() {
   top: 0;
   z-index: 100;
   background: #fff;
-  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-md);
+}
 
-  &__inner {
-    max-width: 1200px;
+/* ── Row 1: Main bar (64px) ── */
+.header__bar {
+  &-inner {
+    max-width: 1280px;
     margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 20px;
-    height: 60px;
+    height: 64px;
     padding: 0 24px;
   }
 
-  &__logo {
-    font-size: 20px;
-    font-weight: 700;
-    color: #409eff;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  &__nav {
-    display: flex;
-    gap: 4px;
-
-    &-link {
-      padding: 6px 12px;
-      font-size: 14px;
-      color: #555;
-      border-radius: 6px;
-      transition: all .15s;
-
-      &:hover {
-        color: #409eff;
-        background: rgba(64,158,255,.06);
-      }
-
-      &.router-link-exact-active {
-        color: #409eff;
-        font-weight: 600;
-      }
-    }
-  }
-
-  &__search {
+  &-left {
     flex: 1;
-    max-width: 480px;
-  }
-
-  &__actions {
     display: flex;
     align-items: center;
+    gap: 24px;
+  }
+
+  &-search {
+    flex: 0 0 520px;
+  }
+
+  &-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 10px;
-    margin-left: auto;
   }
+}
 
-  &__user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
+.header__logo {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--brand-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
 
-    &-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: #333;
+.header__nav {
+  display: flex;
+  gap: 4px;
+
+  &-link {
+    padding: 6px 12px;
+    font-size: 14px;
+    color: var(--text2);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      color: var(--brand-primary);
+      background: rgba(var(--brand-primary-rgb), 0.06);
     }
+
+    &.router-link-exact-active {
+      color: var(--brand-primary);
+      font-weight: 600;
+    }
+  }
+}
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  &-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text1);
   }
 }
 
 .cart-btn {
   font-size: 18px;
-  border: 1px solid #e0e0e0;
-  transition: all .15s;
+  border: 1px solid var(--line-light);
+  transition: all var(--transition-fast);
 
   &:hover {
-    color: #409eff;
-    border-color: #409eff;
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
   }
 }
 
+/* ── Search input ── */
 .header-search-input {
   :deep(.el-input__wrapper) {
-    border: 2px solid #409eff;
-    border-radius: 24px;
-    background: #f0f7ff;
-    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+    border: 2px solid var(--line-regular);
+    border-radius: var(--radius-full);
+    background: var(--bg2);
+    box-shadow: none;
     padding-left: 8px;
-    transition: all 0.25s ease;
+    transition: all var(--transition-normal);
 
     &:hover {
-      border-color: #66b1ff;
-      box-shadow: 0 4px 14px rgba(64, 158, 255, 0.2);
+      border-color: var(--brand-primary-hover);
       background: #ecf5ff;
+      box-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.08);
     }
 
     &.is-focus {
-      border-color: #337ecc;
-      box-shadow: 0 4px 18px rgba(64, 158, 255, 0.28);
+      border-color: var(--brand-primary);
       background: #fff;
+      box-shadow: 0 4px 16px rgba(var(--brand-primary-rgb), 0.15);
     }
   }
 
   :deep(.el-input__inner) {
-    color: #333;
+    color: var(--text2);
     font-size: 15px;
 
     &::placeholder {
-      color: #a0c4e8;
+      color: var(--text4);
       font-weight: 400;
     }
   }
 
   :deep(.el-input__prefix) {
-    color: #409eff;
+    color: var(--brand-primary);
     font-size: 18px;
   }
 }
@@ -310,7 +373,6 @@ function handleLogout() {
 .main {
   flex: 1;
   padding: 24px;
-  min-height: calc(100vh - 60px - 200px);
 }
 
 /* ── Footer ── */
@@ -339,7 +401,7 @@ function handleLogout() {
       color: #999;
       font-size: 13px;
       margin-bottom: 8px;
-      transition: color .15s;
+      transition: color var(--transition-fast);
 
       &:hover { color: #fff; }
     }
@@ -352,15 +414,40 @@ function handleLogout() {
   }
 }
 
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .header__bar {
+    &-search {
+      flex: 0 0 360px;
+    }
+  }
+}
+
 @media (max-width: 768px) {
-  .header {
-    &__inner { gap: 10px; padding: 0 12px; }
-    &__nav { display: none; }
-    &__search { max-width: 260px; }
-    &__logo { font-size: 16px; }
+  .header__bar {
+    &-inner {
+      gap: 10px;
+      padding: 0 12px;
+      height: 56px;
+    }
+
+    &-search {
+      flex: 1 1 auto;
+      max-width: 260px;
+    }
   }
 
-  .main { padding: 12px; }
+  .header__logo {
+    font-size: 16px;
+  }
+
+  .header__nav {
+    display: none;
+  }
+
+  .main {
+    padding: 12px;
+  }
 
   .footer__inner {
     grid-template-columns: repeat(2, 1fr);

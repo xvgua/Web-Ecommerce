@@ -1,23 +1,9 @@
 <template>
   <div class="home">
-    <!-- Category Nav + Banner -->
+    <!-- Full-width Banner -->
     <section class="hero">
-      <div class="hero__categories">
-        <div
-          v-for="cat in categories"
-          :key="cat.id"
-          class="hero__cat-item"
-          @click="$router.push(`/products?categoryId=${cat.id}`)"
-        >
-          <span class="hero__cat-icon">
-            <component :is="catIcons[cat.id % catIcons.length]" />
-          </span>
-          <span class="hero__cat-name">{{ cat.name }}</span>
-          <el-icon class="hero__cat-arrow"><ArrowRight /></el-icon>
-        </div>
-      </div>
       <div class="hero__banner">
-        <el-carousel height="400px" :interval="5000" arrow="always">
+        <el-carousel height="360px" :interval="5000" arrow="always">
           <el-carousel-item v-for="(b, i) in banners" :key="i">
             <div class="hero__slide" :style="{ background: b.bg }">
               <div class="hero__slide-text">
@@ -37,6 +23,26 @@
             </div>
           </el-carousel-item>
         </el-carousel>
+      </div>
+    </section>
+
+    <!-- Category Card Floor -->
+    <section v-if="categories.length" class="category-floor">
+      <div class="category-grid">
+        <div
+          v-for="cat in categories"
+          :key="cat.id"
+          class="category-card"
+          @click="$router.push(`/products?categoryId=${cat.id}`)"
+        >
+          <span class="category-card__icon">
+            <component :is="catIcons[cat.id % catIcons.length]" />
+          </span>
+          <span class="category-card__name">{{ cat.name }}</span>
+          <span class="category-card__hint">
+            {{ cat.productCount != null ? `${cat.productCount}件商品` : '去看看' }}
+          </span>
+        </div>
       </div>
     </section>
 
@@ -183,62 +189,17 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .home {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
-/* ── Hero ── */
+/* ── Hero Banner ── */
 .hero {
-  display: flex;
-  gap: 16px;
   margin-bottom: 32px;
-  border-radius: 12px;
-  overflow: hidden;
-
-  &__categories {
-    width: 240px;
-    flex-shrink: 0;
-    background: #fff;
-    border-radius: 12px;
-    padding: 8px 0;
-    box-shadow: 0 1px 4px rgba(0,0,0,.04);
-  }
-
-  &__cat-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background .15s;
-    font-size: 14px;
-
-    &:hover {
-      background: #f5f7fa;
-      color: #409eff;
-    }
-  }
-
-  &__cat-icon {
-    font-size: 18px;
-    color: #909399;
-    display: flex;
-  }
-
-  &__cat-name {
-    flex: 1;
-  }
-
-  &__cat-arrow {
-    color: #c0c4cc;
-    font-size: 12px;
-  }
 
   &__banner {
-    flex: 1;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    min-width: 0;
   }
 
   &__slide {
@@ -246,7 +207,7 @@ onMounted(async () => {
     align-items: center;
     justify-content: space-between;
     height: 100%;
-    padding: 0 64px;
+    padding: 0 80px;
     color: #fff;
   }
 
@@ -264,8 +225,54 @@ onMounted(async () => {
   }
 
   &__slide-art {
-    width: 180px;
+    width: 200px;
     flex-shrink: 0;
+  }
+}
+
+/* ── Category Card Floor ── */
+.category-floor {
+  margin-bottom: 40px;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.category-card {
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 28px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &__icon {
+    font-size: 36px;
+    color: var(--brand-primary);
+    display: flex;
+  }
+
+  &__name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text1);
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: var(--text3);
   }
 }
 
@@ -278,17 +285,17 @@ onMounted(async () => {
 
   .feature-item {
     background: #fff;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 20px;
     display: flex;
     align-items: center;
     gap: 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    box-shadow: var(--shadow-sm);
 
-    .el-icon { color: #409eff; flex-shrink: 0; }
+    .el-icon { color: var(--brand-primary); flex-shrink: 0; }
 
     strong { font-size: 15px; display: block; margin-bottom: 4px; }
-    p     { font-size: 12px; color: #999; margin: 0; }
+    p     { font-size: 12px; color: var(--text3); margin: 0; }
   }
 }
 
@@ -322,11 +329,11 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #909399;
+    color: var(--text3);
     font-size: 14px;
-    transition: color .15s;
+    transition: color var(--transition-fast);
 
-    &:hover { color: #409eff; }
+    &:hover { color: var(--brand-primary); }
   }
 }
 
@@ -335,19 +342,12 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 /* ── Promo ── */
 .promo {
   margin-bottom: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
 
@@ -365,34 +365,27 @@ onMounted(async () => {
 }
 
 /* ── Responsive ── */
+@media (max-width: 1440px) {
+  .category-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 @media (max-width: 1024px) {
-  .hero {
-    flex-direction: column;
+  .hero__slide {
+    padding: 0 32px;
 
-    &__categories {
-      display: flex;
-      width: 100%;
-      overflow-x: auto;
-      padding: 8px;
-      gap: 4px;
+    &-text h2 { font-size: 26px; }
+    &-art { width: 140px; }
+  }
 
-      &::-webkit-scrollbar { display: none; }
-    }
+  .category-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
 
-    &__cat-item {
-      white-space: nowrap;
-      flex-shrink: 0;
-      padding: 8px 14px;
-      border-radius: 20px;
-      background: #f5f7fa;
-    }
-
-    &__cat-arrow { display: none; }
-
-    &__banner { min-height: 240px; }
-
-    &__slide { padding: 0 32px; }
-    &__slide-text h2 { font-size: 26px; }
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .features {
@@ -401,8 +394,39 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .hero__slide-art { display: none; }
-  .hero__slide-text h2 { font-size: 22px; }
+  .hero {
+    margin-bottom: 20px;
+
+    &__banner {
+      border-radius: 8px;
+    }
+
+    &__slide {
+      padding: 0 24px;
+
+      &-text h2 { font-size: 22px; }
+      &-art { display: none; }
+    }
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .category-card {
+    padding: 20px 12px 16px;
+    gap: 6px;
+
+    &__icon { font-size: 28px; }
+    &__name { font-size: 14px; }
+    &__hint { font-size: 11px; }
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 
   .features {
     grid-template-columns: 1fr;

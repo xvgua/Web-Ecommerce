@@ -43,14 +43,14 @@ function goDetail() {
 <style lang="scss" scoped>
 .product-card {
   background: #fff;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;
-  transition: transform .25s, box-shadow .25s;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 
   &:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 
     .product-card__image :deep(.product-placeholder) {
       transform: scale(1.06);
@@ -80,7 +80,7 @@ function goDetail() {
     font-size: 11px;
     font-weight: 700;
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     letter-spacing: .5px;
   }
 
@@ -91,7 +91,7 @@ function goDetail() {
   &__name {
     font-size: 14px;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 1.5;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
