@@ -30,9 +30,10 @@
     <section v-if="categories.length" class="category-floor">
       <div class="category-grid">
         <div
-          v-for="cat in categories"
+          v-for="(cat, i) in categories"
           :key="cat.id"
           class="category-card"
+          :style="{ '--accent': accentColors[i % accentColors.length] }"
           @click="$router.push(`/products?categoryId=${cat.id}`)"
         >
           <span class="category-card__icon">
@@ -136,6 +137,12 @@ import type { Product, Category } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
 
 const catIcons = [Goods, ShoppingBag, Star, Present]
+
+const accentColors = [
+  '#667eea', '#f5576c', '#4facfe', '#f093fb',
+  '#fa709a', '#30cfd0', '#a18cd1', '#ff6f3f',
+  '#43e97b', '#ffc837',
+]
 
 const categories = ref<Category[]>([])
 const hotProducts = ref<Product[]>([])
@@ -242,32 +249,56 @@ onMounted(async () => {
 }
 
 .category-card {
+  --accent: #409eff;
   background: #fff;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 28px 16px 20px;
+  padding: 32px 16px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
   transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-6px);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+
+    .category-card__icon {
+      transform: scale(1.12);
+    }
   }
 
   &__icon {
-    font-size: 36px;
-    color: var(--brand-primary);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
     display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #fff;
+    transition: transform var(--transition-normal);
   }
 
   &__name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text1);
+    margin-top: 2px;
   }
 
   &__hint {
@@ -415,11 +446,16 @@ onMounted(async () => {
   }
 
   .category-card {
-    padding: 20px 12px 16px;
+    padding: 22px 10px 16px;
     gap: 6px;
 
-    &__icon { font-size: 28px; }
-    &__name { font-size: 14px; }
+    &__icon {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+    }
+
+    &__name { font-size: 13px; }
     &__hint { font-size: 11px; }
   }
 
