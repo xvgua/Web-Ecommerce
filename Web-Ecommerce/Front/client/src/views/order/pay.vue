@@ -93,24 +93,26 @@
                 <span class="pay-summary__price">{{ formatPrice(order.totalAmount) }}</span>
               </div>
 
-              <el-button
-                type="danger"
-                size="large"
-                class="pay-summary__btn"
-                :loading="paying"
-                :disabled="!selectedMethod"
-                @click="handlePay"
-              >
-                立即支付
-              </el-button>
-              <el-button
-                size="large"
-                class="pay-summary__cancel-btn"
-                :loading="cancelling"
-                @click="handleCancel"
-              >
-                取消订单
-              </el-button>
+              <div class="pay-summary__actions">
+                <el-button
+                  type="danger"
+                  size="large"
+                  class="pay-summary__btn"
+                  :loading="paying"
+                  :disabled="!selectedMethod"
+                  @click="handlePay"
+                >
+                  立即支付
+                </el-button>
+                <el-button
+                  size="large"
+                  class="pay-summary__cancel-btn"
+                  :loading="cancelling"
+                  @click="handleCancel"
+                >
+                  取消订单
+                </el-button>
+              </div>
             </div>
           </div>
         </div>
@@ -136,7 +138,7 @@ const order = ref<Order | null>(null)
 const loading = ref(false)
 const paying = ref(false)
 const cancelling = ref(false)
-const selectedMethod = ref('')
+const selectedMethod = ref('wechat')
 
 const payMethods = [
   { value: 'wechat', name: '微信支付', desc: '推荐安装微信用户使用' },
@@ -441,18 +443,24 @@ onMounted(() => { loadOrder() })
     line-height: 1.5;
   }
 
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
   &__btn {
     width: 100%;
-    margin-top: 16px;
     font-size: 16px;
     height: 44px;
   }
 
   &__cancel-btn {
     width: 100%;
-    margin-top: 10px;
-    font-size: 14px;
-    height: 40px;
+    font-size: 16px;
+    height: 44px;
+    margin-left: 0;
   }
 }
 </style>
