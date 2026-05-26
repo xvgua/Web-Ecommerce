@@ -9,10 +9,14 @@
         <div class="pay-layout">
           <!-- 左侧：订单信息 -->
           <div class="pay-main">
-            <!-- 支付状态提示 -->
-            <div class="pay-tip" v-if="order.status === 0">
+            <!-- 支付倒计时 -->
+            <div class="pay-tip" v-if="order.status === 0 && remainingMs > 0">
               <el-icon :size="18"><Clock /></el-icon>
-              <span>订单将在提交后<strong>30分钟</strong>内自动取消，请尽快完成支付</span>
+              <span>剩余支付时间 <strong class="pay-countdown">{{ countdown }}</strong></span>
+            </div>
+            <div class="pay-tip pay-tip--expired" v-else-if="order.status === 0 && expired">
+              <el-icon :size="18"><WarningFilled /></el-icon>
+              <span>支付超时，订单已取消，商品已退回购物车</span>
             </div>
 
             <div class="pay-block">
@@ -122,11 +126,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, ChatDotSquare, Wallet, CreditCard } from '@element-plus/icons-vue'
+import { Clock, WarningFilled, ChatDotSquare, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { getOrderById, payOrder, cancelOrder } from '@/api/order'
+import { addToCart } from '@/api/cart'
 import { formatPrice } from '@/utils/format'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -140,6 +145,49 @@ const paying = ref(false)
 const cancelling = ref(false)
 const selectedMethod = ref('wechat')
 
+const PAY_TIMEOUT_MS = 30 * 60 * 1000
+const remainingMs = ref(0)
+const expired = ref(false)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+const countdown = computed(() => {
+  const ms = remainingMs.value
+  if (ms <= 0) return '00:00:00'
+  const totalSec = Math.floor(ms / 1000)
+  const min = Math.floor(totalSec / 60)
+  const sec = totalSec % 60
+  const cs = Math.floor((ms % 1000) / 10)
+  return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(cs).padStart(2, '0')}`
+})
+
+function startCountdown(createTime: string) {
+  const deadline = new Date(createTime).getTime() + PAY_TIMEOUT_MS
+  countdownTimer = setInterval(() => {
+    remainingMs.value = Math.max(0, deadline - Date.now())
+    if (remainingMs.value <= 0 && countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+      handleTimeout()
+    }
+  }, 10)
+}
+
+async function handleTimeout() {
+  if (expired.value) return
+  expired.value = true
+  try {
+    await cancelOrder(order.value!.id)
+  } catch { /* 订单可能已被取消 */ }
+  // 将订单商品重新加回购物车
+  if (order.value?.items) {
+    for (const item of order.value.items) {
+      try {
+        await addToCart({ productId: item.productId, skuId: item.skuId ?? 0, quantity: item.quantity })
+      } catch { /* 个别商品添加失败不阻塞 */ }
+    }
+  }
+}
+
 const payMethods = [
   { value: 'wechat', name: '微信支付', desc: '推荐安装微信用户使用' },
   { value: 'alipay', name: '支付宝', desc: '推荐安装支付宝用户使用' },
@@ -151,7 +199,9 @@ async function loadOrder() {
   try {
     const res = await getOrderById(Number(route.params.id))
     order.value = res.data
-    if (order.value.status !== 0) {
+    if (order.value.status === 0) {
+      startCountdown(order.value.createTime)
+    } else {
       ElMessage.warning('该订单无需支付')
       router.replace(`/orders/${order.value.id}`)
     }
@@ -192,6 +242,13 @@ async function handleCancel() {
 }
 
 onMounted(() => { loadOrder() })
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -243,7 +300,18 @@ onMounted(() => { loadOrder() })
   color: #e6423a;
   margin-bottom: 16px;
 
-  strong { font-weight: 700; }
+  &--expired {
+    background: #fef7e0;
+    border-color: #fae2b0;
+    color: #e6a23c;
+  }
+}
+
+.pay-countdown {
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 // ── 通用卡片块 ──
