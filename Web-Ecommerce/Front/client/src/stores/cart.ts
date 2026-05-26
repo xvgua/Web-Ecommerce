@@ -16,7 +16,7 @@ export const useCartStore = defineStore('cart', () => {
 
   async function fetchCart() {
     const res = await getCartList()
-    items.value = res.data.map((item) => ({ ...item, checked: true }))
+    items.value = res.data.map((item) => ({ ...item, checked: !!item.checked }))
   }
 
   async function addItem(productId: number, skuId: number, quantity: number) {

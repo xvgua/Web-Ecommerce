@@ -2,53 +2,55 @@
   <div class="favorites-page">
     <h1 class="page-title">我的收藏</h1>
 
-    <div class="favorites-list" v-if="products.length > 0" v-loading="loading">
-      <div
-        v-for="product in products"
-        :key="product.id"
-        class="favorite-item"
-      >
-        <div class="favorite-item__image" @click="goDetail(product.id)">
-          <ProductImage
-            :src="product.mainImage"
-            :seed="product.name + product.id"
-            fit="cover"
-          />
-        </div>
-        <div class="favorite-item__info" @click="goDetail(product.id)">
-          <h3 class="favorite-item__name">{{ product.name }}</h3>
-          <div class="favorite-item__meta">
-            <span class="favorite-item__price">{{ formatPrice(product.price) }}</span>
-            <span class="favorite-item__stock" v-if="product.status === 1">库存 {{ product.stock }} 件</span>
-            <el-tag type="info" size="small" v-else>已下架</el-tag>
+    <div class="favorites-container" v-loading="loading">
+      <template v-if="products.length > 0">
+        <div
+          v-for="product in products"
+          :key="product.id"
+          class="favorite-card"
+        >
+          <div class="favorite-card__body">
+            <div class="favorite-card__image" @click="goDetail(product.id)">
+              <ProductImage
+                :src="product.mainImage"
+                :seed="product.name + product.id"
+                fit="cover"
+              />
+            </div>
+            <div class="favorite-card__info" @click="goDetail(product.id)">
+              <h3 class="favorite-card__name">{{ product.name }}</h3>
+              <div class="favorite-card__meta">
+                <span class="favorite-card__price">{{ formatPrice(product.price) }}</span>
+                <span class="favorite-card__stock" v-if="product.status === 1">库存 {{ product.stock }} 件</span>
+                <el-tag type="info" size="small" v-else>已下架</el-tag>
+              </div>
+            </div>
+            <div class="favorite-card__actions">
+              <el-button
+                type="primary"
+                size="small"
+                :disabled="product.status !== 1"
+                :loading="addLoadingMap[product.id]"
+                @click.stop="handleAddToCart(product)"
+              >
+                <el-icon><ShoppingCart /></el-icon>
+                {{ product.status === 1 ? '加入购物车' : '已下架' }}
+              </el-button>
+              <el-button
+                size="small"
+                :loading="removeLoadingMap[product.id]"
+                @click.stop="handleRemove(product)"
+              >
+                取消收藏
+              </el-button>
+            </div>
           </div>
         </div>
-        <div class="favorite-item__actions">
-          <el-button
-            type="primary"
-            size="default"
-            :disabled="product.status !== 1"
-            :loading="addLoadingMap[product.id]"
-            @click.stop="handleAddToCart(product)"
-          >
-            <el-icon><ShoppingCart /></el-icon>
-            {{ product.status === 1 ? '加入购物车' : '已下架' }}
-          </el-button>
-          <el-button
-            type="default"
-            size="default"
-            :loading="removeLoadingMap[product.id]"
-            @click.stop="handleRemove(product)"
-          >
-            取消收藏
-          </el-button>
-        </div>
-      </div>
+      </template>
+      <el-empty v-else description="暂无收藏，去逛逛吧">
+        <el-button type="primary" @click="$router.push('/products')">浏览商品</el-button>
+      </el-empty>
     </div>
-
-    <el-empty v-if="!loading && products.length === 0" description="暂无收藏，去逛逛吧">
-      <el-button type="primary" @click="$router.push('/products')">浏览商品</el-button>
-    </el-empty>
   </div>
 </template>
 
@@ -122,34 +124,47 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .favorites-page {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.favorite-item {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.favorites-container {
   background: #fff;
-  padding: 20px 24px;
   border-radius: 12px;
-  margin-bottom: 12px;
+  padding: 20px;
+}
+
+.favorite-card {
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
   transition: box-shadow .2s;
 
+  & + & {
+    margin-top: 16px;
+  }
+
   &:hover {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .06);
+  }
+
+  &__body {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
   }
 
   &__image {
-    width: 100px;
-    height: 100px;
-    border-radius: 8px;
+    width: 80px;
+    height: 80px;
+    border-radius: 6px;
     overflow: hidden;
     cursor: pointer;
     flex-shrink: 0;
@@ -162,10 +177,10 @@ onMounted(() => {
   }
 
   &__name {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     color: #1a1a1a;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -178,8 +193,8 @@ onMounted(() => {
   }
 
   &__price {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: #e6423a;
   }
 
@@ -190,21 +205,22 @@ onMounted(() => {
 
   &__actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-shrink: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .favorite-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+  .favorite-card {
+    &__body {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
 
     &__image {
       width: 100%;
-      height: 200px;
+      height: 180px;
     }
 
     &__actions {

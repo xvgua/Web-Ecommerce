@@ -36,7 +36,7 @@ export interface ProductSku {
 
 export interface ProductQuery extends PageQuery {
   categoryId?: number
-  sort?: 'price_asc' | 'price_desc' | 'sales_desc' | 'newest'
+  sort?: 'price_asc' | 'price_desc' | 'sales_desc' | 'newest' | 'rating_desc' | 'rating_asc'
   minPrice?: number
   maxPrice?: number
 }

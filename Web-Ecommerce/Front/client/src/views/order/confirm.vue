@@ -3,7 +3,10 @@
     <h1>确认订单</h1>
 
     <div class="confirm-section">
-      <h2>收货地址</h2>
+      <div class="section-header">
+        <h2>收货地址</h2>
+        <el-button size="small" @click="handleAddAddress">新增地址</el-button>
+      </div>
       <div class="address-list" v-if="addresses.length">
         <div
           v-for="addr in addresses"
@@ -21,10 +24,34 @@
           </div>
         </div>
       </div>
-      <el-empty v-else description="暂无收货地址">
-        <el-button type="primary" @click="$router.push('/user/address')">添加地址</el-button>
-      </el-empty>
+      <el-empty v-else description="暂无收货地址，请添加" />
     </div>
+
+    <el-dialog v-model="addressDialogVisible" title="新增地址" width="500px">
+      <el-form ref="addressFormRef" :model="addressForm" :rules="addressRules" label-width="80px">
+        <el-form-item label="收货人" prop="name">
+          <el-input v-model="addressForm.name" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="addressForm.phone" />
+        </el-form-item>
+        <el-form-item label="省市区" prop="district">
+          <el-input v-model="addressForm.province" placeholder="省" style="width: 30%" />
+          <el-input v-model="addressForm.city" placeholder="市" style="width: 30%; margin: 0 8px" />
+          <el-input v-model="addressForm.district" placeholder="区" style="width: 30%" />
+        </el-form-item>
+        <el-form-item label="详细地址" prop="detail">
+          <el-input v-model="addressForm.detail" type="textarea" />
+        </el-form-item>
+        <el-form-item label="设为默认">
+          <el-switch v-model="addressForm.isDefault" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addressDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="addressSubmitting" @click="handleSubmitAddress">保存</el-button>
+      </template>
+    </el-dialog>
 
     <div class="confirm-section">
       <h2>商品清单</h2>
@@ -66,14 +93,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
-import { getAddressList } from '@/api/user'
+import { getAddressList, createAddress } from '@/api/user'
 import { createOrder } from '@/api/order'
 import { formatPrice } from '@/utils/format'
-import type { Address } from '@shared/types/user'
+import { requiredRule, phoneRules } from '@shared/validators'
+import type { Address, AddressForm } from '@shared/types/user'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
@@ -82,6 +111,61 @@ const cartStore = useCartStore()
 const addresses = ref<Address[]>([])
 const selectedAddressId = ref<number>(0)
 const submitting = ref(false)
+
+const addressDialogVisible = ref(false)
+const addressSubmitting = ref(false)
+const addressFormRef = ref<FormInstance>()
+
+const addressForm = reactive<AddressForm>({
+  name: '',
+  phone: '',
+  province: '',
+  city: '',
+  district: '',
+  detail: '',
+  isDefault: 0,
+})
+
+const addressRules: FormRules = {
+  name: [requiredRule('收货人')],
+  phone: phoneRules,
+  detail: [requiredRule('详细地址')],
+}
+
+async function loadAddresses() {
+  try {
+    const res = await getAddressList()
+    addresses.value = res.data
+    const defaultAddr = addresses.value.find((addr) => addr.isDefault)
+    selectedAddressId.value = defaultAddr?.id || addresses.value[0]?.id || 0
+  } catch {
+    // handled by interceptor
+  }
+}
+
+function handleAddAddress() {
+  Object.assign(addressForm, { name: '', phone: '', province: '', city: '', district: '', detail: '', isDefault: 0 })
+  addressDialogVisible.value = true
+}
+
+async function handleSubmitAddress() {
+  const valid = await addressFormRef.value?.validate()
+  if (!valid) return
+
+  addressSubmitting.value = true
+  try {
+    const res = await createAddress(addressForm)
+    ElMessage.success('地址已添加')
+    addressDialogVisible.value = false
+    await loadAddresses()
+    // auto-select the newly created address
+    if (res.data?.id) {
+      selectedAddressId.value = res.data.id
+    }
+  } finally {
+    addressSubmitting.value = false
+  }
+}
 
 async function handleSubmit() {
   submitting.value = true
@@ -99,15 +183,8 @@ async function handleSubmit() {
   }
 }
 
-onMounted(async () => {
-  try {
-    const res = await getAddressList()
-    addresses.value = res.data
-    const defaultAddr = addresses.value.find((addr) => addr.isDefault)
-    selectedAddressId.value = defaultAddr?.id || addresses.value[0]?.id || 0
-  } catch {
-    // handled by interceptor
-  }
+onMounted(() => {
+  loadAddresses()
 })
 </script>
 
@@ -126,6 +203,13 @@ onMounted(async () => {
 
     h2 {
       font-size: 16px;
+      margin-bottom: 0;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 16px;
     }
   }
@@ -190,6 +274,7 @@ onMounted(async () => {
   .confirm-footer {
     position: sticky;
     bottom: 0;
+    z-index: 100;
     background: #fff;
     margin-top: 20px;
     padding: 16px 20px;
@@ -198,7 +283,7 @@ onMounted(async () => {
     justify-content: flex-end;
     align-items: center;
     gap: 20px;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
 
     &__total {
       font-size: 14px;

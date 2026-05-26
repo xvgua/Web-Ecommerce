@@ -77,7 +77,7 @@ public class CartServiceImpl implements CartService {
             cart.setQuantity(req.getQuantity());
         }
         if (req.getChecked() != null) {
-            cart.setChecked(req.getChecked());
+            cart.setChecked(req.getChecked() ? 1 : 0);
         }
         cartMapper.updateById(cart);
     }

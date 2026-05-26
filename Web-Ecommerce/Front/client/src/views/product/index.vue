@@ -11,6 +11,13 @@
         >
           {{ opt.label }}
         </span>
+        <span
+          :class="['sort-btn', { 'sort-btn--active': ratingActive }]"
+          @click="handleRatingSort"
+        >
+          评价高低
+          <span v-if="ratingActive" class="sort-arrow">{{ sort === 'rating_desc' ? '↑' : '↓' }}</span>
+        </span>
       </div>
     </div>
 
@@ -40,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getProductList } from '@/api/product'
 import type { Product, ProductQuery } from '@shared/types/product'
@@ -80,8 +87,20 @@ async function loadProducts() {
   }
 }
 
+const ratingActive = computed(() => sort.value === 'rating_desc' || sort.value === 'rating_asc')
+
 function handleSort(val: string) {
   sort.value = val
+  page.value = 1
+  loadProducts()
+}
+
+function handleRatingSort() {
+  if (sort.value === 'rating_desc') {
+    sort.value = 'rating_asc'
+  } else {
+    sort.value = 'rating_desc'
+  }
   page.value = 1
   loadProducts()
 }
@@ -135,7 +154,17 @@ onMounted(() => { loadProducts() })
       color: #fff;
       background: #409eff;
     }
+
+    .sort-arrow {
+      color: #fff;
+    }
   }
+}
+
+.sort-arrow {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 12px;
 }
 
 .product-grid {

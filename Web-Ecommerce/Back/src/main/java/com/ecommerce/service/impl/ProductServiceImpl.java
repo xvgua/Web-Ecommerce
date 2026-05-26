@@ -122,6 +122,10 @@ public class ProductServiceImpl implements ProductService {
             wrapper.orderByDesc(Product::getPrice);
         } else if ("sales_desc".equals(sort)) {
             wrapper.orderByDesc(Product::getSales);
+        } else if ("rating_desc".equals(sort)) {
+            wrapper.orderByDesc(Product::getAvgRating);
+        } else if ("rating_asc".equals(sort)) {
+            wrapper.orderByAsc(Product::getAvgRating);
         } else {
             wrapper.orderByDesc(Product::getCreateTime);
         }

@@ -11,7 +11,7 @@
 
       <div class="cart-items">
         <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
-          <el-checkbox v-model="item.checked" class="cart-item__check" />
+          <el-checkbox v-model="item.checked" class="cart-item__check" @change="handleCheckedChange(item)" />
           <div class="cart-item__img" @click="$router.push(`/products/${item.productId}`)">
             <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
           </div>
@@ -85,6 +85,10 @@ const checkAll = computed({
 })
 
 function handleQuantityChange(item: CartItem) {
+  cartStore.updateItem(item.id, item.quantity, item.checked)
+}
+
+function handleCheckedChange(item: CartItem) {
   cartStore.updateItem(item.id, item.quantity, item.checked)
 }
 
