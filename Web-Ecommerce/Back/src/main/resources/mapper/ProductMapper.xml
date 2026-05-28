@@ -11,7 +11,7 @@
     <select id="searchByKeyword" resultType="com.ecommerce.entity.Product">
         SELECT p.id, p.name, p.category_id, p.price, p.stock,
                p.description, p.main_image, p.images, p.status,
-               p.sales, p.create_time, p.update_time
+               p.sales, p.listed_at, p.create_time, p.update_time
         FROM product p
         WHERE p.status = #{status}
           <if test="categoryId != null">

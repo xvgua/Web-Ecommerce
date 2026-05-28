@@ -30,9 +30,10 @@ const props = defineProps<{ product: Product }>()
 const router = useRouter()
 
 const isNew = computed(() => {
-  const created = new Date(props.product.createTime).getTime()
+  const listed = props.product.listedAt || props.product.createTime
+  const listedTs = new Date(listed).getTime()
   const now = Date.now()
-  return now - created < 7 * 24 * 3600 * 1000
+  return now - listedTs < 7 * 24 * 3600 * 1000
 })
 
 function goDetail() {

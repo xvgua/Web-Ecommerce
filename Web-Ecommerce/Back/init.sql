@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS `product` (
   sales       INT            DEFAULT 0,
   avg_rating  DECIMAL(2,1)   DEFAULT 0 COMMENT '平均评分 0.0~5.0',
   review_count INT           DEFAULT 0 COMMENT '评价总数',
+  listed_at   DATETIME       DEFAULT NULL COMMENT '首次上架时间',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

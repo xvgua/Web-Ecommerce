@@ -141,7 +141,9 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { useSearchHistory } from '@/composables/useSearchHistory'
+import { getCategories } from '@/api/product'
 import type { SearchHistoryItem } from '@/composables/useSearchHistory'
+import type { Category } from '@shared/types/product'
 
 const router = useRouter()
 const route = useRoute()
@@ -149,6 +151,18 @@ const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
 const { getAll: getHistory, add: addHistory, remove: removeHistory, clear: clearHistory } = useSearchHistory()
+
+function findCategoryName(tree: Category[], id: number): string | null {
+  for (const node of tree) {
+    if (node.id === id) return node.name
+    if (node.children) {
+      for (const child of node.children) {
+        if (child.id === id) return child.name
+      }
+    }
+  }
+  return null
+}
 
 function fetchSuggestions(queryString: string, callback: (data: any[]) => void) {
   if (queryString.trim()) {
@@ -184,6 +198,16 @@ function handleSearch() {
 watch(() => route.query.keyword, (kw) => {
   keyword.value = (kw as string) || ''
 })
+
+watch(() => route.query.categoryId, async (catId) => {
+  const cid = catId ? Number(catId) : 0
+  if (!cid || keyword.value.trim()) return
+  try {
+    const res = await getCategories()
+    const name = findCategoryName(res.data, cid)
+    if (name) keyword.value = name
+  } catch { /* ignore */ }
+}, { immediate: false })
 
 function handleLogout() {
   userStore.logout()

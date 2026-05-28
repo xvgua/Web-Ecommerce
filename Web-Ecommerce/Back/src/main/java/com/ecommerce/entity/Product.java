@@ -23,6 +23,7 @@ public class Product {
     private Integer sales;
     private BigDecimal avgRating;
     private Integer reviewCount;
+    private LocalDateTime listedAt;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

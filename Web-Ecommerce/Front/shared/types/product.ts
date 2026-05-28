@@ -22,6 +22,7 @@ export interface Product {
   sales: number
   avgRating: number
   reviewCount: number
+  listedAt?: string
   createTime: string
   skus?: ProductSku[]
 }

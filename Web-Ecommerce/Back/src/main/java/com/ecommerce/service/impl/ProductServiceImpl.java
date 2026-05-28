@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -132,7 +135,7 @@ public class ProductServiceImpl implements ProductService {
         } else if ("rating_asc".equals(sort)) {
             wrapper.orderByAsc(Product::getAvgRating);
         } else {
-            wrapper.orderByDesc(Product::getCreateTime);
+            wrapper.orderByDesc(Product::getListedAt);
         }
     }
 
@@ -181,11 +184,29 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<Product> getNewProducts(int limit) {
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Product::getStatus, ProductStatus.ON_SALE)
-                .orderByDesc(Product::getCreateTime)
-                .last("LIMIT " + Math.min(limit, 50));
-        return productMapper.selectList(wrapper);
+        // This week's products first, fill to limit with most recent
+        LocalDateTime weekStart = LocalDateTime.now().with(DayOfWeek.MONDAY).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        List<Product> weekList = productMapper.selectList(
+                new LambdaQueryWrapper<Product>()
+                        .eq(Product::getStatus, ProductStatus.ON_SALE)
+                        .isNotNull(Product::getListedAt)
+                        .ge(Product::getListedAt, weekStart)
+                        .orderByDesc(Product::getListedAt)
+                        .last("LIMIT " + limit));
+        if (weekList.size() >= limit) return weekList;
+
+        // Not enough this week — fill with most recent from all time
+        int remaining = limit - weekList.size();
+        java.util.Set<Long> existingIds = weekList.stream().map(Product::getId).collect(java.util.stream.Collectors.toSet());
+        List<Product> fillList = productMapper.selectList(
+                new LambdaQueryWrapper<Product>()
+                        .eq(Product::getStatus, ProductStatus.ON_SALE)
+                        .isNotNull(Product::getListedAt)
+                        .notIn(!existingIds.isEmpty(), Product::getId, existingIds)
+                        .orderByDesc(Product::getListedAt)
+                        .last("LIMIT " + remaining));
+        weekList.addAll(fillList);
+        return weekList;
     }
 
     @Override
@@ -200,8 +221,12 @@ public class ProductServiceImpl implements ProductService {
         product.setDetail(form.getDetail());
         product.setMainImage(form.getMainImage());
         product.setImages(form.getImages());
-        product.setStatus(form.getStatus() != null ? form.getStatus() : ProductStatus.ON_SALE);
+        int status = form.getStatus() != null ? form.getStatus() : ProductStatus.ON_SALE;
+        product.setStatus(status);
         product.setSales(0);
+        if (status == ProductStatus.ON_SALE) {
+            product.setListedAt(LocalDateTime.now());
+        }
         productMapper.insert(product);
 
         if (form.getSkus() != null && !form.getSkus().isEmpty()) {
@@ -237,7 +262,14 @@ public class ProductServiceImpl implements ProductService {
         if (form.getDetail() != null) product.setDetail(form.getDetail());
         if (form.getMainImage() != null) product.setMainImage(form.getMainImage());
         if (form.getImages() != null) product.setImages(form.getImages());
-        if (form.getStatus() != null) product.setStatus(form.getStatus());
+        if (form.getStatus() != null) {
+            int oldStatus = product.getStatus() != null ? product.getStatus() : 0;
+            product.setStatus(form.getStatus());
+            if (form.getStatus() == ProductStatus.ON_SALE && oldStatus != ProductStatus.ON_SALE
+                    && product.getListedAt() == null) {
+                product.setListedAt(LocalDateTime.now());
+            }
+        }
         productMapper.updateById(product);
 
         if (form.getSkus() != null) {

@@ -1,5 +1,18 @@
 <template>
   <div class="product-list-page">
+    <!-- Subcategory Tags -->
+    <div class="subcat-bar" v-if="subCategories.length > 0">
+      <span class="subcat-bar__label">相关分类：</span>
+      <span
+        v-for="cat in subCategories"
+        :key="cat.id"
+        :class="['subcat-tag', { 'subcat-tag--active': activeCatId === cat.id }]"
+        @click="$router.push(`/products?categoryId=${cat.id}`)"
+      >
+        {{ cat.name }}
+      </span>
+    </div>
+
     <!-- Sort Bar -->
     <div class="filter-bar">
       <div class="filter-bar__sort">
@@ -49,8 +62,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getProductList } from '@/api/product'
-import type { Product, ProductQuery } from '@shared/types/product'
+import { getProductList, getCategories } from '@/api/product'
+import type { Product, ProductQuery, Category } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
 
 const route = useRoute()
@@ -61,6 +74,39 @@ const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const sort = ref('')
+
+const subCategories = ref<Category[]>([])
+const activeCatId = ref<number>(0)
+
+async function loadSubCategories() {
+  const catId = route.query.categoryId ? Number(route.query.categoryId) : undefined
+  activeCatId.value = catId || 0
+  if (!catId) {
+    subCategories.value = []
+    return
+  }
+  try {
+    const res = await getCategories()
+    const tree = res.data
+    for (const node of tree) {
+      if (node.id === catId) {
+        // Clicked a level-1 category — show its children
+        subCategories.value = node.children || []
+        return
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (child.id === catId) {
+            // Clicked a level-2 category — show siblings under same parent
+            subCategories.value = node.children
+            return
+          }
+        }
+      }
+    }
+    subCategories.value = []
+  } catch { subCategories.value = [] }
+}
 
 const sortOptions = [
   { label: '默认', value: '' },
@@ -115,15 +161,61 @@ watch(() => route.query.keyword, () => {
 watch(() => route.query.categoryId, () => {
   page.value = 1
   loadProducts()
+  loadSubCategories()
 })
 
-onMounted(() => { loadProducts() })
+onMounted(() => { loadProducts(); loadSubCategories() })
 </script>
 
 <style lang="scss" scoped>
 .product-list-page {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.subcat-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 14px 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+
+  &__label {
+    font-size: 13px;
+    color: #999;
+    flex-shrink: 0;
+  }
+}
+
+.subcat-tag {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #555;
+  background: #f5f5f5;
+  transition: all .15s;
+
+  &:hover {
+    color: #409eff;
+    background: rgba(64,158,255,.08);
+  }
+
+  &--active {
+    color: #fff;
+    background: #409eff;
+    font-weight: 500;
+
+    &:hover {
+      color: #fff;
+      background: #409eff;
+    }
+  }
 }
 
 .filter-bar {
