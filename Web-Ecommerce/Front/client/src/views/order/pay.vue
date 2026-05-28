@@ -19,26 +19,9 @@
               <span>支付超时，订单已取消，商品已退回购物车</span>
             </div>
 
-            <div class="pay-block">
-              <h2 class="pay-block__title">商品清单</h2>
-              <div class="pay-products">
-                <div v-for="item in order.items" :key="item.id" class="pay-product">
-                  <div class="pay-product__img">
-                    <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
-                  </div>
-                  <div class="pay-product__info">
-                    <div class="pay-product__name">{{ item.productName }}</div>
-                    <div class="pay-product__spec" v-if="item.specDesc">{{ item.specDesc }}</div>
-                  </div>
-                  <div class="pay-product__price">{{ formatPrice(item.price) }}</div>
-                  <div class="pay-product__qty">x{{ item.quantity }}</div>
-                  <div class="pay-product__subtotal">{{ formatPrice(item.price * item.quantity) }}</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="pay-block">
-              <h2 class="pay-block__title">支付方式</h2>
+            <!-- 阶段一：选择支付方式 -->
+            <div class="pay-block" v-if="phase === 'select'">
+              <h2 class="pay-block__title">选择支付方式</h2>
               <div class="pay-methods">
                 <div
                   v-for="m in payMethods"
@@ -61,6 +44,69 @@
                 </div>
               </div>
             </div>
+
+            <!-- 阶段二：展示二维码 -->
+            <div class="pay-block" v-if="phase === 'qrcode' || phase === 'scanned'">
+              <h2 class="pay-block__title">扫码支付</h2>
+              <div class="qr-section">
+                <div class="qr-wrapper">
+                  <canvas ref="qrCanvasRef" class="qr-canvas"></canvas>
+                  <div class="qr-method-badge" :class="'qr-method-badge--' + payIntent?.payMethod">
+                    <el-icon v-if="payIntent?.payMethod === 'wechat'" :size="14"><ChatDotSquare /></el-icon>
+                    <el-icon v-else-if="payIntent?.payMethod === 'alipay'" :size="14"><Wallet /></el-icon>
+                    <el-icon v-else :size="14"><CreditCard /></el-icon>
+                    <span>{{ methodLabel }}</span>
+                  </div>
+                </div>
+                <div class="qr-info">
+                  <div class="qr-amount">
+                    <span class="qr-amount__label">应付金额</span>
+                    <span class="qr-amount__value">{{ formatPrice(order.totalAmount) }}</span>
+                  </div>
+                  <div class="qr-status" v-if="phase === 'qrcode'">
+                    <el-icon class="qr-status__icon is-loading" :size="16"><Loading /></el-icon>
+                    <span>等待扫码支付...</span>
+                  </div>
+                  <div class="qr-status qr-status--scanned" v-else-if="phase === 'scanned'">
+                    <el-icon class="qr-status__icon" :size="16"><CircleCheckFilled /></el-icon>
+                    <span>二维码已扫描，请在手机上确认支付</span>
+                  </div>
+                  <div class="qr-tip">
+                    <span v-if="payIntent?.payMethod === 'wechat'">请使用微信扫一扫</span>
+                    <span v-else-if="payIntent?.payMethod === 'alipay'">请使用支付宝扫一扫</span>
+                    <span v-else>请使用银行APP扫一扫</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 阶段三：支付状态 -->
+            <div class="pay-block pay-block--result" v-if="phase === 'paid'">
+              <div class="pay-result">
+                <el-icon class="pay-result__icon pay-result__icon--success" :size="48"><CircleCheckFilled /></el-icon>
+                <h3 class="pay-result__title">支付成功</h3>
+                <p class="pay-result__desc">订单已支付，即将跳转订单详情...</p>
+              </div>
+            </div>
+
+            <!-- 商品清单 -->
+            <div class="pay-block">
+              <h2 class="pay-block__title">商品清单</h2>
+              <div class="pay-products">
+                <div v-for="item in order.items" :key="item.id" class="pay-product">
+                  <div class="pay-product__img">
+                    <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
+                  </div>
+                  <div class="pay-product__info">
+                    <div class="pay-product__name">{{ item.productName }}</div>
+                    <div class="pay-product__spec" v-if="item.specDesc">{{ item.specDesc }}</div>
+                  </div>
+                  <div class="pay-product__price">{{ formatPrice(item.price) }}</div>
+                  <div class="pay-product__qty">x{{ item.quantity }}</div>
+                  <div class="pay-product__subtotal">{{ formatPrice(item.price * item.quantity) }}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 右侧：订单摘要 -->
@@ -75,6 +121,10 @@
               <div class="pay-summary__row">
                 <span>提交时间</span>
                 <span>{{ order.createTime }}</span>
+              </div>
+              <div class="pay-summary__row">
+                <span>支付方式</span>
+                <span>{{ methodLabel || '未选择' }}</span>
               </div>
               <div class="pay-summary__row">
                 <span>收货地址</span>
@@ -98,16 +148,42 @@
               </div>
 
               <div class="pay-summary__actions">
-                <el-button
-                  type="danger"
-                  size="large"
-                  class="pay-summary__btn"
-                  :loading="paying"
-                  :disabled="!selectedMethod"
-                  @click="handlePay"
-                >
-                  立即支付
-                </el-button>
+                <!-- 阶段一按钮 -->
+                <template v-if="phase === 'select'">
+                  <el-button
+                    type="danger"
+                    size="large"
+                    class="pay-summary__btn"
+                    :loading="creatingIntent"
+                    @click="handleCreatePayIntent"
+                  >
+                    立即支付
+                  </el-button>
+                </template>
+
+                <!-- 阶段二按钮 -->
+                <template v-if="phase === 'qrcode' || phase === 'scanned'">
+                  <el-button
+                    type="danger"
+                    size="large"
+                    class="pay-summary__btn"
+                    :loading="confirming"
+                    :disabled="phase !== 'scanned'"
+                    @click="handleConfirmPay"
+                  >
+                    {{ phase === 'scanned' ? '我已完成支付' : '请先扫描二维码' }}
+                  </el-button>
+                  <el-button
+                    size="default"
+                    class="pay-summary__back-btn"
+                    @click="resetToSelect"
+                  >
+                    重新选择
+                  </el-button>
+                </template>
+              </div>
+
+              <div class="pay-summary__actions" v-if="phase === 'select'">
                 <el-button
                   size="large"
                   class="pay-summary__cancel-btn"
@@ -126,14 +202,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, WarningFilled, ChatDotSquare, Wallet, CreditCard } from '@element-plus/icons-vue'
-import { getOrderById, payOrder, cancelOrder } from '@/api/order'
+import { Clock, WarningFilled, ChatDotSquare, Wallet, CreditCard, Loading, CircleCheckFilled } from '@element-plus/icons-vue'
+import { getOrderById, cancelOrder, createPayIntent, simulateScan, confirmPay } from '@/api/order'
 import { addToCart } from '@/api/cart'
 import { formatPrice } from '@/utils/format'
-import type { Order } from '@shared/types/order'
+import type { Order, PayIntent } from '@shared/types/order'
+import QRCode from 'qrcode'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const route = useRoute()
@@ -141,14 +218,20 @@ const router = useRouter()
 
 const order = ref<Order | null>(null)
 const loading = ref(false)
-const paying = ref(false)
 const cancelling = ref(false)
+const creatingIntent = ref(false)
+const confirming = ref(false)
 const selectedMethod = ref('wechat')
+const phase = ref<'select' | 'qrcode' | 'scanned' | 'paid'>('select')
+const payIntent = ref<PayIntent | null>(null)
+const qrCanvasRef = ref<HTMLCanvasElement | null>(null)
 
 const PAY_TIMEOUT_MS = 30 * 60 * 1000
 const remainingMs = ref(0)
 const expired = ref(false)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
+let scanTimer: ReturnType<typeof setTimeout> | null = null
+let redirectTimer: ReturnType<typeof setTimeout> | null = null
 
 const countdown = computed(() => {
   const ms = remainingMs.value
@@ -159,6 +242,21 @@ const countdown = computed(() => {
   const cs = Math.floor((ms % 1000) / 10)
   return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(cs).padStart(2, '0')}`
 })
+
+const methodLabel = computed(() => {
+  if (!payIntent.value) {
+    const m = payMethods.find(p => p.value === selectedMethod.value)
+    return m ? m.name : ''
+  }
+  const m = payMethods.find(p => p.value === payIntent.value!.payMethod)
+  return m ? m.name : ''
+})
+
+const payMethods = [
+  { value: 'wechat', name: '微信支付', desc: '推荐安装微信用户使用' },
+  { value: 'alipay', name: '支付宝', desc: '推荐安装支付宝用户使用' },
+  { value: 'card', name: '银行卡支付', desc: '支持储蓄卡及信用卡' },
+]
 
 function startCountdown(createTime: string) {
   const deadline = new Date(createTime).getTime() + PAY_TIMEOUT_MS
@@ -178,7 +276,6 @@ async function handleTimeout() {
   try {
     await cancelOrder(order.value!.id)
   } catch { /* 订单可能已被取消 */ }
-  // 将订单商品重新加回购物车
   if (order.value?.items) {
     for (const item of order.value.items) {
       try {
@@ -187,12 +284,6 @@ async function handleTimeout() {
     }
   }
 }
-
-const payMethods = [
-  { value: 'wechat', name: '微信支付', desc: '推荐安装微信用户使用' },
-  { value: 'alipay', name: '支付宝', desc: '推荐安装支付宝用户使用' },
-  { value: 'card', name: '银行卡支付', desc: '支持储蓄卡及信用卡' },
-]
 
 async function loadOrder() {
   loading.value = true
@@ -210,18 +301,64 @@ async function loadOrder() {
   }
 }
 
-async function handlePay() {
-  if (!selectedMethod.value) {
-    ElMessage.warning('请选择支付方式')
-    return
-  }
-  paying.value = true
+async function handleCreatePayIntent() {
+  creatingIntent.value = true
   try {
-    await payOrder(order.value!.id, selectedMethod.value)
-    ElMessage.success('支付成功')
-    router.push(`/orders/${order.value!.id}`)
+    const res = await createPayIntent(order.value!.id, selectedMethod.value)
+    payIntent.value = res.data
+    phase.value = 'qrcode'
+    await nextTick()
+    await renderQRCode()
+    // 3 秒后自动模拟扫码
+    scanTimer = setTimeout(async () => {
+      try {
+        await simulateScan(order.value!.id)
+        phase.value = 'scanned'
+      } catch { /* 模拟扫码失败不阻塞 */ }
+    }, 3000)
   } finally {
-    paying.value = false
+    creatingIntent.value = false
+  }
+}
+
+async function renderQRCode() {
+  if (!qrCanvasRef.value || !payIntent.value) return
+  try {
+    const data = JSON.stringify({
+      orderNo: payIntent.value.orderNo,
+      token: payIntent.value.qrToken,
+      amount: payIntent.value.amount,
+      method: payIntent.value.payMethod,
+    })
+    await QRCode.toCanvas(qrCanvasRef.value, data, {
+      width: 200,
+      margin: 2,
+      color: { dark: '#333333', light: '#ffffff' },
+    })
+  } catch { /* canvas 渲染失败不阻塞 */ }
+}
+
+async function handleConfirmPay() {
+  confirming.value = true
+  try {
+    await confirmPay(order.value!.id)
+    phase.value = 'paid'
+    redirectTimer = setTimeout(() => {
+      router.push(`/orders/${order.value!.id}`)
+    }, 1500)
+  } catch {
+    ElMessage.error('支付确认失败，请重试')
+  } finally {
+    confirming.value = false
+  }
+}
+
+function resetToSelect() {
+  phase.value = 'select'
+  payIntent.value = null
+  if (scanTimer) {
+    clearTimeout(scanTimer)
+    scanTimer = null
   }
 }
 
@@ -237,7 +374,7 @@ async function handleCancel() {
     ElMessage.success('订单已取消')
     router.push(`/orders/${order.value!.id}`)
   } finally {
-    cancelling.value = ''
+    cancelling.value = false
   }
 }
 
@@ -247,6 +384,14 @@ onUnmounted(() => {
   if (countdownTimer) {
     clearInterval(countdownTimer)
     countdownTimer = null
+  }
+  if (scanTimer) {
+    clearTimeout(scanTimer)
+    scanTimer = null
+  }
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+    redirectTimer = null
   }
 })
 </script>
@@ -327,6 +472,141 @@ onUnmounted(() => {
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #f5f5f5;
+  }
+
+  &--result {
+    text-align: center;
+    padding: 32px 20px;
+  }
+}
+
+// ── 二维码区域 ──
+.qr-section {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.qr-wrapper {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
+  border: 3px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qr-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.qr-method-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  font-size: 10px;
+  color: #fff;
+
+  &--wechat { background: #07c160; }
+  &--alipay { background: #1677ff; }
+  &--card   { background: #f56c6c; }
+}
+
+.qr-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.qr-amount {
+  margin-bottom: 12px;
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 4px;
+  }
+
+  &__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e6423a;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+  }
+}
+
+.qr-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 8px;
+
+  &__icon.is-loading {
+    animation: rotating 1.5s linear infinite;
+  }
+
+  &--scanned {
+    color: #07c160;
+    font-weight: 600;
+
+    .qr-status__icon {
+      color: #07c160;
+    }
+  }
+}
+
+@keyframes rotating {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.qr-tip {
+  font-size: 12px;
+  color: #999;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+// ── 支付结果 ──
+.pay-result {
+  &__icon {
+    margin-bottom: 12px;
+
+    &--success {
+      color: #07c160;
+    }
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  &__desc {
+    font-size: 13px;
+    color: #999;
   }
 }
 
@@ -522,6 +802,11 @@ onUnmounted(() => {
     width: 100%;
     font-size: 16px;
     height: 44px;
+  }
+
+  &__back-btn {
+    width: 100%;
+    margin-left: 0;
   }
 
   &__cancel-btn {

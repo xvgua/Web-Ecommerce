@@ -7,6 +7,8 @@ import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.OrderQuery;
+import com.ecommerce.dto.PayIntentResponse;
+import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
@@ -43,6 +45,8 @@ public class OrderServiceImpl implements OrderService {
     private UserMapper userMapper;
     @Autowired
     private ReviewMapper reviewMapper;
+    @Autowired
+    private PaymentSessionMapper paymentSessionMapper;
 
     @Override
     @Transactional
@@ -246,6 +250,110 @@ public class OrderServiceImpl implements OrderService {
         order.setPayTime(LocalDateTime.now());
         orderMapper.updateById(order);
         log.info("Order paid: orderNo={}, payMethod={}", order.getOrderNo(), payMethod);
+    }
+
+    @Override
+    public PayIntentResponse createPayIntent(Long userId, Long id, String payMethod) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAY) {
+            throw new BusinessException("订单状态不正确");
+        }
+        if (payMethod == null || payMethod.isBlank()) {
+            throw new BusinessException("请选择支付方式");
+        }
+        if (!List.of("wechat", "alipay", "card").contains(payMethod)) {
+            throw new BusinessException("不支持的支付方式");
+        }
+
+        // Return existing session if still waiting for scan
+        PaymentSession existing = paymentSessionMapper.selectOne(
+                new LambdaQueryWrapper<PaymentSession>().eq(PaymentSession::getOrderId, id));
+        if (existing != null && "WAITING_SCAN".equals(existing.getStatus())) {
+            return new PayIntentResponse(existing.getQrToken(), order.getOrderNo(),
+                    order.getTotalAmount(), existing.getPayMethod());
+        }
+
+        String qrToken = UUID.randomUUID().toString().replace("-", "");
+        PaymentSession session = new PaymentSession();
+        session.setOrderId(id);
+        session.setPayMethod(payMethod);
+        session.setQrToken(qrToken);
+        session.setQrScanned(0);
+        session.setStatus("WAITING_SCAN");
+        paymentSessionMapper.insert(session);
+
+        log.info("Pay intent created: orderNo={}, payMethod={}", order.getOrderNo(), payMethod);
+        return new PayIntentResponse(qrToken, order.getOrderNo(), order.getTotalAmount(), payMethod);
+    }
+
+    @Override
+    public PayStatusResponse getPayStatus(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        PaymentSession session = paymentSessionMapper.selectOne(
+                new LambdaQueryWrapper<PaymentSession>().eq(PaymentSession::getOrderId, id));
+        if (session == null) {
+            return new PayStatusResponse("NONE", false, null);
+        }
+        return new PayStatusResponse(session.getStatus(), session.getQrScanned() == 1, session.getPayMethod());
+    }
+
+    @Override
+    public PayStatusResponse simulateScan(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        PaymentSession session = paymentSessionMapper.selectOne(
+                new LambdaQueryWrapper<PaymentSession>().eq(PaymentSession::getOrderId, id));
+        if (session == null) {
+            throw new BusinessException("未找到支付会话");
+        }
+        if (!"WAITING_SCAN".equals(session.getStatus())) {
+            throw new BusinessException("当前状态不允许扫码");
+        }
+        session.setQrScanned(1);
+        session.setScanTime(LocalDateTime.now());
+        session.setStatus("SCANNED");
+        paymentSessionMapper.updateById(session);
+        log.info("QR scanned: orderNo={}", order.getOrderNo());
+        return new PayStatusResponse("SCANNED", true, session.getPayMethod());
+    }
+
+    @Override
+    @Transactional
+    public void confirmPay(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAY) {
+            throw new BusinessException("订单状态不正确");
+        }
+        PaymentSession session = paymentSessionMapper.selectOne(
+                new LambdaQueryWrapper<PaymentSession>().eq(PaymentSession::getOrderId, id));
+        if (session == null || session.getQrScanned() != 1) {
+            throw new BusinessException("请先扫描二维码");
+        }
+        order.setStatus(OrderStatus.PENDING_SHIP);
+        order.setPayTime(LocalDateTime.now());
+        orderMapper.updateById(order);
+        // Conditional update to prevent concurrent double-confirm
+        int affected = paymentSessionMapper.update(null,
+                new LambdaUpdateWrapper<PaymentSession>()
+                        .eq(PaymentSession::getOrderId, id)
+                        .eq(PaymentSession::getQrScanned, 1)
+                        .eq(PaymentSession::getStatus, "SCANNED")
+                        .set(PaymentSession::getStatus, "PAID"));
+        if (affected == 0) {
+            throw new BusinessException("支付确认失败，请重试");
+        }
+        log.info("Payment confirmed: orderNo={}, payMethod={}", order.getOrderNo(), session.getPayMethod());
     }
 
     @Override

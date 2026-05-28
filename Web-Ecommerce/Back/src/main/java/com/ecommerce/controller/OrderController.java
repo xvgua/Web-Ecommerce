@@ -3,8 +3,11 @@ package com.ecommerce.controller;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.CreatePayIntentRequest;
 import com.ecommerce.dto.OrderQuery;
+import com.ecommerce.dto.PayIntentResponse;
 import com.ecommerce.dto.PayOrderRequest;
+import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.entity.Order;
 import com.ecommerce.security.UserContext;
 import com.ecommerce.service.OrderService;
@@ -38,6 +41,27 @@ public class OrderController {
     public Result<Void> pay(@PathVariable Long id, @RequestBody(required = false) PayOrderRequest req) {
         String payMethod = req != null ? req.getPayMethod() : null;
         orderService.payOrder(UserContext.getUserId(), id, payMethod);
+        return Result.success();
+    }
+
+    @PostMapping("/{id}/pay-intent")
+    public Result<PayIntentResponse> createPayIntent(@PathVariable Long id, @RequestBody CreatePayIntentRequest req) {
+        return Result.success(orderService.createPayIntent(UserContext.getUserId(), id, req.getPayMethod()));
+    }
+
+    @GetMapping("/{id}/pay-status")
+    public Result<PayStatusResponse> getPayStatus(@PathVariable Long id) {
+        return Result.success(orderService.getPayStatus(UserContext.getUserId(), id));
+    }
+
+    @PostMapping("/{id}/scan-simulate")
+    public Result<PayStatusResponse> simulateScan(@PathVariable Long id) {
+        return Result.success(orderService.simulateScan(UserContext.getUserId(), id));
+    }
+
+    @PutMapping("/{id}/pay/confirm")
+    public Result<Void> confirmPay(@PathVariable Long id) {
+        orderService.confirmPay(UserContext.getUserId(), id);
         return Result.success();
     }
 

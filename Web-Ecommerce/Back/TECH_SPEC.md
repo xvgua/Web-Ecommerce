@@ -91,11 +91,15 @@ PUT    /api/resource/:id/cancel|confirm|ship  → 特殊动作
 | GET | `/orders` | 用户 | `?page, pageSize, status?` | `PageResponse<Order>` |
 | GET | `/orders/:id` | 用户 | — | `Order`（含 items[] + address） |
 | POST | `/orders` | 用户 | `{ addressId, cartItemIds: number[], remark? }` | `Order` |
+| POST | `/orders/:id/pay-intent` | 用户 | `{ payMethod }` | `{ qrToken, orderNo, amount, payMethod }` |
+| GET | `/orders/:id/pay-status` | 用户 | — | `{ status, scanned, payMethod }` |
+| POST | `/orders/:id/scan-simulate` | 用户 | — | `{ status, scanned }` |
+| PUT | `/orders/:id/pay/confirm` | 用户 | — | `null` |
 | PUT | `/orders/:id/pay` | 用户 | `{ payMethod? }` | `null` |
 | PUT | `/orders/:id/cancel` | 用户 | — | `null` |
 | PUT | `/orders/:id/confirm` | 用户 | — | `null` |
 
-> 创建订单事务内完成：生成订单号 → 创建 order + order_item → 扣减库存 → 清空购物车已选。支付接口为模拟支付，调用后订单状态 0→1。
+> 创建订单事务内完成：生成订单号 → 创建 order + order_item → 扣减库存 → 清空购物车已选。支付流程：创建支付会话生成二维码 → 模拟扫码 → 用户确认支付（订单状态 0→1）。旧版 `PUT /pay` 保留兼容。
 
 ### 2.7 评价 — `/api/reviews`
 
@@ -403,7 +407,23 @@ CREATE TABLE announcement (
 );
 ```
 
-### 4.14 设计约束
+### 4.14 支付会话表 `payment_session`
+
+```sql
+CREATE TABLE payment_session (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id    BIGINT       NOT NULL UNIQUE,
+  pay_method  VARCHAR(20)  NOT NULL COMMENT 'wechat/alipay/card',
+  qr_token    VARCHAR(64)  NOT NULL UNIQUE,
+  qr_scanned  TINYINT      DEFAULT 0 COMMENT '0=未扫码 1=已扫码',
+  scan_time   DATETIME     NULL,
+  status      VARCHAR(20)  DEFAULT 'WAITING_SCAN' COMMENT 'WAITING_SCAN/SCANNED/PAID',
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### 4.15 设计约束
 
 - 主键 `BIGINT AUTO_INCREMENT`
 - 金额 `DECIMAL(10,2)`，禁止浮点运算
@@ -468,8 +488,18 @@ public class ProductStatus {
                    ┌──────────┐
                    │ 待支付(0) │
                    └────┬─────┘
-                        │ 模拟支付
-                        ↓
+                        │ ① 生成付款码 (POST /pay-intent)
+                        ↓    创建 payment_session
+                   ┌──────────┐
+                   │ 待扫码    │ (payment_session.status = WAITING_SCAN)
+                   └────┬─────┘
+                        │ ② 扫码 (POST /scan-simulate)
+                        ↓    payment_session.status = SCANNED
+                   ┌──────────┐
+                   │ 已扫码    │ (payment_session.status = SCANNED)
+                   └────┬─────┘
+                        │ ③ 确认支付 (PUT /pay/confirm)
+                        ↓    订单状态 0→1
                    ┌──────────┐
          ┌─────────│ 待发货(1) │
          │ 取消    └────┬─────┘
@@ -487,7 +517,7 @@ public class ProductStatus {
 退款中(5)：从"已发货"或"已完成"发起，管理员处理后→已完成
 ```
 
-规则：只有待支付可取消、只有待发货可发货、只有待收货可确认收货、取消后恢复库存。
+规则：只有待支付可取消、只有待发货可发货、只有待收货可确认收货、取消后恢复库存。支付需先扫码后确认。
 
 ---
 

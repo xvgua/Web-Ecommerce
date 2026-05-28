@@ -43,3 +43,16 @@ export interface PaymentForm {
   orderId: number
   payMethod: string
 }
+
+export interface PayIntent {
+  qrToken: string
+  orderNo: string
+  amount: number
+  payMethod: string
+}
+
+export interface PayStatus {
+  status: 'WAITING_SCAN' | 'SCANNED' | 'PAID' | 'NONE'
+  scanned: boolean
+  payMethod: string | null
+}

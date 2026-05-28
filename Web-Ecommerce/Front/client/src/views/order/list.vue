@@ -7,7 +7,8 @@
       <el-tab-pane label="待付款" name="0" />
       <el-tab-pane label="待发货" name="1" />
       <el-tab-pane label="待收货" name="2" />
-      <el-tab-pane label="退款/售后" name="5" />
+      <el-tab-pane label="已完成" name="3" />
+      <el-tab-pane label="已取消" name="4" />
       <el-tab-pane label="评价" name="review" />
     </el-tabs>
 

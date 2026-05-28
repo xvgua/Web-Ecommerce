@@ -70,21 +70,34 @@ Back/src/main/java/com/ecommerce/
 
 | 方法 | 路径 | 鉴权 | 请求体 | 响应 data | 说明 |
 |------|------|------|--------|-----------|------|
-| PUT | `/orders/:id/pay` | 用户 | `{ payMethod? }` | `null` | 模拟支付 |
+| POST | `/orders/:id/pay-intent` | 用户 | `{ payMethod }` | `PayIntentResponse` | 创建支付会话，生成 QR token |
+| GET | `/orders/:id/pay-status` | 用户 | — | `PayStatusResponse` | 查询支付状态 |
+| POST | `/orders/:id/scan-simulate` | 用户 | — | `PayStatusResponse` | 模拟扫码 |
+| PUT | `/orders/:id/pay/confirm` | 用户 | — | `null` | 确认支付（需先扫码） |
+| PUT | `/orders/:id/pay` | 用户 | `{ payMethod? }` | `null` | 直接支付（旧版兼容） |
+
+### 支付流程
+
+1. **创建支付会话** — `POST /pay-intent`，生成 `payment_session` 记录（qr_token = UUID，status = WAITING_SCAN）
+2. **模拟扫码** — `POST /scan-simulate`，设置 qr_scanned = 1，status = SCANNED
+3. **确认支付** — `PUT /pay/confirm`，验证已扫码后完成支付（订单状态 0→1，记录 pay_time）
 
 ### 支付约束
 
-1. **模拟支付** — 不接入真实支付渠道，调用后订单状态 0（待支付）→ 1（待发货），记录 `pay_time`
+1. **模拟支付** — 不接入真实支付渠道，三步完成：生成 QR → 扫码 → 确认
 2. **状态校验** — 仅 `PENDING_PAY (0)` 状态可支付，其他状态调用返回错误
-3. **支付方式** — 接收 `payMethod` 参数（如 wechat / alipay / card），仅做日志记录，不做支付路由逻辑
-4. **用户隔离** — 从 `UserContext` 取 userId，校验订单归属，用户只能支付自己的订单
-5. **不涉及金额计算** — 支付金额以后端订单 `total_amount` 为准，不信任前端传入金额
-6. **日志** — 支付成功打印 `log.info("Order paid: orderNo={}, payMethod={}")`
+3. **扫码前置** — 确认支付前必须已扫码（qr_scanned = 1），否则报错
+4. **支付方式** — 接收 `payMethod` 参数（wechat / alipay / card），创建会话时必传
+5. **用户隔离** — 从 `UserContext` 取 userId，校验订单归属，用户只能支付自己的订单
+6. **不涉及金额计算** — 支付金额以后端订单 `total_amount` 为准，不信任前端传入金额
+7. **日志** — 关键操作打印日志：创建会话、扫码、确认支付
 
 ### 订单状态流转（支付相关）
 
 ```
-待支付 (0) ──[模拟支付]──→ 待发货 (1)
+待支付 (0) ──[创建会话]──→ 待扫码 (payment_session.WAITING_SCAN)
+                              ──[扫码]──→ 已扫码 (payment_session.SCANNED)
+                                ──[确认支付]──→ 待发货 (1)
 待支付 (0) ──[取消订单]──→ 已取消 (4)
 ```
 

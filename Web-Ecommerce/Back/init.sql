@@ -128,6 +128,21 @@ CREATE TABLE IF NOT EXISTS `order_item` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
+-- 8-b. 支付会话表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `payment_session` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id    BIGINT       NOT NULL UNIQUE,
+  pay_method  VARCHAR(20)  NOT NULL COMMENT 'wechat/alipay/card',
+  qr_token    VARCHAR(64)  NOT NULL UNIQUE,
+  qr_scanned  TINYINT      DEFAULT 0 COMMENT '0=未扫码 1=已扫码',
+  scan_time   DATETIME     NULL,
+  status      VARCHAR(20)  DEFAULT 'WAITING_SCAN' COMMENT 'WAITING_SCAN/SCANNED/PAID',
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
 -- 9. 收货地址表
 -- ============================================
 CREATE TABLE IF NOT EXISTS `address` (
