@@ -76,8 +76,8 @@ ALTER TABLE `product` ADD FULLTEXT INDEX ft_product_name (name) WITH PARSER ngra
 CREATE TABLE IF NOT EXISTS `product_sku` (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   product_id  BIGINT         NOT NULL,
-  spec_name   VARCHAR(50)    NOT NULL,
-  spec_value  VARCHAR(50)    NOT NULL,
+  spec_name   VARCHAR(255)   NOT NULL,
+  spec_value  VARCHAR(255)   DEFAULT '',
   price       DECIMAL(10,2)  NOT NULL,
   stock       INT            DEFAULT 0,
   image       VARCHAR(255)   DEFAULT NULL COMMENT '规格缩略图'

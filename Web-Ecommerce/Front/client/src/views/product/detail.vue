@@ -76,8 +76,7 @@
                 <img :src="sku.image" :alt="sku.specValue" />
               </div>
               <div class="sku-card__text">
-                <span class="sku-card__name">{{ sku.specValue }}</span>
-                <span class="sku-card__spec">{{ sku.specName }}</span>
+                <span class="sku-card__name">{{ sku.specName }}</span>
               </div>
               <div class="sku-card__price" v-if="sku.price !== product.price">
                 {{ formatPrice(sku.price) }}

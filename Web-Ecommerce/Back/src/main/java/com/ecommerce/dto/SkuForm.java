@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 public class SkuForm {
     @NotBlank(message = "规格名不能为空")
     private String specName;
-    @NotBlank(message = "规格值不能为空")
     private String specValue;
     @NotNull(message = "价格不能为空")
     private BigDecimal price;

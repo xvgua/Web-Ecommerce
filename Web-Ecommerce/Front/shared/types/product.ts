@@ -30,7 +30,7 @@ export interface ProductSku {
   id: number
   productId: number
   specName: string
-  specValue: string
+  specValue?: string
   price: number
   stock: number
   image?: string
@@ -38,7 +38,7 @@ export interface ProductSku {
 
 export interface SkuForm {
   specName: string
-  specValue: string
+  specValue?: string
   price: number
   stock: number
   image?: string

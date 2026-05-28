@@ -215,6 +215,8 @@ public class ProductServiceImpl implements ProductService {
             }
             syncProductFromSkus(product.getId());
             product = productMapper.selectById(product.getId());
+        } else {
+            createDefaultSku(product);
         }
 
         return product;
@@ -249,8 +251,16 @@ public class ProductServiceImpl implements ProductService {
                     sku.setImage(sf.getImage());
                     skuMapper.insert(sku);
                 }
+            } else {
+                createDefaultSku(product);
             }
             syncProductFromSkus(id);
+        } else {
+            long count = skuMapper.selectCount(
+                    new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, id));
+            if (count == 0) {
+                createDefaultSku(product);
+            }
         }
     }
 
@@ -272,6 +282,17 @@ public class ProductServiceImpl implements ProductService {
         update.setPrice(minPrice);
         update.setStock(totalStock);
         productMapper.updateById(update);
+    }
+
+    private void createDefaultSku(Product product) {
+        ProductSku sku = new ProductSku();
+        sku.setProductId(product.getId());
+        sku.setSpecName(product.getName());
+        sku.setSpecValue("");
+        sku.setPrice(product.getPrice());
+        sku.setStock(product.getStock() != null ? product.getStock() : 0);
+        sku.setImage(product.getMainImage());
+        skuMapper.insert(sku);
     }
 
     @Override

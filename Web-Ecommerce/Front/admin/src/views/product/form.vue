@@ -59,15 +59,13 @@
           <div class="sku-list">
             <div class="sku-list__header">
               <span class="sku-list__label">规格名</span>
-              <span class="sku-list__label">规格值</span>
               <span class="sku-list__label sku-list__label--img">图片</span>
               <span class="sku-list__label">价格</span>
               <span class="sku-list__label">库存</span>
               <span class="sku-list__label"></span>
             </div>
             <div v-for="(sku, index) in form.skus" :key="index" class="sku-row">
-              <el-input v-model="sku.specName" placeholder="如：型号" />
-              <el-input v-model="sku.specValue" placeholder="如：7921：2克+顺丰包邮" />
+              <el-input v-model="sku.specName" placeholder="如：7921：2克+顺丰包邮" />
               <div class="sku-row__img">
                 <img v-if="sku.image" :src="sku.image" class="sku-row__thumb" />
                 <el-upload
@@ -149,7 +147,7 @@ function beforeUpload(file: File) {
 
 function addSku() {
   if (!form.skus) form.skus = []
-  form.skus.push({ specName: '', specValue: '', price: 0, stock: 0, image: '' })
+  form.skus.push({ specName: '', price: 0, stock: 0, image: '' })
 }
 
 function removeSku(index: number) {
@@ -162,9 +160,8 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const payload = { ...form }
-    if (!payload.skus || payload.skus.length === 0) {
-      delete payload.skus
-    }
+    // Always send skus so the backend knows when to create a default
+    if (!payload.skus) payload.skus = []
     if (isEdit.value) {
       await updateProduct(Number(route.params.id), payload)
       ElMessage.success('商品已更新')
@@ -193,7 +190,7 @@ onMounted(async () => {
     form.mainImage = p.mainImage
     form.images = p.images
     form.status = p.status
-    form.skus = (p.skus || []).map(s => ({ specName: s.specName, specValue: s.specValue, price: s.price, stock: s.stock, image: s.image || '' }))
+    form.skus = (p.skus || []).map(s => ({ specName: s.specName, price: s.price, stock: s.stock, image: s.image || '' }))
   }
 })
 </script>
@@ -243,11 +240,10 @@ onMounted(async () => {
   &__label {
     font-size: 12px;
     color: #999;
-    &:nth-child(1) { width: 100px; }
-    &:nth-child(2) { width: 150px; }
-    &:nth-child(3) { width: 80px; }
-    &:nth-child(4) { width: 130px; }
-    &:nth-child(5) { width: 110px; }
+    &:nth-child(1) { flex: 1; }
+    &:nth-child(2) { width: 80px; }
+    &:nth-child(3) { width: 130px; }
+    &:nth-child(4) { width: 110px; }
   }
 }
 
@@ -257,8 +253,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 8px;
 
-  .el-input { width: 100px; }
-  .el-input + .el-input { width: 150px; }
+  .el-input { flex: 1; }
   .el-input-number { width: 130px; }
   .el-input-number + .el-input-number { width: 110px; }
 
