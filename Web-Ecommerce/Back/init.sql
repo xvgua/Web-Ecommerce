@@ -79,7 +79,8 @@ CREATE TABLE IF NOT EXISTS `product_sku` (
   spec_name   VARCHAR(50)    NOT NULL,
   spec_value  VARCHAR(50)    NOT NULL,
   price       DECIMAL(10,2)  NOT NULL,
-  stock       INT            DEFAULT 0
+  stock       INT            DEFAULT 0,
+  image       VARCHAR(255)   DEFAULT NULL COMMENT '规格缩略图'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================

@@ -22,4 +22,5 @@ export interface UpdateCartForm {
   id: number
   quantity: number
   checked?: boolean
+  skuId?: number
 }

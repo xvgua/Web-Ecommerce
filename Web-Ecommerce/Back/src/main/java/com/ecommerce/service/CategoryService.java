@@ -10,4 +10,5 @@ public interface CategoryService {
     Category create(Category category);
     void update(Long id, Category category);
     void delete(Long id);
+    void moveSortOrder(Long id, String direction);
 }

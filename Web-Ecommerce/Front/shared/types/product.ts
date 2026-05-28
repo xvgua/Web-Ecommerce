@@ -23,6 +23,7 @@ export interface Product {
   avgRating: number
   reviewCount: number
   createTime: string
+  skus?: ProductSku[]
 }
 
 export interface ProductSku {
@@ -32,6 +33,15 @@ export interface ProductSku {
   specValue: string
   price: number
   stock: number
+  image?: string
+}
+
+export interface SkuForm {
+  specName: string
+  specValue: string
+  price: number
+  stock: number
+  image?: string
 }
 
 export interface ProductQuery extends PageQuery {
@@ -51,6 +61,7 @@ export interface ProductForm {
   mainImage: string
   images: string[]
   status: number
+  skus?: SkuForm[]
 }
 
 export interface Review {

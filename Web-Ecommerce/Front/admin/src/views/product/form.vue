@@ -55,6 +55,39 @@
         <el-form-item label="商品详情" prop="description">
           <el-input v-model="form.description" type="textarea" :rows="8" placeholder="请输入商品描述（支持 HTML）" />
         </el-form-item>
+        <el-form-item label="商品规格">
+          <div class="sku-list">
+            <div class="sku-list__header">
+              <span class="sku-list__label">规格名</span>
+              <span class="sku-list__label">规格值</span>
+              <span class="sku-list__label sku-list__label--img">图片</span>
+              <span class="sku-list__label">价格</span>
+              <span class="sku-list__label">库存</span>
+              <span class="sku-list__label"></span>
+            </div>
+            <div v-for="(sku, index) in form.skus" :key="index" class="sku-row">
+              <el-input v-model="sku.specName" placeholder="如：型号" />
+              <el-input v-model="sku.specValue" placeholder="如：7921：2克+顺丰包邮" />
+              <div class="sku-row__img">
+                <img v-if="sku.image" :src="sku.image" class="sku-row__thumb" />
+                <el-upload
+                  v-else
+                  action="/api/admin/upload"
+                  :show-file-list="false"
+                  :on-success="(res: {data:string}) => sku.image = res.data"
+                  :before-upload="beforeUpload"
+                >
+                  <el-button text size="small" type="primary">上传</el-button>
+                </el-upload>
+                <el-button v-if="sku.image" text size="small" type="danger" @click="sku.image = ''">移除</el-button>
+              </div>
+              <el-input-number v-model="sku.price" :min="0" :precision="2" controls-position="right" />
+              <el-input-number v-model="sku.stock" :min="0" controls-position="right" />
+              <el-button type="danger" :icon="Delete" circle @click="removeSku(index)" />
+            </div>
+            <el-button type="primary" plain size="small" @click="addSku">+ 添加规格</el-button>
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">保存</el-button>
           <el-button size="large" @click="$router.back()">取消</el-button>
@@ -70,8 +103,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { createProduct, updateProduct, getProductById, getCategoryList } from '@/api/admin'
+import { Delete } from '@element-plus/icons-vue'
 import { requiredRule, priceRules } from '@shared/validators'
-import type { Category, ProductForm } from '@shared/types/product'
+import type { Category, ProductForm, SkuForm } from '@shared/types/product'
 import ProductPlaceholder from '@/components/common/ProductPlaceholder.vue'
 
 const route = useRoute()
@@ -91,6 +125,7 @@ const form = reactive<ProductForm>({
   mainImage: '',
   images: [],
   status: 1,
+  skus: [],
 })
 
 const rules: FormRules = {
@@ -112,16 +147,29 @@ function beforeUpload(file: File) {
   return isLt2M
 }
 
+function addSku() {
+  if (!form.skus) form.skus = []
+  form.skus.push({ specName: '', specValue: '', price: 0, stock: 0, image: '' })
+}
+
+function removeSku(index: number) {
+  form.skus?.splice(index, 1)
+}
+
 async function handleSubmit() {
   const valid = await formRef.value?.validate()
   if (!valid) return
   submitting.value = true
   try {
+    const payload = { ...form }
+    if (!payload.skus || payload.skus.length === 0) {
+      delete payload.skus
+    }
     if (isEdit.value) {
-      await updateProduct(Number(route.params.id), form)
+      await updateProduct(Number(route.params.id), payload)
       ElMessage.success('商品已更新')
     } else {
-      await createProduct(form)
+      await createProduct(payload)
       ElMessage.success('商品已创建')
     }
     router.push('/products')
@@ -145,6 +193,7 @@ onMounted(async () => {
     form.mainImage = p.mainImage
     form.images = p.images
     form.status = p.status
+    form.skus = (p.skus || []).map(s => ({ specName: s.specName, specValue: s.specValue, price: s.price, stock: s.stock, image: s.image || '' }))
   }
 })
 </script>
@@ -180,5 +229,53 @@ onMounted(async () => {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #eee;
+}
+
+.sku-list {
+  width: 100%;
+
+  &__header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  &__label {
+    font-size: 12px;
+    color: #999;
+    &:nth-child(1) { width: 100px; }
+    &:nth-child(2) { width: 150px; }
+    &:nth-child(3) { width: 80px; }
+    &:nth-child(4) { width: 130px; }
+    &:nth-child(5) { width: 110px; }
+  }
+}
+
+.sku-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+
+  .el-input { width: 100px; }
+  .el-input + .el-input { width: 150px; }
+  .el-input-number { width: 130px; }
+  .el-input-number + .el-input-number { width: 110px; }
+
+  &__img {
+    width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #eee;
+  }
 }
 </style>

@@ -15,9 +15,44 @@
           <div class="cart-item__img" @click="$router.push(`/products/${item.productId}`)">
             <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
           </div>
-          <div class="cart-item__info" @click="$router.push(`/products/${item.productId}`)">
-            <div class="cart-item__name">{{ item.productName }}</div>
-            <div class="cart-item__spec" v-if="item.specDesc">{{ item.specDesc }}</div>
+          <div class="cart-item__info">
+            <div class="cart-item__name" @click="$router.push(`/products/${item.productId}`)">{{ item.productName }}</div>
+            <div class="cart-item__spec" v-if="item.specDesc">
+              <span>{{ item.specDesc }}</span>
+              <el-popover
+                :visible="specPopoverId === item.id"
+                placement="bottom"
+                :width="220"
+                trigger="click"
+                @show="loadProductSkus(item.productId)"
+                @hide="specPopoverId = 0"
+              >
+                <template #reference>
+                  <el-button text size="small" type="primary" @click="specPopoverId = specPopoverId === item.id ? 0 : item.id">
+                    换规格
+                  </el-button>
+                </template>
+                <div class="spec-popover-list" v-if="productSkuMap[item.productId]?.length">
+                  <div
+                    v-for="sku in productSkuMap[item.productId]"
+                    :key="sku.id"
+                    :class="['spec-option', {
+                      'spec-option--active': sku.id === item.skuId,
+                      'spec-option--disabled': sku.stock === 0
+                    }]"
+                    @click="sku.stock > 0 && handleSwitchSku(item, sku)"
+                  >
+                    <img v-if="sku.image" :src="sku.image" class="spec-option__img" />
+                    <div class="spec-option__info">
+                      <span class="spec-option__name">{{ sku.specValue }}</span>
+                      <span class="spec-option__label">{{ sku.specName }}</span>
+                    </div>
+                    <span class="spec-option__price">{{ formatPrice(sku.price) }}</span>
+                  </div>
+                </div>
+                <el-empty v-else description="暂无其他规格" :image-size="40" />
+              </el-popover>
+            </div>
           </div>
           <div class="cart-item__price">{{ formatPrice(item.price) }}</div>
           <div class="cart-item__qty">
@@ -67,17 +102,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { useCartStore } from '@/stores/cart'
+import { getProductById } from '@/api/product'
 import { formatPrice } from '@/utils/format'
 import type { CartItem } from '@shared/types/cart'
+import type { ProductSku } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
+
+const specPopoverId = ref(0)
+const productSkuMap = reactive<Record<number, ProductSku[]>>({})
+
+async function loadProductSkus(productId: number) {
+  if (productSkuMap[productId]) return
+  try {
+    const res = await getProductById(productId)
+    productSkuMap[productId] = res.data.skus || []
+  } catch { /* ignore */ }
+}
+
+async function handleSwitchSku(item: CartItem, sku: ProductSku) {
+  specPopoverId.value = 0
+  if (sku.id === item.skuId) return
+  await cartStore.updateItem(item.id, item.quantity, item.checked, sku.id)
+}
 
 const checkAll = computed({
   get: () => cartStore.items.length > 0 && cartStore.items.every((item) => item.checked),
@@ -168,6 +222,9 @@ onMounted(() => { cartStore.fetchCart() })
     font-size: 12px;
     color: #999;
     margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   &__price {
@@ -230,6 +287,75 @@ onMounted(() => { cartStore.fetchCart() })
     &.is-disabled {
       background: #e0e0e0;
     }
+  }
+}
+
+.spec-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spec-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all .2s;
+
+  &:hover {
+    border-color: #409eff;
+  }
+
+  &--active {
+    border-color: #409eff;
+    background: rgba(64, 158, 255, .08);
+  }
+
+  &--disabled {
+    opacity: .45;
+    cursor: not-allowed;
+
+    &:hover { border-color: #eee; }
+  }
+
+  &__img {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #f0f0f0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  &__label {
+    font-size: 11px;
+    color: #999;
+  }
+
+  &__price {
+    font-size: 12px;
+    color: #e6423a;
+    font-family: 'SF Mono', monospace;
+    flex-shrink: 0;
   }
 }
 

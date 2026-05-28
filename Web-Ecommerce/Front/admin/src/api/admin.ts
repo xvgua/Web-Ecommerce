@@ -57,6 +57,10 @@ export function deleteCategory(id: number): Promise<ApiResponse<null>> {
   return request.delete(`/admin/categories/${id}`)
 }
 
+export function moveCategorySort(id: number, direction: 'up' | 'down'): Promise<ApiResponse<null>> {
+  return request({ method: 'PUT', url: `/admin/categories/${id}/move?direction=${direction}` })
+}
+
 // ===== Order Management =====
 export function getOrderList(params: OrderQuery): Promise<ApiResponse<PageResponse<Order>>> {
   return request.get('/admin/orders', { params })

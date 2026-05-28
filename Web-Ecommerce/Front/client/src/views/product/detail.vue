@@ -28,9 +28,9 @@
         </div>
         <h1 class="detail-info__name">{{ product.name }}</h1>
         <div class="detail-info__price-row">
-          <span class="detail-info__price">{{ formatPrice(product.price) }}</span>
-          <span class="detail-info__original" v-if="product.price < 99999">
-            {{ formatPrice(product.price * 1.2) }}
+          <span class="detail-info__price">{{ formatPrice(displayPrice) }}</span>
+          <span class="detail-info__original" v-if="displayPrice < 99999">
+            {{ formatPrice(displayPrice * 1.2) }}
           </span>
           <el-button
             class="favorite-btn"
@@ -50,7 +50,7 @@
         <div class="detail-info__meta">
           <div class="meta-item">
             <el-icon><Box /></el-icon>
-            <span>库存 {{ product.stock }} 件</span>
+            <span>库存 {{ displayStock }} 件</span>
           </div>
           <div class="meta-item">
             <el-icon><TrendCharts /></el-icon>
@@ -61,16 +61,29 @@
         <div class="detail-info__divider" />
 
         <div class="detail-info__spec" v-if="product.skus?.length">
-          <h4>规格</h4>
-          <div class="spec-options">
-            <span
+          <h4>商品规格</h4>
+          <div class="sku-grid">
+            <div
               v-for="sku in product.skus"
               :key="sku.id"
-              :class="['spec-tag', { 'spec-tag--active': selectedSkuId === sku.id }]"
-              @click="selectedSkuId = sku.id"
+              :class="['sku-card', {
+                'sku-card--active': selectedSkuId === sku.id,
+                'sku-card--disabled': sku.stock === 0
+              }]"
+              @click="sku.stock > 0 && (selectedSkuId = sku.id)"
             >
-              {{ sku.specValue }}
-            </span>
+              <div class="sku-card__img" v-if="sku.image">
+                <img :src="sku.image" :alt="sku.specValue" />
+              </div>
+              <div class="sku-card__text">
+                <span class="sku-card__name">{{ sku.specValue }}</span>
+                <span class="sku-card__spec">{{ sku.specName }}</span>
+              </div>
+              <div class="sku-card__price" v-if="sku.price !== product.price">
+                {{ formatPrice(sku.price) }}
+              </div>
+              <div class="sku-card__soldout" v-if="sku.stock === 0">已售罄</div>
+            </div>
           </div>
         </div>
 
@@ -79,7 +92,7 @@
           <el-input-number
             v-model="quantity"
             :min="1"
-            :max="product.stock"
+            :max="displayStock"
             size="large"
           />
         </div>
@@ -208,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Box, TrendCharts, ShoppingCart, Star, StarFilled } from '@element-plus/icons-vue'
@@ -232,6 +245,16 @@ const addLoading = ref(false)
 const activeImg = ref('')
 const selectedSkuId = ref(0)
 const detailTab = ref('desc')
+
+const selectedSku = computed(() =>
+  product.value?.skus?.find(s => s.id === selectedSkuId.value) || null
+)
+const displayPrice = computed(() =>
+  selectedSku.value?.price ?? product.value?.price ?? 0
+)
+const displayStock = computed(() =>
+  selectedSku.value?.stock ?? product.value?.stock ?? 0
+)
 
 // ── 评价状态 ──
 const reviews = ref<Review[]>([])
@@ -282,6 +305,9 @@ async function loadProduct() {
     const res = await getProductById(Number(route.params.id))
     product.value = res.data
     activeImg.value = product.value.mainImage
+    if (product.value.skus?.length) {
+      selectedSkuId.value = product.value.skus[0].id
+    }
   } finally {
     loading.value = false
   }
@@ -350,6 +376,14 @@ function formatDate(dateStr: string): string {
 }
 
 async function handleAddToCart() {
+  if (product.value?.skus?.length && !selectedSkuId.value) {
+    ElMessage.warning('请选择商品规格')
+    return
+  }
+  if (selectedSku.value && selectedSku.value.stock === 0) {
+    ElMessage.warning('该规格已售罄')
+    return
+  }
   addLoading.value = true
   try {
     await cartStore.addItem(product.value!.id, selectedSkuId.value, quantity.value)
@@ -531,27 +565,100 @@ onMounted(() => {
   }
 }
 
-.spec-options {
-  display: flex;
-  flex-wrap: wrap;
+.sku-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+}
 
-  .spec-tag {
-    padding: 8px 18px;
-    border: 2px solid #eee;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all .2s;
+.sku-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
 
-    &:hover { border-color: #409eff; color: #409eff; }
+  &:hover { border-color: #409eff; }
 
-    &--active {
-      border-color: #409eff;
-      background: rgba(64,158,255,.08);
-      color: #409eff;
-      font-weight: 600;
+  &--active {
+    border-color: #409eff;
+    background: rgba(64, 158, 255, .08);
+  }
+
+  &--disabled {
+    opacity: .45;
+    cursor: not-allowed;
+
+    &:hover { border-color: #eee; }
+  }
+
+  &__img {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    background: #f8f8f8;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  &__spec {
+    font-size: 11px;
+    color: #999;
+  }
+
+  &__price {
+    font-size: 12px;
+    color: #e6423a;
+    font-family: 'SF Mono', monospace;
+    margin-top: 4px;
+  }
+
+  &__soldout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, .7);
+    color: #999;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sku-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sku-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

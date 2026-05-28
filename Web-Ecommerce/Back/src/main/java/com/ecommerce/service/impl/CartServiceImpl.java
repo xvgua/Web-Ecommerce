@@ -69,6 +69,26 @@ public class CartServiceImpl implements CartService {
         if (cart == null || !cart.getUserId().equals(userId)) {
             throw new BusinessException(404, "购物车商品不存在");
         }
+
+        if (req.getSkuId() != null && !req.getSkuId().equals(cart.getSkuId())) {
+            ProductSku newSku = skuMapper.selectById(req.getSkuId());
+            if (newSku == null) throw new BusinessException(404, "规格不存在");
+            if (!newSku.getProductId().equals(cart.getProductId())) {
+                throw new BusinessException("规格与商品不匹配");
+            }
+            Cart existing = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                    .eq(Cart::getUserId, userId)
+                    .eq(Cart::getProductId, cart.getProductId())
+                    .eq(Cart::getSkuId, req.getSkuId()));
+            if (existing != null && !existing.getId().equals(cartId)) {
+                existing.setQuantity(existing.getQuantity() + (req.getQuantity() != null ? req.getQuantity() : cart.getQuantity()));
+                cartMapper.updateById(existing);
+                cartMapper.deleteById(cartId);
+                return;
+            }
+            cart.setSkuId(req.getSkuId());
+        }
+
         if (req.getQuantity() != null) {
             if (req.getQuantity() <= 0) {
                 cartMapper.deleteById(cartId);

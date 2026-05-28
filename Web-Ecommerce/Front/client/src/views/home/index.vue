@@ -280,7 +280,7 @@ onMounted(async () => {
   display: flex;
   gap: 14px;
   margin: 20px 0 36px;
-  min-height: 400px;
+  height: 400px;
 }
 
 /* ── Left: Category Sidebar ── */
@@ -293,11 +293,14 @@ $cat-subtle: #7b8bb4;
 .hero-cat {
   width: 234px;
   flex-shrink: 0;
+  height: 100%;
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, .05), 0 4px 14px rgba(0, 0, 0, .04);
   position: relative;
   overflow: visible;
+  display: flex;
+  flex-direction: column;
 
   &__header {
     font-size: 14px;
@@ -319,6 +322,8 @@ $cat-subtle: #7b8bb4;
     list-style: none;
     margin: 0;
     padding: 8px 0;
+    flex: 1;
+    overflow-y: auto;
   }
 
   &__item {
@@ -435,9 +440,18 @@ $cat-subtle: #7b8bb4;
 .hero-carousel {
   flex: 1;
   min-width: 0;
+  height: 100%;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
+
+  :deep(.el-carousel) {
+    height: 100% !important;
+  }
+
+  :deep(.el-carousel__container) {
+    height: 100% !important;
+  }
 
   &__slide {
     display: flex;
@@ -505,6 +519,7 @@ $cat-subtle: #7b8bb4;
 .hero-promo {
   width: 240px;
   flex-shrink: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -745,10 +760,12 @@ $cat-subtle: #7b8bb4;
   .hero-three-col {
     flex-direction: column;
     gap: 10px;
+    height: auto;
   }
 
   .hero-cat {
     width: 100%;
+    height: auto;
 
     &__header {
       border-radius: 10px;
@@ -758,6 +775,7 @@ $cat-subtle: #7b8bb4;
       display: flex;
       flex-wrap: wrap;
       padding: 8px;
+      overflow-y: visible;
     }
 
     &__item {
@@ -785,6 +803,7 @@ $cat-subtle: #7b8bb4;
   }
 
   .hero-carousel {
+    height: auto;
     border-radius: 8px;
 
     &__slide {

@@ -24,8 +24,8 @@ export const useCartStore = defineStore('cart', () => {
     await fetchCart()
   }
 
-  async function updateItem(id: number, quantity: number, checked?: boolean) {
-    await updateCartItem({ id, quantity, checked })
+  async function updateItem(id: number, quantity: number, checked?: boolean, skuId?: number) {
+    await updateCartItem({ id, quantity, checked, skuId })
     await fetchCart()
   }
 

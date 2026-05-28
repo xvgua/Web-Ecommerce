@@ -36,4 +36,10 @@ public class AdminCategoryController {
         categoryService.delete(id);
         return Result.success();
     }
+
+    @PutMapping("/{id}/move")
+    public Result<Void> move(@PathVariable Long id, @RequestParam(required = false) String direction) {
+        categoryService.moveSortOrder(id, direction);
+        return Result.success();
+    }
 }

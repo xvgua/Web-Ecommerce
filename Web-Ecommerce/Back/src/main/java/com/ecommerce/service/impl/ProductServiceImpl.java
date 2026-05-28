@@ -6,6 +6,7 @@ import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.dto.ProductForm;
 import com.ecommerce.dto.ProductQuery;
+import com.ecommerce.dto.SkuForm;
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.CategoryMapper;
 import com.ecommerce.mapper.ProductMapper;
@@ -14,8 +15,10 @@ import com.ecommerce.service.ProductService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -184,6 +187,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public Product create(ProductForm form) {
         Product product = new Product();
         product.setName(form.getName());
@@ -197,10 +201,27 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(form.getStatus() != null ? form.getStatus() : ProductStatus.ON_SALE);
         product.setSales(0);
         productMapper.insert(product);
+
+        if (form.getSkus() != null && !form.getSkus().isEmpty()) {
+            for (SkuForm sf : form.getSkus()) {
+                ProductSku sku = new ProductSku();
+                sku.setProductId(product.getId());
+                sku.setSpecName(sf.getSpecName());
+                sku.setSpecValue(sf.getSpecValue());
+                sku.setPrice(sf.getPrice());
+                sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
+                sku.setImage(sf.getImage());
+                skuMapper.insert(sku);
+            }
+            syncProductFromSkus(product.getId());
+            product = productMapper.selectById(product.getId());
+        }
+
         return product;
     }
 
     @Override
+    @Transactional
     public void update(Long id, ProductForm form) {
         Product product = productMapper.selectById(id);
         if (product == null) throw new BusinessException(404, "商品不存在");
@@ -214,6 +235,43 @@ public class ProductServiceImpl implements ProductService {
         if (form.getImages() != null) product.setImages(form.getImages());
         if (form.getStatus() != null) product.setStatus(form.getStatus());
         productMapper.updateById(product);
+
+        if (form.getSkus() != null) {
+            skuMapper.delete(new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, id));
+            if (!form.getSkus().isEmpty()) {
+                for (SkuForm sf : form.getSkus()) {
+                    ProductSku sku = new ProductSku();
+                    sku.setProductId(id);
+                    sku.setSpecName(sf.getSpecName());
+                    sku.setSpecValue(sf.getSpecValue());
+                    sku.setPrice(sf.getPrice());
+                    sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
+                    sku.setImage(sf.getImage());
+                    skuMapper.insert(sku);
+                }
+            }
+            syncProductFromSkus(id);
+        }
+    }
+
+    private void syncProductFromSkus(Long productId) {
+        List<ProductSku> skus = skuMapper.selectList(
+                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, productId));
+        if (skus.isEmpty()) return;
+
+        BigDecimal minPrice = skus.stream()
+                .map(ProductSku::getPrice)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        int totalStock = skus.stream()
+                .mapToInt(s -> s.getStock() != null ? s.getStock() : 0)
+                .sum();
+
+        Product update = new Product();
+        update.setId(productId);
+        update.setPrice(minPrice);
+        update.setStock(totalStock);
+        productMapper.updateById(update);
     }
 
     @Override

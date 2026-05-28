@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ProductForm {
@@ -19,5 +20,5 @@ public class ProductForm {
     private String mainImage;
     private String images;
     private Integer status;
-    private String skus;
+    private List<SkuForm> skus;
 }
