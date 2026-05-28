@@ -14,11 +14,13 @@ public interface ProductMapper extends BaseMapper<Product> {
                                   @Param("likeKeyword") String likeKeyword,
                                   @Param("fuzzyKeyword") String fuzzyKeyword,
                                   @Param("status") Integer status,
+                                  @Param("categoryId") Long categoryId,
                                   @Param("offset") int offset,
                                   @Param("pageSize") int pageSize);
 
     long countByKeyword(@Param("escapedKeyword") String escapedKeyword,
                         @Param("likeKeyword") String likeKeyword,
                         @Param("fuzzyKeyword") String fuzzyKeyword,
-                        @Param("status") Integer status);
+                        @Param("status") Integer status,
+                        @Param("categoryId") Long categoryId);
 }

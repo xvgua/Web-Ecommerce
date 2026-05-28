@@ -74,10 +74,12 @@ async function loadProducts() {
   loading.value = true
   try {
     const kw = (route.query.keyword as string) || ''
+    const catId = route.query.categoryId ? Number(route.query.categoryId) : undefined
     const res = await getProductList({
       page: page.value,
       pageSize: pageSize.value,
       keyword: kw.trim() || undefined,
+      categoryId: catId,
       sort: (sort.value || undefined) as ProductQuery['sort'],
     })
     products.value = res.data.records
@@ -106,6 +108,11 @@ function handleRatingSort() {
 }
 
 watch(() => route.query.keyword, () => {
+  page.value = 1
+  loadProducts()
+})
+
+watch(() => route.query.categoryId, () => {
   page.value = 1
   loadProducts()
 })

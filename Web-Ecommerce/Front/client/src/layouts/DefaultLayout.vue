@@ -131,8 +131,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Search, ShoppingCart, Clock, Close,
   User, Document, SwitchButton, Star,
@@ -144,6 +144,7 @@ import { useSearchHistory } from '@/composables/useSearchHistory'
 import type { SearchHistoryItem } from '@/composables/useSearchHistory'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
@@ -179,6 +180,10 @@ function handleSearch() {
     router.push({ path: '/products', query: { keyword: kw } })
   }
 }
+
+watch(() => route.query.keyword, (kw) => {
+  keyword.value = (kw as string) || ''
+})
 
 function handleLogout() {
   userStore.logout()

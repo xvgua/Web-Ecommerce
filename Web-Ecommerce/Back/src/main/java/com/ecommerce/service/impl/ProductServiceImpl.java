@@ -53,6 +53,8 @@ public class ProductServiceImpl implements ProductService {
         String escapedKeyword = escapeBooleanMode(keyword);
         String likeKeyword = escapeLikeWildcards(keyword);
         Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
+        Long categoryId = query.getCategoryId() != null && query.getCategoryId() > 0
+                ? query.getCategoryId() : null;
 
         // Skip Levenshtein for very short keywords (≤2 chars):
         // edit distance ≤2 would match almost everything, making it noise
@@ -62,9 +64,9 @@ public class ProductServiceImpl implements ProductService {
         int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
         int offset = (page - 1) * pageSize;
 
-        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status);
+        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryId);
         List<Product> records = productMapper.searchByKeyword(
-                escapedKeyword, likeKeyword, fuzzyKeyword, status, offset, pageSize);
+                escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryId, offset, pageSize);
 
         fillCategoryNames(records);
         return PageResult.of(records, total, page, pageSize);
