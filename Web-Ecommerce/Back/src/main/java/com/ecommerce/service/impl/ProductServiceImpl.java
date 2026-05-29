@@ -38,6 +38,39 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private CategoryMapper categoryMapper;
 
+    /**
+     * Collect the given category ID plus all its descendant IDs.
+     * Used so that filtering by a parent category also shows products
+     * in its child categories.
+     */
+    private Set<Long> collectDescendantCategoryIds(Long categoryId) {
+        Set<Long> result = new HashSet<>();
+        result.add(categoryId);
+
+        List<Category> all = categoryMapper.selectList(null);
+        Map<Long, List<Category>> parentToChildren = new HashMap<>();
+        for (Category c : all) {
+            if (c.getParentId() != null && c.getParentId() > 0) {
+                parentToChildren.computeIfAbsent(c.getParentId(), k -> new ArrayList<>()).add(c);
+            }
+        }
+
+        Deque<Long> queue = new ArrayDeque<>();
+        queue.add(categoryId);
+        while (!queue.isEmpty()) {
+            Long pid = queue.poll();
+            List<Category> children = parentToChildren.get(pid);
+            if (children != null) {
+                for (Category child : children) {
+                    if (result.add(child.getId())) {
+                        queue.add(child.getId());
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
     @Override
     public PageResult<Product> getProductPage(ProductQuery query) {
         if (StringUtils.hasText(query.getKeyword())) {
@@ -56,8 +89,8 @@ public class ProductServiceImpl implements ProductService {
         String escapedKeyword = escapeBooleanMode(keyword);
         String likeKeyword = escapeLikeWildcards(keyword);
         Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
-        Long categoryId = query.getCategoryId() != null && query.getCategoryId() > 0
-                ? query.getCategoryId() : null;
+        List<Long> categoryIds = query.getCategoryId() != null && query.getCategoryId() > 0
+                ? new ArrayList<>(collectDescendantCategoryIds(query.getCategoryId())) : null;
 
         // Skip Levenshtein for very short keywords (≤2 chars):
         // edit distance ≤2 would match almost everything, making it noise
@@ -67,9 +100,9 @@ public class ProductServiceImpl implements ProductService {
         int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
         int offset = (page - 1) * pageSize;
 
-        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryId);
+        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryIds);
         List<Product> records = productMapper.searchByKeyword(
-                escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryId, offset, pageSize);
+                escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryIds, offset, pageSize);
 
         fillCategoryNames(records);
         return PageResult.of(records, total, page, pageSize);
@@ -87,7 +120,8 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (query.getCategoryId() != null && query.getCategoryId() > 0) {
-            wrapper.eq(Product::getCategoryId, query.getCategoryId());
+            Set<Long> categoryIds = collectDescendantCategoryIds(query.getCategoryId());
+            wrapper.in(Product::getCategoryId, categoryIds);
         }
         if (query.getMinPrice() != null) {
             wrapper.ge(Product::getPrice, query.getMinPrice());

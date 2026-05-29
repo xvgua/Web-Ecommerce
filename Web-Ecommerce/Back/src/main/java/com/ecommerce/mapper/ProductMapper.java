@@ -14,7 +14,7 @@ public interface ProductMapper extends BaseMapper<Product> {
                                   @Param("likeKeyword") String likeKeyword,
                                   @Param("fuzzyKeyword") String fuzzyKeyword,
                                   @Param("status") Integer status,
-                                  @Param("categoryId") Long categoryId,
+                                  @Param("categoryIds") List<Long> categoryIds,
                                   @Param("offset") int offset,
                                   @Param("pageSize") int pageSize);
 
@@ -22,5 +22,5 @@ public interface ProductMapper extends BaseMapper<Product> {
                         @Param("likeKeyword") String likeKeyword,
                         @Param("fuzzyKeyword") String fuzzyKeyword,
                         @Param("status") Integer status,
-                        @Param("categoryId") Long categoryId);
+                        @Param("categoryIds") List<Long> categoryIds);
 }
