@@ -23,6 +23,7 @@
             <el-button
               text
               size="small"
+              :loading="movingId === primary.id"
               :disabled="pi === 0"
               @click="handleMove(primary.id, 'up')"
             >
@@ -31,6 +32,7 @@
             <el-button
               text
               size="small"
+              :loading="movingId === primary.id"
               :disabled="pi === primaryCategories.length - 1"
               @click="handleMove(primary.id, 'down')"
             >
@@ -57,6 +59,7 @@
                 <el-button
                   text
                   size="small"
+                  :loading="movingId === row.id"
                   :disabled="$index === 0"
                   @click="handleMove(row.id, 'up')"
                 >
@@ -65,6 +68,7 @@
                 <el-button
                   text
                   size="small"
+                  :loading="movingId === row.id"
                   :disabled="$index === (primary.children?.length || 0) - 1"
                   @click="handleMove(row.id, 'down')"
                 >
@@ -230,11 +234,18 @@ async function handleSubmit() {
   }
 }
 
+const movingId = ref(0)
+
 async function handleMove(id: number, direction: 'up' | 'down') {
+  movingId.value = id
   try {
     await moveCategorySort(id, direction)
+    ElMessage.success(direction === 'up' ? '已上移' : '已下移')
     loadCategories()
   } catch { /* handled by interceptor */ }
+  finally {
+    movingId.value = 0
+  }
 }
 
 onMounted(() => {
@@ -310,4 +321,5 @@ onMounted(() => {
     font-size: 13px;
   }
 }
+
 </style>
