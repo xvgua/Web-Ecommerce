@@ -35,6 +35,6 @@ public class AuthController {
     @PostMapping("/send-register-code")
     public Result<Void> sendRegisterCode(@Valid @RequestBody SendCodeRequest req) {
         verificationCodeService.generateAndSend(req.getEmail());
-        return Result.success("验证码已发送", null);
+        return Result.success("验证码已发送", null);  // T inferred as Void from method return type
     }
 }
