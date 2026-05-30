@@ -30,7 +30,15 @@
             <el-input v-model="form.username" placeholder="请输入用户名" size="large" :prefix-icon="User" />
           </el-form-item>
           <el-form-item label="邮箱" prop="email">
-            <el-input v-model="form.email" placeholder="请输入邮箱" size="large" :prefix-icon="Message" />
+            <div class="email-row">
+              <el-input v-model="form.email" placeholder="请输入邮箱" size="large" :prefix-icon="Message" class="email-row__input" />
+              <el-button size="large" :disabled="codeCooldown > 0" :loading="sendingCode" @click="sendCode" class="email-row__btn">
+                {{ codeCooldown > 0 ? `${codeCooldown}s 后重发` : '发送验证码' }}
+              </el-button>
+            </div>
+          </el-form-item>
+          <el-form-item label="验证码" prop="captcha">
+            <el-input v-model="form.captcha" placeholder="请输入 6 位验证码" size="large" maxlength="6" :prefix-icon="Key" />
           </el-form-item>
           <el-form-item label="密码" prop="password">
             <el-input v-model="form.password" type="password" placeholder="请输入密码" size="large" show-password :prefix-icon="Lock" />
@@ -54,17 +62,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Message } from '@element-plus/icons-vue'
+import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { register } from '@/api/user'
-import { usernameRules, passwordRules, emailRules } from '@shared/validators'
+import { register, sendRegisterCode } from '@/api/user'
+import { usernameRules, passwordRules, emailRules, captchaRules } from '@shared/validators'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const sendingCode = ref(false)
+const codeCooldown = ref(0)
+let cooldownTimer: ReturnType<typeof setInterval> | null = null
+
+async function sendCode() {
+  // Pre-validate email format before sending
+  try {
+    await formRef.value?.validateField('email')
+  } catch {
+    return
+  }
+  sendingCode.value = true
+  try {
+    await sendRegisterCode(form.email)
+    ElMessage.success('验证码已发送至您的邮箱')
+    codeCooldown.value = 60
+    cooldownTimer = setInterval(() => {
+      codeCooldown.value--
+      if (codeCooldown.value <= 0) {
+        clearInterval(cooldownTimer!)
+        cooldownTimer = null
+      }
+    }, 1000)
+  } catch { /* handled by interceptor */ }
+  finally { sendingCode.value = false }
+}
 
 const form = reactive({
   username: '',
@@ -85,12 +119,25 @@ const validateConfirmPass = (_rule: unknown, value: string, callback: (error?: E
 const rules: FormRules = {
   username: usernameRules,
   email: emailRules,
+  captcha: captchaRules,
   password: passwordRules,
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     { validator: validateConfirmPass, trigger: 'blur' },
   ],
 }
+
+// Reset cooldown and captcha when user changes email (code is bound to old email)
+watch(() => form.email, () => {
+  if (codeCooldown.value > 0) {
+    codeCooldown.value = 0
+    if (cooldownTimer) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
+    }
+  }
+  form.captcha = ''
+})
 
 async function handleRegister() {
   const valid = await formRef.value?.validate()
@@ -184,6 +231,20 @@ async function handleRegister() {
       color: #409eff;
       font-weight: 500;
     }
+  }
+}
+
+.email-row {
+  display: flex;
+  gap: 10px;
+
+  &__input {
+    flex: 1;
+  }
+
+  &__btn {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 

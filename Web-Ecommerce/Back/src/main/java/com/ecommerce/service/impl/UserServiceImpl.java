@@ -10,6 +10,7 @@ import com.ecommerce.entity.UserStatus;
 import com.ecommerce.mapper.UserMapper;
 import com.ecommerce.security.JwtUtils;
 import com.ecommerce.service.UserService;
+import com.ecommerce.service.VerificationCodeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +27,8 @@ public class UserServiceImpl implements UserService {
     private UserMapper userMapper;
     @Autowired
     private JwtUtils jwtUtils;
+    @Autowired
+    private VerificationCodeService verificationCodeService;
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -34,6 +37,10 @@ public class UserServiceImpl implements UserService {
         if (!req.getPassword().equals(req.getConfirmPassword())) {
             throw new BusinessException("两次密码输入不一致");
         }
+
+        // Verify captcha
+        verificationCodeService.verify(req.getEmail(), req.getCaptcha());
+
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, req.getUsername());
         if (userMapper.selectCount(wrapper) > 0) {

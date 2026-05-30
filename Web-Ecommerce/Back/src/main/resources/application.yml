@@ -11,6 +11,18 @@ spring:
     multipart:
       max-file-size: 2MB
       max-request-size: 10MB
+  mail:
+    host: ${MAIL_HOST:smtp.163.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:17707697453@163.com}
+    password: ${MAIL_PASSWORD:DLWWYjuBMMm3g3Lm}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

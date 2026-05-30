@@ -10,6 +10,10 @@ export function register(data: RegisterForm): Promise<ApiResponse<null>> {
   return request.post('/auth/register', data)
 }
 
+export function sendRegisterCode(email: string): Promise<ApiResponse<null>> {
+  return request.post('/auth/send-register-code', { email })
+}
+
 export function getUserInfo(): Promise<ApiResponse<User>> {
   return request.get('/user/info')
 }

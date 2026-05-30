@@ -34,6 +34,12 @@ export const phoneRules: FormItemRule[] = [
   { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
 ]
 
+export const captchaRules: FormItemRule[] = [
+  { required: true, message: '请输入验证码', trigger: 'blur' },
+  { len: 6, message: '验证码为 6 位数字', trigger: 'blur' },
+  { pattern: /^\d{6}$/, message: '验证码格式不正确', trigger: 'blur' },
+]
+
 export const priceRules: FormItemRule[] = [
   { required: true, message: '请输入价格', trigger: 'blur' },
   {
