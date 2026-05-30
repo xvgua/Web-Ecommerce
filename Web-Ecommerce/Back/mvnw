@@ -1,0 +1,35 @@
+#! /bin/sh
+# Maven Wrapper for Unix/Git Bash
+# Downloads Maven if not present, then runs it
+
+MVNW_VER=3.2.0
+BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+MAVEN_USER_HOME="${MAVEN_USER_HOME:-$HOME/.m2}"
+
+# Try to find java
+if [ -n "$JAVA_HOME" ] ; then
+  JAVACMD="$JAVA_HOME/bin/java"
+else
+  JAVACMD="$(which java 2>/dev/null)"
+fi
+
+if [ ! -x "$JAVACMD" ] ; then
+  echo "ERROR: JAVA_HOME is not set and no 'java' command found in PATH." >&2
+  exit 1
+fi
+
+CLASSWORLDS_LAUNCHER=org.apache.maven.wrapper.MavenWrapperMain
+MVNW_REPOURL="https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/${MVNW_VER}/maven-wrapper-${MVNW_VER}.jar"
+WRAPPER_JAR="$BASE_DIR/.mvn/wrapper/maven-wrapper.jar"
+
+# Download wrapper jar if missing
+if [ ! -f "$WRAPPER_JAR" ]; then
+  echo "Downloading Maven Wrapper JAR..."
+  mkdir -p "$(dirname "$WRAPPER_JAR")"
+  curl -fsSL -o "$WRAPPER_JAR" "$MVNW_REPOURL" || wget -q -O "$WRAPPER_JAR" "$MVNW_REPOURL"
+fi
+
+MAVEN_PROJECTBASEDIR="$BASE_DIR"
+export MAVEN_PROJECTBASEDIR
+
+exec "$JAVACMD" -cp "$WRAPPER_JAR" $CLASSWORLDS_LAUNCHER "$@"
