@@ -124,6 +124,9 @@ public class CartServiceImpl implements CartService {
             item.setPrice(product.getPrice());
             item.setStock(product.getStock());
         }
+        Long skuCount = skuMapper.selectCount(
+                new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, item.getProductId()));
+        item.setHasSku(skuCount > 0);
         if (item.getSkuId() != null && item.getSkuId() > 0) {
             ProductSku sku = skuMapper.selectById(item.getSkuId());
             if (sku != null) {

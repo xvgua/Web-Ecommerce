@@ -50,7 +50,7 @@ export function refundOrder(id: number): Promise<ApiResponse<null>> {
   return request.put(`/orders/${id}/refund`)
 }
 
-export function reorderOrder(id: number): Promise<ApiResponse<null>> {
+export function reorderOrder(id: number): Promise<ApiResponse<Order | null>> {
   return request.post(`/orders/${id}/reorder`)
 }
 

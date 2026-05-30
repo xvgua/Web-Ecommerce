@@ -25,6 +25,8 @@ public class Cart {
     @TableField(exist = false)
     private String specDesc;
     @TableField(exist = false)
+    private Boolean hasSku;
+    @TableField(exist = false)
     private BigDecimal price;
     @TableField(exist = false)
     private Integer stock;

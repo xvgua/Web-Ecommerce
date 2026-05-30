@@ -168,9 +168,14 @@ async function handleRefund(id: number) {
 }
 
 async function handleReorder(id: number) {
-  await reorderOrder(id)
-  ElMessage.success('已加入购物车')
-  router.push('/cart')
+  const res = await reorderOrder(id)
+  if (res.data) {
+    ElMessage.success('下单成功，即将跳转支付页面')
+    router.push(`/orders/${res.data.id}/pay`)
+  } else {
+    ElMessage.warning('部分商品库存不足，已加入购物车')
+    router.push('/cart')
+  }
 }
 
 async function handleConfirm(id: number) {

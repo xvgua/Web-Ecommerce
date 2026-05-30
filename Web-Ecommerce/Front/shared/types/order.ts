@@ -41,8 +41,11 @@ export interface OrderQuery extends PageQuery {
 
 export interface CreateOrderForm {
   addressId: number
-  cartItemIds: number[]
-  remark: string
+  cartItemIds?: number[]
+  productId?: number
+  skuId?: number
+  quantity?: number
+  remark?: string
 }
 
 export interface PaymentForm {

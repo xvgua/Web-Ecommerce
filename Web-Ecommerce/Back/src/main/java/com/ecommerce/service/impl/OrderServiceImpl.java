@@ -51,15 +51,32 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order createOrder(Long userId, CreateOrderRequest req) {
-        // Get selected cart items
-        List<Cart> cartItems = cartMapper.selectList(
-                new LambdaQueryWrapper<Cart>()
-                        .eq(Cart::getUserId, userId)
-                        .eq(Cart::getChecked, 1)
-                        .in(Cart::getId, req.getCartItemIds()));
+        List<Cart> cartItems;
 
-        if (cartItems.isEmpty()) {
-            throw new BusinessException("请选择要购买的商品");
+        if (req.getProductId() != null) {
+            if (req.getQuantity() == null || req.getQuantity() <= 0) {
+                throw new BusinessException("请选择购买数量");
+            }
+            Cart cart = new Cart();
+            cart.setId(0L);
+            cart.setUserId(userId);
+            cart.setProductId(req.getProductId());
+            cart.setSkuId(req.getSkuId() != null ? req.getSkuId() : 0L);
+            cart.setQuantity(req.getQuantity());
+            cart.setChecked(1);
+            cartItems = Collections.singletonList(cart);
+        } else {
+            if (req.getCartItemIds() == null || req.getCartItemIds().isEmpty()) {
+                throw new BusinessException("请选择要购买的商品");
+            }
+            cartItems = cartMapper.selectList(
+                    new LambdaQueryWrapper<Cart>()
+                            .eq(Cart::getUserId, userId)
+                            .eq(Cart::getChecked, 1)
+                            .in(Cart::getId, req.getCartItemIds()));
+            if (cartItems.isEmpty()) {
+                throw new BusinessException("请选择要购买的商品");
+            }
         }
 
         // Validate address
@@ -146,9 +163,11 @@ public class OrderServiceImpl implements OrderService {
             orderItemMapper.insert(item);
         }
 
-        // Clear selected cart items
-        List<Long> cartIds = cartItems.stream().map(Cart::getId).toList();
-        cartMapper.deleteBatchIds(cartIds);
+        // Clear selected cart items (skip for buy-now orders)
+        if (req.getProductId() == null) {
+            List<Long> cartIds = cartItems.stream().map(Cart::getId).toList();
+            cartMapper.deleteBatchIds(cartIds);
+        }
 
         log.info("Order created: orderNo={}, userId={}, amount={}", order.getOrderNo(), userId, totalAmount);
         return order;
@@ -419,7 +438,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public void reorder(Long userId, Long id) {
+    public Order reorder(Long userId, Long id) {
         Order order = orderMapper.selectById(id);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(404, "订单不存在");
@@ -429,6 +448,89 @@ public class OrderServiceImpl implements OrderService {
         }
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, id));
+        if (items.isEmpty()) {
+            throw new BusinessException("订单无商品");
+        }
+
+        // Check stock for all items
+        boolean stockSufficient = true;
+        for (OrderItem item : items) {
+            int availableStock;
+            if (item.getSkuId() != null && item.getSkuId() > 0) {
+                ProductSku sku = skuMapper.selectById(item.getSkuId());
+                availableStock = sku != null ? sku.getStock() : 0;
+            } else {
+                Product product = productMapper.selectById(item.getProductId());
+                availableStock = product != null ? product.getStock() : 0;
+            }
+            if (item.getQuantity() > availableStock) {
+                stockSufficient = false;
+                break;
+            }
+        }
+
+        if (stockSufficient) {
+            // Create order directly
+            Order newOrder = new Order();
+            newOrder.setOrderNo(generateOrderNo());
+            newOrder.setUserId(userId);
+            newOrder.setAddressId(order.getAddressId());
+            newOrder.setStatus(OrderStatus.PENDING_PAY);
+            newOrder.setRemark("");
+
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            List<OrderItem> newItems = new ArrayList<>();
+
+            for (OrderItem oldItem : items) {
+                BigDecimal price;
+                if (oldItem.getSkuId() != null && oldItem.getSkuId() > 0) {
+                    ProductSku sku = skuMapper.selectById(oldItem.getSkuId());
+                    if (sku == null) throw new BusinessException("规格不存在，请重新下单");
+                    int affected = skuMapper.update(null,
+                            new LambdaUpdateWrapper<ProductSku>()
+                                    .eq(ProductSku::getId, oldItem.getSkuId())
+                                    .ge(ProductSku::getStock, oldItem.getQuantity())
+                                    .setSql("stock = stock - " + oldItem.getQuantity()));
+                    if (affected == 0) throw new BusinessException("商品「" + oldItem.getProductName() + "」库存不足");
+                    price = sku.getPrice();
+                } else {
+                    Product product = productMapper.selectById(oldItem.getProductId());
+                    if (product == null || product.getStatus() == ProductStatus.OFF_SHELF)
+                        throw new BusinessException("商品「" + oldItem.getProductName() + "」已下架");
+                    int affected = productMapper.update(null,
+                            new LambdaUpdateWrapper<Product>()
+                                    .eq(Product::getId, oldItem.getProductId())
+                                    .ge(Product::getStock, oldItem.getQuantity())
+                                    .setSql("stock = stock - " + oldItem.getQuantity())
+                                    .setSql("sales = sales + " + oldItem.getQuantity()));
+                    if (affected == 0) throw new BusinessException("商品「" + oldItem.getProductName() + "」库存不足");
+                    price = product.getPrice();
+                }
+
+                OrderItem newItem = new OrderItem();
+                newItem.setProductId(oldItem.getProductId());
+                newItem.setProductName(oldItem.getProductName());
+                newItem.setProductImage(oldItem.getProductImage());
+                newItem.setSkuId(oldItem.getSkuId());
+                newItem.setSpecDesc(oldItem.getSpecDesc());
+                newItem.setQuantity(oldItem.getQuantity());
+                newItem.setPrice(price);
+                newItems.add(newItem);
+                totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(oldItem.getQuantity())));
+            }
+
+            newOrder.setTotalAmount(totalAmount);
+            orderMapper.insert(newOrder);
+            for (OrderItem ni : newItems) {
+                ni.setOrderId(newOrder.getId());
+                orderItemMapper.insert(ni);
+            }
+            log.info("Reordered directly: orderNo={}, userId={}, newOrderNo={}",
+                    order.getOrderNo(), userId, newOrder.getOrderNo());
+            return newOrder;
+        }
+
+        // Stock insufficient, add to cart
         for (OrderItem item : items) {
             Long skuId = item.getSkuId() != null ? item.getSkuId() : 0L;
             Cart existing = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
@@ -448,7 +550,9 @@ public class OrderServiceImpl implements OrderService {
                 cartMapper.insert(cart);
             }
         }
-        log.info("Order reordered: orderNo={}, userId={}, items={}", order.getOrderNo(), userId, items.size());
+        log.info("Reordered to cart (stock insufficient): orderNo={}, userId={}, items={}",
+                order.getOrderNo(), userId, items.size());
+        return null;
     }
 
     @Override

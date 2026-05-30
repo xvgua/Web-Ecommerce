@@ -24,42 +24,45 @@
           </div>
           <div class="cart-item__info">
             <div class="cart-item__name" @click="$router.push(`/products/${item.productId}`)">{{ item.productName }}</div>
-            <div class="cart-item__spec" v-if="item.specDesc">
-              <span>{{ item.specDesc }}</span>
-              <el-popover
-                :visible="specPopoverId === item.id"
-                placement="bottom"
-                :width="220"
-                trigger="click"
-                @show="loadProductSkus(item.productId)"
-                @hide="specPopoverId = 0"
-              >
-                <template #reference>
-                  <el-button text size="small" type="primary" @click="specPopoverId = specPopoverId === item.id ? 0 : item.id">
-                    换规格
-                  </el-button>
-                </template>
-                <div class="spec-popover-list" v-if="productSkuMap[item.productId]?.length">
-                  <div
-                    v-for="sku in productSkuMap[item.productId]"
-                    :key="sku.id"
-                    :class="['spec-option', {
-                      'spec-option--active': sku.id === item.skuId,
-                      'spec-option--disabled': sku.stock === 0
-                    }]"
-                    @click="sku.stock > 0 && handleSwitchSku(item, sku)"
-                  >
-                    <img v-if="sku.image" :src="sku.image" class="spec-option__img" />
-                    <div class="spec-option__info">
-                      <span class="spec-option__name">{{ sku.specValue }}</span>
-                      <span class="spec-option__label">{{ sku.specName }}</span>
-                    </div>
-                    <span class="spec-option__price">{{ formatPrice(sku.price) }}</span>
-                  </div>
+            <el-popover
+              v-if="item.hasSku"
+              :visible="specPopoverId === item.id"
+              placement="bottom"
+              :width="220"
+              trigger="click"
+              @show="loadProductSkus(item.productId)"
+              @hide="specPopoverId = 0"
+            >
+              <template #reference>
+                <div
+                  :class="['cart-item__spec-select', { 'is-open': specPopoverId === item.id }]"
+                  @click="specPopoverId = specPopoverId === item.id ? 0 : item.id"
+                >
+                  <span v-if="item.specDesc">{{ item.specDesc }}</span>
+                  <span v-else class="cart-item__spec-select--empty">未选择规格</span>
+                  <el-icon class="cart-item__spec-arrow"><ArrowDown /></el-icon>
                 </div>
-                <el-empty v-else description="暂无其他规格" :image-size="40" />
-              </el-popover>
-            </div>
+              </template>
+              <div class="spec-popover-list" v-if="productSkuMap[item.productId]?.length">
+                <div
+                  v-for="sku in productSkuMap[item.productId]"
+                  :key="sku.id"
+                  :class="['spec-option', {
+                    'spec-option--active': sku.id === item.skuId,
+                    'spec-option--disabled': sku.stock === 0
+                  }]"
+                  @click="sku.stock > 0 && handleSwitchSku(item, sku)"
+                >
+                  <img v-if="sku.image" :src="sku.image" class="spec-option__img" />
+                  <div class="spec-option__info">
+                    <span class="spec-option__name">{{ sku.specValue }}</span>
+                    <span class="spec-option__label">{{ sku.specName }}</span>
+                  </div>
+                  <span class="spec-option__price">{{ formatPrice(sku.price) }}</span>
+                </div>
+              </div>
+              <el-empty v-else description="暂无其他规格" :image-size="40" />
+            </el-popover>
           </div>
           <div class="cart-item__price">{{ formatPrice(item.price) }}</div>
           <div class="cart-item__qty">
@@ -110,7 +113,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, ArrowDown } from '@element-plus/icons-vue'
 import { useCartStore } from '@/stores/cart'
 import { getProductById } from '@/api/product'
 import { batchAddFavorites } from '@/api/favorite'
@@ -238,7 +241,6 @@ onMounted(() => { cartStore.fetchCart() })
   &__info {
     flex: 1;
     min-width: 0;
-    cursor: pointer;
   }
 
   &__name {
@@ -247,15 +249,53 @@ onMounted(() => { cartStore.fetchCart() })
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
   }
 
-  &__spec {
-    font-size: 12px;
-    color: #999;
-    margin-top: 4px;
-    display: flex;
+  &__spec-select {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    user-select: none;
+    transition: all .2s;
+    max-width: 100%;
+
+    &:hover {
+      background: #e8e8e8;
+      color: #333;
+    }
+
+    &.is-open {
+      background: #e8e8e8;
+      color: #409eff;
+    }
+
+    &--empty {
+      color: #e6a23c;
+    }
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__spec-arrow {
+    font-size: 10px;
+    flex-shrink: 0;
+    transition: transform .2s;
+
+    .is-open & {
+      transform: rotate(180deg);
+    }
   }
 
   &__price {

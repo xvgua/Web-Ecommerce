@@ -6,6 +6,7 @@ export interface CartItem {
   productImage: string
   skuId: number
   specDesc: string
+  hasSku: boolean
   price: number
   quantity: number
   stock: number

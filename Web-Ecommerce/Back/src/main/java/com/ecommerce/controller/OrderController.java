@@ -79,9 +79,8 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/reorder")
-    public Result<Void> reorder(@PathVariable Long id) {
-        orderService.reorder(UserContext.getUserId(), id);
-        return Result.success();
+    public Result<Order> reorder(@PathVariable Long id) {
+        return Result.success(orderService.reorder(UserContext.getUserId(), id));
     }
 
     @PutMapping("/{id}/confirm")

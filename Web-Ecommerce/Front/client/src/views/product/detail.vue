@@ -226,6 +226,8 @@ import { ElMessage } from 'element-plus'
 import { Box, TrendCharts, ShoppingCart, Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductById, getProductReviews } from '@/api/product'
 import { checkFavorite, addFavorite, removeFavorite } from '@/api/favorite'
+import { createOrder } from '@/api/order'
+import { getAddressList } from '@/api/user'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { formatPrice } from '@/utils/format'
@@ -397,9 +399,39 @@ async function handleAddToCart() {
   }
 }
 
-function handleBuyNow() {
-  handleAddToCart()
-  router.push('/cart')
+async function handleBuyNow() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  if (product.value?.skus?.length && !selectedSkuId.value) {
+    ElMessage.warning('请选择商品规格')
+    return
+  }
+  if (selectedSku.value && selectedSku.value.stock === 0) {
+    ElMessage.warning('该规格已售罄')
+    return
+  }
+  addLoading.value = true
+  try {
+    const addrRes = await getAddressList()
+    if (!addrRes.data?.length) {
+      ElMessage.warning('请先添加收货地址')
+      router.push('/user/addresses')
+      return
+    }
+    const orderRes = await createOrder({
+      addressId: addrRes.data[0].id,
+      productId: product.value!.id,
+      skuId: selectedSkuId.value || 0,
+      quantity: quantity.value,
+    })
+    ElMessage.success('下单成功，即将跳转支付页面')
+    router.push(`/orders/${orderRes.data.id}/pay`)
+  } finally {
+    addLoading.value = false
+  }
 }
 
 onMounted(() => {

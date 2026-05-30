@@ -131,9 +131,14 @@ async function handleRefund() {
 }
 
 async function handleReorder() {
-  await reorderOrder(order.value!.id)
-  ElMessage.success('已加入购物车')
-  router.push('/cart')
+  const res = await reorderOrder(order.value!.id)
+  if (res.data) {
+    ElMessage.success('下单成功，即将跳转支付页面')
+    router.push(`/orders/${res.data.id}/pay`)
+  } else {
+    ElMessage.warning('部分商品库存不足，已加入购物车')
+    router.push('/cart')
+  }
 }
 
 const reviewOpen = computed(() => {

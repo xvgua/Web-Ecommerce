@@ -17,7 +17,7 @@ public interface OrderService {
     void confirmReceive(Long userId, Long id);
     void updateAddress(Long userId, Long id, Long addressId);
     void refundOrder(Long userId, Long id);
-    void reorder(Long userId, Long id);
+    Order reorder(Long userId, Long id);
 
     // Payment flow
     PayIntentResponse createPayIntent(Long userId, Long id, String payMethod);
