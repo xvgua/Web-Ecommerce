@@ -85,8 +85,7 @@
               </el-dropdown>
             </template>
             <template v-else>
-              <el-button text @click="$router.push('/login')">登录</el-button>
-              <el-button type="primary" size="small" @click="$router.push('/register')">注册</el-button>
+              <el-button type="primary" size="small" @click="$router.push('/login')">登录</el-button>
             </template>
             <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
               <el-button circle :icon="ShoppingCart" class="cart-btn" @click="$router.push('/cart')" />

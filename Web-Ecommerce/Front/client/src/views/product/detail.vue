@@ -282,6 +282,11 @@ async function handleToggleFavorite() {
     router.push('/login')
     return
   }
+  // If product has SKUs, require selection before favoriting
+  if (!favorited.value && product.value?.skus?.length && !selectedSkuId.value) {
+    ElMessage.warning('请选择规格')
+    return
+  }
   favLoading.value = true
   try {
     if (favorited.value) {
@@ -289,7 +294,7 @@ async function handleToggleFavorite() {
       favorited.value = false
       ElMessage.success('已取消收藏')
     } else {
-      await addFavorite(Number(route.params.id))
+      await addFavorite(Number(route.params.id), selectedSkuId.value || undefined)
       favorited.value = true
       ElMessage.success('已收藏')
     }

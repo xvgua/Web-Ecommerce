@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS `order` (
   status        TINYINT        DEFAULT 0 COMMENT '0=待支付 1=待发货 2=待收货 3=已完成 4=已取消 5=退款中',
   remark        VARCHAR(500)   DEFAULT '',
   pay_time      DATETIME       NULL,
+  deal_time     DATETIME       NULL COMMENT '成交时间（确认收货时写入）',
+  address_modified TINYINT     DEFAULT 0 COMMENT '0=未修改 1=已修改',
   create_time   DATETIME       DEFAULT CURRENT_TIMESTAMP,
   update_time   DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -173,10 +175,11 @@ CREATE TABLE IF NOT EXISTS `review` (
   rating      TINYINT        NOT NULL COMMENT '1-5星',
   content     TEXT,
   images      VARCHAR(2000)  DEFAULT '',
+  is_followup TINYINT        NOT NULL DEFAULT 0 COMMENT '0=initial, 1=followup',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_product_id (product_id),
   INDEX idx_user_id (user_id),
-  UNIQUE KEY uk_order_product (order_id, product_id)
+  UNIQUE KEY uk_order_product_type (order_id, product_id, is_followup)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -186,6 +189,7 @@ CREATE TABLE IF NOT EXISTS `favorite` (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id     BIGINT   NOT NULL,
   product_id  BIGINT   NOT NULL,
+  sku_id      BIGINT   DEFAULT 0,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

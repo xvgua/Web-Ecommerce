@@ -33,7 +33,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new LoginInterceptor(jwtUtils))
-                .addPathPatterns("/api/upload", "/api/reviews",
+                .addPathPatterns("/api/upload", "/api/reviews/**",
                         "/api/cart/**", "/api/user/**", "/api/orders/**",
                         "/api/favorites/**");
 

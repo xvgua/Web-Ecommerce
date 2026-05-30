@@ -17,6 +17,7 @@ public class Review {
     private Integer rating;
     private String content;
     private String images;
+    private Integer isFollowup;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

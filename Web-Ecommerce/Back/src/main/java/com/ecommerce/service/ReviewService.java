@@ -1,6 +1,7 @@
 package com.ecommerce.service;
 
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.CreateFollowUpReviewRequest;
 import com.ecommerce.dto.CreateReviewRequest;
 import com.ecommerce.entity.Review;
 
@@ -9,4 +10,6 @@ public interface ReviewService {
                                          Integer ratingMin, Integer ratingMax);
 
     Review createReview(Long userId, CreateReviewRequest request);
+
+    Review createFollowUpReview(Long userId, CreateFollowUpReviewRequest request);
 }

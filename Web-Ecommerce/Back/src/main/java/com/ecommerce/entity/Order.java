@@ -18,6 +18,8 @@ public class Order {
     private Integer status;
     private String remark;
     private LocalDateTime payTime;
+    private LocalDateTime dealTime;
+    private Integer addressModified;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

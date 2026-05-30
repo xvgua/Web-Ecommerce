@@ -16,7 +16,6 @@
     <div class="review-subtabs" v-if="activeTab === 'review'">
       <el-radio-group v-model="reviewSubTab" size="small" @change="handleSubTabChange">
         <el-radio-button value="pending">待评价</el-radio-button>
-        <el-radio-button value="followup">可追评</el-radio-button>
         <el-radio-button value="reviewed">已评价</el-radio-button>
       </el-radio-group>
     </div>
@@ -25,7 +24,7 @@
       <div v-for="order in orders" :key="order.id" class="order-card" @click="$router.push(`/orders/${order.id}`)">
         <div class="order-card__header">
           <span class="order-card__no">订单号：{{ order.orderNo }}</span>
-          <span class="order-card__time">{{ order.createTime }}</span>
+          <span class="order-card__time">{{ formatDate(order.createTime) }}</span>
           <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark" size="small">
             {{ order.statusText }}
           </el-tag>
@@ -55,10 +54,23 @@
             </span>
           </div>
           <div class="order-card__actions">
+            <!-- 待付款 -->
             <el-button v-if="order.status === 0" type="primary" size="small" @click="handlePay(order.id)">去支付</el-button>
             <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消</el-button>
+            <!-- 待发货 -->
+            <el-button v-if="order.status === 1" size="small" @click="handleEditAddress(order)">修改地址</el-button>
+            <el-button v-if="order.status === 1 || order.status === 2" size="small" @click="handleRefund(order.id)">申请退款</el-button>
+            <!-- 已完成 -->
+            <el-button v-if="order.status === 3" size="small" @click="handleReorder(order.id)">再来一单</el-button>
+            <!-- 已取消 -->
+            <el-button v-if="order.status === 4" size="small" @click="handleReorder(order.id)">加入购物车</el-button>
+            <!-- 待收货 -->
+            <el-button v-if="order.status === 2 || order.status === 3" size="small" @click="handleViewLogistics(order.id)">查看物流</el-button>
             <el-button v-if="order.status === 2" type="success" size="small" @click="handleConfirm(order.id)">确认收货</el-button>
-            <el-button v-if="activeTab === 'review'" type="warning" size="small" @click="$router.push(`/orders/${order.id}`)">评价</el-button>
+            <!-- 评价 tab — 待评价 -->
+            <el-button v-if="activeTab === 'review' && reviewSubTab === 'pending'" type="warning" size="small" @click="$router.push(`/orders/${order.id}`)">评价</el-button>
+            <!-- 评价 tab — 已评价 -->
+            <el-button v-if="activeTab === 'review' && reviewSubTab === 'reviewed'" type="warning" size="small" @click="$router.push(`/orders/${order.id}`)">追加评价</el-button>
             <el-button size="small" @click="$router.push(`/orders/${order.id}`)">详情</el-button>
           </div>
         </div>
@@ -86,8 +98,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getOrderList, cancelOrder, confirmReceive } from '@/api/order'
-import { formatPrice } from '@/utils/format'
+import { getOrderList, cancelOrder, confirmReceive, refundOrder, reorderOrder } from '@/api/order'
+import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -148,6 +160,19 @@ async function handleCancel(id: number) {
   loadOrders()
 }
 
+async function handleRefund(id: number) {
+  await ElMessageBox.confirm('确定要申请退款吗？退款后将恢复库存。', '提示', { type: 'warning' })
+  await refundOrder(id)
+  ElMessage.success('退款申请已提交')
+  loadOrders()
+}
+
+async function handleReorder(id: number) {
+  await reorderOrder(id)
+  ElMessage.success('已加入购物车')
+  router.push('/cart')
+}
+
 async function handleConfirm(id: number) {
   await ElMessageBox.confirm('确认已收到商品吗？', '提示', { type: 'warning' })
   await confirmReceive(id)
@@ -157,6 +182,18 @@ async function handleConfirm(id: number) {
 
 function handlePay(id: number) {
   router.push(`/orders/${id}/pay`)
+}
+
+function handleEditAddress(order: Order) {
+  if (order.addressModified) {
+    ElMessage.warning('您已经修改过地址啦')
+    return
+  }
+  router.push(`/orders/${order.id}/edit-address`)
+}
+
+function handleViewLogistics(id: number) {
+  router.push(`/orders/${id}`)
 }
 
 onMounted(() => { loadOrders() })

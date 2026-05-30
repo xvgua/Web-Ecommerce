@@ -1,6 +1,6 @@
 <template>
   <div class="review-page">
-    <h1 class="page-title">发表评价</h1>
+    <h1 class="page-title">{{ isFollowUp ? '追加评价' : '发表评价' }}</h1>
 
     <div v-loading="loading" class="review-card">
       <div class="review-card__product" v-if="orderItem">
@@ -64,8 +64,8 @@
 
       <div class="review-card__actions">
         <el-button @click="$router.back()">取消</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="!rating" @click="handleSubmit">
-          提交评价
+        <el-button type="primary" :loading="submitting" :disabled="!canSubmit" @click="handleSubmit">
+          {{ isFollowUp ? '提交追加评价' : '提交评价' }}
         </el-button>
       </div>
     </div>
@@ -80,7 +80,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, Close } from '@element-plus/icons-vue'
 import { getOrderById } from '@/api/order'
-import { createReview } from '@/api/product'
+import { createReview, createFollowUpReview } from '@/api/product'
 import { formatPrice } from '@/utils/format'
 import { TOKEN_KEY } from '@shared/constants'
 import type { OrderItem } from '@shared/types/order'
@@ -91,6 +91,7 @@ const router = useRouter()
 
 const orderId = Number(route.params.orderId)
 const productId = Number(route.params.productId)
+const isFollowUp = computed(() => route.query.followUp === '1')
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -99,6 +100,8 @@ const orderItem = ref<OrderItem | null>(null)
 const rating = ref(0)
 const content = ref('')
 const imageUrls = ref<string[]>([])
+
+const canSubmit = computed(() => isFollowUp.value ? content.value.trim().length > 0 : rating.value > 0)
 
 const rateTexts = ['非常差', '差', '一般', '好', '非常好']
 
@@ -140,7 +143,17 @@ async function loadOrderItem() {
   loading.value = true
   try {
     const res = await getOrderById(orderId)
-    const item = res.data.items?.find(i => i.productId === productId)
+    const order = res.data
+    if (order.dealTime) {
+      const deadline = new Date(order.dealTime)
+      deadline.setMonth(deadline.getMonth() + 1)
+      if (deadline <= new Date()) {
+        ElMessage.warning('该订单已完成超过1个月，已关闭评价入口')
+        router.replace(`/orders/${orderId}`)
+        return
+      }
+    }
+    const item = order.items?.find(i => i.productId === productId)
     if (item) {
       orderItem.value = item
     }
@@ -150,7 +163,7 @@ async function loadOrderItem() {
 }
 
 async function handleSubmit() {
-  if (!rating.value) {
+  if (!isFollowUp.value && !rating.value) {
     ElMessage.warning('请给商品评分')
     return
   }
@@ -161,14 +174,20 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    await createReview({
+    const data = {
       productId,
       orderId,
       rating: rating.value,
       content: content.value.trim(),
       images: imageUrls.value,
-    })
-    ElMessage.success('评价成功')
+    }
+    if (isFollowUp.value) {
+      await createFollowUpReview(data)
+      ElMessage.success('追加评价成功')
+    } else {
+      await createReview(data)
+      ElMessage.success('评价成功')
+    }
     router.push(`/orders/${orderId}`)
   } catch {
     // error handled by interceptor
@@ -186,7 +205,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .review-page {
-  max-width: 700px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -209,14 +228,14 @@ onMounted(() => {
     &-img {
       width: 72px;
       height: 72px;
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       flex-shrink: 0;
     }
 
     &-info { flex: 1; min-width: 0; }
 
-    &-name { font-size: 15px; font-weight: 600; }
+    &-name { font-size: 14px; font-weight: 600; }
 
     &-spec { font-size: 12px; color: #999; margin-top: 4px; }
 

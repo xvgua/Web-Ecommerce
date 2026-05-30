@@ -30,7 +30,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="170" />
+        <el-table-column prop="createTime" label="创建时间" width="170" :formatter="(_, __, val) => formatDate(val)" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button text type="primary" size="small" @click="$router.push(`/orders/${row.id}`)">详情</el-button>
@@ -73,7 +73,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getOrderList, shipOrder, cancelOrder } from '@/api/admin'
-import { formatPrice } from '@/utils/format'
+import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_MAP, ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 

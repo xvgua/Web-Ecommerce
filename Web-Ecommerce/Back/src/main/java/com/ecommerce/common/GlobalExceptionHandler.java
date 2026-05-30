@@ -5,6 +5,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @Slf4j
 @RestControllerAdvice
@@ -20,6 +21,11 @@ public class GlobalExceptionHandler {
     public Result<Void> handleDuplicateKey(DuplicateKeyException e) {
         log.warn("Duplicate key: {}", e.getMessage());
         return Result.error(400, "您已评价过该商品");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<Void> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return Result.error(400, "文件大小超过限制，最大支持2MB");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

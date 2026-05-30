@@ -30,6 +30,16 @@ export function createReview(data: {
   return request.post('/reviews', data)
 }
 
+export function createFollowUpReview(data: {
+  productId: number
+  orderId: number
+  rating: number
+  content: string
+  images: string[]
+}): Promise<ApiResponse<Review>> {
+  return request.post(`/reviews/${data.productId}/followup`, data)
+}
+
 export function getCategories(): Promise<ApiResponse<Category[]>> {
   return request.get('/categories')
 }

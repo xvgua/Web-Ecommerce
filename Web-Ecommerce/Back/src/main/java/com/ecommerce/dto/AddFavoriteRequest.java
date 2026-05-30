@@ -7,4 +7,5 @@ import lombok.Data;
 public class AddFavoriteRequest {
     @NotNull(message = "商品ID不能为空")
     private Long productId;
+    private Long skuId;
 }

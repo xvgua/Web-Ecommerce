@@ -11,6 +11,7 @@ export interface OrderItem {
   quantity: number
   price: number
   isReviewed?: boolean
+  hasFollowUp?: boolean
 }
 
 export interface Order {
@@ -22,8 +23,13 @@ export interface Order {
   totalAmount: number
   status: number
   statusText: string
+  payMethod?: string
   payTime: string
+  shipTime?: string
+  dealTime?: string
   createTime: string
+  updateTime?: string
+  addressModified?: number
   reviewCount?: number
   items: OrderItem[]
 }

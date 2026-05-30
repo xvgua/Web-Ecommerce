@@ -2,6 +2,7 @@ package com.ecommerce.controller;
 
 import com.ecommerce.common.PageResult;
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.AddressUpdateRequest;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.CreatePayIntentRequest;
 import com.ecommerce.dto.OrderQuery;
@@ -71,9 +72,27 @@ public class OrderController {
         return Result.success();
     }
 
+    @PutMapping("/{id}/refund")
+    public Result<Void> refund(@PathVariable Long id) {
+        orderService.refundOrder(UserContext.getUserId(), id);
+        return Result.success();
+    }
+
+    @PostMapping("/{id}/reorder")
+    public Result<Void> reorder(@PathVariable Long id) {
+        orderService.reorder(UserContext.getUserId(), id);
+        return Result.success();
+    }
+
     @PutMapping("/{id}/confirm")
     public Result<Void> confirm(@PathVariable Long id) {
         orderService.confirmReceive(UserContext.getUserId(), id);
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/address")
+    public Result<Void> updateAddress(@PathVariable Long id, @RequestBody AddressUpdateRequest req) {
+        orderService.updateAddress(UserContext.getUserId(), id, req.getAddressId());
         return Result.success();
     }
 }

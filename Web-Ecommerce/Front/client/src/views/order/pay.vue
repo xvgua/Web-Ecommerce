@@ -120,7 +120,7 @@
               </div>
               <div class="pay-summary__row">
                 <span>提交时间</span>
-                <span>{{ order.createTime }}</span>
+                <span>{{ formatDate(order.createTime) }}</span>
               </div>
               <div class="pay-summary__row">
                 <span>支付方式</span>
@@ -208,7 +208,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, WarningFilled, ChatDotSquare, Wallet, CreditCard, Loading, CircleCheckFilled } from '@element-plus/icons-vue'
 import { getOrderById, cancelOrder, createPayIntent, simulateScan, confirmPay } from '@/api/order'
 import { addToCart } from '@/api/cart'
-import { formatPrice } from '@/utils/format'
+import { formatPrice, formatDate } from '@/utils/format'
 import type { Order, PayIntent } from '@shared/types/order'
 import QRCode from 'qrcode'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -398,7 +398,7 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .pay-page {
-  max-width: 1100px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -463,7 +463,7 @@ onUnmounted(() => {
 .pay-block {
   background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 16px;
 
   &__title {

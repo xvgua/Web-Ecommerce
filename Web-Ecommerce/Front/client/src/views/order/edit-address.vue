@@ -1,29 +1,49 @@
 <template>
-  <div class="address-page">
-    <div class="page-header">
-      <h1 class="page-title">收货地址</h1>
-      <el-button type="primary" @click="handleAdd">新增地址</el-button>
-    </div>
+  <div class="edit-address-page">
+    <h1 class="page-title">修改地址</h1>
 
-    <div class="address-list" v-loading="loading">
-      <div v-for="addr in addresses" :key="addr.id" class="address-card">
+    <div class="section-card" v-if="currentAddress">
+      <h2 class="section-title">当前收货地址</h2>
+      <div class="address-card address-card--current">
         <div class="address-card__content">
           <div class="address-card__region">
-            {{ addr.province }} {{ addr.city }} {{ addr.district }}
+            {{ currentAddress.province }} {{ currentAddress.city }} {{ currentAddress.district }}
           </div>
-          <div class="address-card__detail">{{ addr.detail }}</div>
+          <div class="address-card__detail">{{ currentAddress.detail }}</div>
           <div class="address-card__contact">
-            <span class="address-card__name">{{ addr.name }}</span>
-            <span class="address-card__phone">{{ addr.phone }}</span>
-            <el-tag v-if="addr.isDefault" size="small" type="primary">默认</el-tag>
+            <span>{{ currentAddress.name }}</span>
+            <span class="address-card__phone">{{ currentAddress.phone }}</span>
+            <el-tag v-if="currentAddress.isDefault" size="small" type="primary">默认</el-tag>
           </div>
-        </div>
-        <div class="address-card__actions">
-          <el-button text type="primary" @click="handleEdit(addr)">编辑</el-button>
-          <el-button text type="danger" @click="handleDelete(addr.id)">删除</el-button>
         </div>
       </div>
-      <el-empty v-if="!loading && !addresses.length" description="暂无收货地址" />
+    </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">选择其他地址</h2>
+        <el-button type="primary" size="small" @click="handleAdd">新增地址</el-button>
+      </div>
+
+      <div v-loading="loading" class="address-list">
+        <div v-for="addr in otherAddresses" :key="addr.id" class="address-card">
+          <div class="address-card__content">
+            <div class="address-card__region">
+              {{ addr.province }} {{ addr.city }} {{ addr.district }}
+            </div>
+            <div class="address-card__detail">{{ addr.detail }}</div>
+            <div class="address-card__contact">
+              <span>{{ addr.name }}</span>
+              <span class="address-card__phone">{{ addr.phone }}</span>
+              <el-tag v-if="addr.isDefault" size="small" type="primary">默认</el-tag>
+            </div>
+          </div>
+          <div class="address-card__actions">
+            <el-button type="primary" size="small" @click="handleSelect(addr)">选择</el-button>
+          </div>
+        </div>
+        <el-empty v-if="!loading && !otherAddresses.length" description="暂无其他收货地址" />
+      </div>
     </div>
 
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑地址' : '新增地址'" width="500px">
@@ -59,15 +79,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { getAddressList, createAddress, updateAddress, deleteAddress } from '@/api/user'
+import { getOrderById } from '@/api/order'
+import { getAddressList, createAddress, updateAddress } from '@/api/user'
+import { updateOrderAddress } from '@/api/order'
 import { requiredRule, phoneRules } from '@shared/validators'
 import type { Address, AddressForm } from '@shared/types/user'
+import type { Order } from '@shared/types/order'
 
+const route = useRoute()
+const router = useRouter()
+
+const orderId = Number(route.params.id)
+
+const order = ref<Order | null>(null)
 const addresses = ref<Address[]>([])
 const loading = ref(false)
+
+const currentAddress = computed(() => order.value?.address)
+const otherAddresses = computed(() =>
+  addresses.value.filter(a => a.id !== order.value?.addressId)
+)
+
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editId = ref(0)
@@ -75,13 +111,7 @@ const submitting = ref(false)
 const formRef = ref<FormInstance>()
 
 const form = reactive<AddressForm>({
-  name: '',
-  phone: '',
-  province: '',
-  city: '',
-  district: '',
-  detail: '',
-  isDefault: 0,
+  name: '', phone: '', province: '', city: '', district: '', detail: '', isDefault: 0,
 })
 
 const rules: FormRules = {
@@ -109,13 +139,28 @@ function autoCorrectCity() {
   form.city = v + '市'
 }
 
-async function loadAddresses() {
+async function loadData() {
   loading.value = true
   try {
-    const res = await getAddressList()
-    addresses.value = res.data
+    const [orderRes, addrRes] = await Promise.all([
+      getOrderById(orderId),
+      getAddressList(),
+    ])
+    order.value = orderRes.data
+    addresses.value = addrRes.data
   } finally {
     loading.value = false
+  }
+}
+
+async function handleSelect(addr: Address) {
+  try {
+    await ElMessageBox.confirm('确定使用该地址作为收货地址吗？', '提示', { type: 'warning' })
+    await updateOrderAddress(orderId, { addressId: addr.id })
+    ElMessage.success('地址修改成功')
+    router.back()
+  } catch {
+    // cancelled
   }
 }
 
@@ -124,28 +169,6 @@ function handleAdd() {
   editId.value = 0
   Object.assign(form, { name: '', phone: '', province: '', city: '', district: '', detail: '', isDefault: 0 })
   dialogVisible.value = true
-}
-
-function handleEdit(addr: Address) {
-  isEdit.value = true
-  editId.value = addr.id
-  Object.assign(form, {
-    name: addr.name,
-    phone: addr.phone,
-    province: addr.province,
-    city: addr.city,
-    district: addr.district,
-    detail: addr.detail,
-    isDefault: addr.isDefault,
-  })
-  dialogVisible.value = true
-}
-
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定要删除该地址吗？', '提示', { type: 'warning' })
-  await deleteAddress(id)
-  ElMessage.success('已删除')
-  loadAddresses()
 }
 
 async function handleSubmit() {
@@ -161,40 +184,50 @@ async function handleSubmit() {
     }
     ElMessage.success(isEdit.value ? '已更新' : '已添加')
     dialogVisible.value = false
-    loadAddresses()
+    const res = await getAddressList()
+    addresses.value = res.data
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(() => {
-  loadAddresses()
-})
+onMounted(() => { loadData() })
 </script>
 
 <style lang="scss" scoped>
-.address-page {
+.edit-address-page {
   max-width: 1000px;
   margin: 0 auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
 }
 
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  margin: 0;
+  margin-bottom: 20px;
 }
 
-.address-list {
+.section-card {
   background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.address-list {
+  border-radius: 0;
+  padding: 0;
 }
 
 .address-card {
@@ -202,6 +235,7 @@ onMounted(() => {
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 12px;
+  margin-top:16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -209,6 +243,11 @@ onMounted(() => {
 
   &:last-child { margin-bottom: 0; }
   &:hover { box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+
+  &--current {
+    border-color: #e0e0e0;
+    background: #fafafa;
+  }
 
   &__content { flex: 1; min-width: 0; }
 
@@ -218,11 +257,9 @@ onMounted(() => {
 
   &__contact { font-size: 13px; color: #333; display: flex; align-items: center; gap: 8px; }
 
-  &__phone { margin-left: 8px; }
+  &__phone { color: #333; }
 
   &__actions {
-    display: flex;
-    gap: 8px;
     flex-shrink: 0;
     margin-left: 16px;
   }

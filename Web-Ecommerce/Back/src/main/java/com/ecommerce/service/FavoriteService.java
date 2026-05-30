@@ -1,13 +1,15 @@
 package com.ecommerce.service;
 
+import com.ecommerce.dto.BatchFavoriteItem;
 import com.ecommerce.entity.Favorite;
-import com.ecommerce.entity.Product;
 
 import java.util.List;
 
 public interface FavoriteService {
-    Favorite addFavorite(Long userId, Long productId);
+    Favorite addFavorite(Long userId, Long productId, Long skuId);
     void removeFavorite(Long userId, Long productId);
-    List<Product> getFavoriteList(Long userId);
+    void batchAddFavorites(Long userId, List<BatchFavoriteItem> items);
+    List<Favorite> getFavoriteList(Long userId);
     boolean isFavorited(Long userId, Long productId);
+    void updateFavoriteSku(Long userId, Long productId, Long skuId);
 }

@@ -28,8 +28,11 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public Address create(Long userId, Address address) {
         address.setUserId(userId);
-        if (address.getIsDefault() != null && address.getIsDefault() == 1) {
+        long count = addressMapper.selectCount(
+                new LambdaQueryWrapper<Address>().eq(Address::getUserId, userId));
+        if (count == 0 || (address.getIsDefault() != null && address.getIsDefault() == 1)) {
             clearDefault(userId);
+            address.setIsDefault(1);
         }
         addressMapper.insert(address);
         return address;
@@ -55,6 +58,14 @@ public class AddressServiceImpl implements AddressService {
             throw new BusinessException(404, "地址不存在");
         }
         addressMapper.deleteById(addressId);
+        // If only one address remains, make it the default
+        List<Address> remaining = addressMapper.selectList(
+                new LambdaQueryWrapper<Address>().eq(Address::getUserId, userId));
+        if (remaining.size() == 1) {
+            Address sole = remaining.get(0);
+            sole.setIsDefault(1);
+            addressMapper.updateById(sole);
+        }
     }
 
     private void clearDefault(Long userId) {

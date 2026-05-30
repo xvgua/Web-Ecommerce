@@ -12,8 +12,8 @@
             <el-tag :type="ORDER_STATUS_COLOR[order.status]">{{ order.statusText }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="订单金额">{{ formatPrice(order.totalAmount) }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ order.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="支付时间">{{ order.payTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDate(order.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="支付时间">{{ order.payTime ? formatDate(order.payTime) : '-' }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
     </div>
@@ -62,7 +62,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getOrderById } from '@/api/admin'
-import { formatPrice } from '@/utils/format'
+import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 

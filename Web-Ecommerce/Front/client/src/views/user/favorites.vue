@@ -2,55 +2,79 @@
   <div class="favorites-page">
     <h1 class="page-title">我的收藏</h1>
 
-    <div class="favorites-container" v-loading="loading">
-      <template v-if="products.length > 0">
-        <div
-          v-for="product in products"
-          :key="product.id"
-          class="favorite-card"
-        >
-          <div class="favorite-card__body">
-            <div class="favorite-card__image" @click="goDetail(product.id)">
-              <ProductImage
-                :src="product.mainImage"
-                :seed="product.name + product.id"
-                fit="cover"
-              />
-            </div>
-            <div class="favorite-card__info" @click="goDetail(product.id)">
-              <h3 class="favorite-card__name">{{ product.name }}</h3>
-              <div class="favorite-card__meta">
-                <span class="favorite-card__price">{{ formatPrice(product.price) }}</span>
-                <span class="favorite-card__stock" v-if="product.status === 1">库存 {{ product.stock }} 件</span>
-                <el-tag type="info" size="small" v-else>已下架</el-tag>
-              </div>
-            </div>
-            <div class="favorite-card__actions">
-              <el-button
-                type="primary"
-                size="small"
-                :disabled="product.status !== 1"
-                :loading="addLoadingMap[product.id]"
-                @click.stop="handleAddToCart(product)"
+    <div class="favorites-content" v-if="favorites.length">
+      <div class="favorites-items" v-loading="loading">
+        <div v-for="fav in favorites" :key="fav.id" class="favorite-item">
+          <div class="favorite-item__img" @click="goDetail(fav.productId)">
+            <ProductImage :src="fav.productImage" :seed="fav.productName + fav.productId" fit="cover" />
+          </div>
+          <div class="favorite-item__info">
+            <div class="favorite-item__name" @click="goDetail(fav.productId)">{{ fav.productName }}</div>
+            <div class="favorite-item__spec">
+              <template v-if="fav.skuId && fav.specDesc">
+                <span>{{ fav.specDesc }}</span>
+              </template>
+              <el-popover
+                :visible="specPopoverId === fav.id"
+                placement="bottom"
+                :width="220"
+                trigger="click"
+                @show="loadProductSkus(fav.productId)"
+                @hide="specPopoverId = 0"
               >
-                <el-icon><ShoppingCart /></el-icon>
-                {{ product.status === 1 ? '加入购物车' : '已下架' }}
-              </el-button>
-              <el-button
-                size="small"
-                :loading="removeLoadingMap[product.id]"
-                @click.stop="handleRemove(product)"
-              >
-                取消收藏
-              </el-button>
+                <template #reference>
+                  <el-button text size="small" type="primary" @click="specPopoverId = specPopoverId === fav.id ? 0 : fav.id">
+                    {{ fav.skuId ? '换规格' : '请选择规格' }}
+                  </el-button>
+                </template>
+                <div class="spec-popover-list" v-if="productSkuMap[fav.productId]?.length">
+                  <div
+                    v-for="sku in productSkuMap[fav.productId]"
+                    :key="sku.id"
+                    :class="['spec-option', {
+                      'spec-option--active': sku.id === fav.skuId,
+                      'spec-option--disabled': sku.stock === 0
+                    }]"
+                    @click="sku.stock > 0 && handleSwitchSku(fav, sku)"
+                  >
+                    <img v-if="sku.image" :src="sku.image" class="spec-option__img" />
+                    <div class="spec-option__info">
+                      <span class="spec-option__name">{{ sku.specValue }}</span>
+                      <span class="spec-option__label">{{ sku.specName }}</span>
+                    </div>
+                    <span class="spec-option__price">{{ formatPrice(sku.price) }}</span>
+                  </div>
+                </div>
+                <el-empty v-else description="暂无其他规格" :image-size="40" />
+              </el-popover>
             </div>
           </div>
+          <div class="favorite-item__price">{{ formatPrice(fav.price) }}</div>
+          <div class="favorite-item__actions">
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="fav.stock === 0"
+              :loading="addLoadingMap[fav.productId]"
+              @click.stop="handleAddToCart(fav)"
+            >
+              加入购物车
+            </el-button>
+            <el-button
+              size="small"
+              :loading="removeLoadingMap[fav.productId]"
+              @click.stop="handleRemove(fav)"
+            >
+              取消收藏
+            </el-button>
+          </div>
         </div>
-      </template>
-      <el-empty v-else description="暂无收藏，去逛逛吧">
-        <el-button type="primary" @click="$router.push('/products')">浏览商品</el-button>
-      </el-empty>
+      </div>
     </div>
+
+    <el-empty v-else v-loading="loading" description="暂无收藏，去逛逛吧">
+      <el-button type="primary" @click="$router.push('/products')">浏览商品</el-button>
+    </el-empty>
   </div>
 </template>
 
@@ -58,48 +82,70 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ShoppingCart } from '@element-plus/icons-vue'
-import { getFavoriteList, removeFavorite } from '@/api/favorite'
+import { getFavoriteList, removeFavorite, updateFavoriteSku } from '@/api/favorite'
+import type { Favorite } from '@/api/favorite'
+import { getProductById } from '@/api/product'
 import { useCartStore } from '@/stores/cart'
 import { formatPrice } from '@/utils/format'
-import type { Product } from '@shared/types/product'
+import type { ProductSku } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
 
-const products = ref<Product[]>([])
+const favorites = ref<Favorite[]>([])
 const loading = ref(false)
 const addLoadingMap = reactive<Record<number, boolean>>({})
 const removeLoadingMap = reactive<Record<number, boolean>>({})
+const specPopoverId = ref(0)
+const productSkuMap = reactive<Record<number, ProductSku[]>>({})
 
 async function loadFavorites() {
   loading.value = true
   try {
     const res = await getFavoriteList()
-    products.value = res.data
+    favorites.value = res.data
   } finally {
     loading.value = false
   }
+}
+
+async function loadProductSkus(productId: number) {
+  if (productSkuMap[productId]) return
+  try {
+    const res = await getProductById(productId)
+    productSkuMap[productId] = res.data.skus || []
+  } catch { /* ignore */ }
+}
+
+async function handleSwitchSku(fav: Favorite, sku: ProductSku) {
+  specPopoverId.value = 0
+  if (sku.id === fav.skuId) return
+  await updateFavoriteSku(fav.productId, sku.id)
+  fav.skuId = sku.id
+  fav.specDesc = sku.specName + ':' + sku.specValue
+  if (sku.price != null) fav.price = sku.price
+  if (sku.stock != null) fav.stock = sku.stock
+  ElMessage.success('规格已更新')
 }
 
 function goDetail(id: number) {
   router.push(`/products/${id}`)
 }
 
-async function handleAddToCart(product: Product) {
-  addLoadingMap[product.id] = true
+async function handleAddToCart(fav: Favorite) {
+  addLoadingMap[fav.productId] = true
   try {
-    await cartStore.addItem(product.id, 0, 1)
+    await cartStore.addItem(fav.productId, fav.skuId || 0, 1)
     ElMessage.success('已加入购物车')
   } finally {
-    addLoadingMap[product.id] = false
+    addLoadingMap[fav.productId] = false
   }
 }
 
-async function handleRemove(product: Product) {
+async function handleRemove(fav: Favorite) {
   try {
-    await ElMessageBox.confirm(`确定取消收藏「${product.name}」吗？`, '提示', {
+    await ElMessageBox.confirm(`确定取消收藏「${fav.productName}」吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
@@ -107,19 +153,17 @@ async function handleRemove(product: Product) {
   } catch {
     return
   }
-  removeLoadingMap[product.id] = true
+  removeLoadingMap[fav.productId] = true
   try {
-    await removeFavorite(product.id)
+    await removeFavorite(fav.productId)
     ElMessage.success('已取消收藏')
-    products.value = products.value.filter((p) => p.id !== product.id)
+    favorites.value = favorites.value.filter((f) => f.productId !== fav.productId)
   } finally {
-    removeLoadingMap[product.id] = false
+    removeLoadingMap[fav.productId] = false
   }
 }
 
-onMounted(() => {
-  loadFavorites()
-})
+onMounted(() => { loadFavorites() })
 </script>
 
 <style lang="scss" scoped>
@@ -131,76 +175,66 @@ onMounted(() => {
 .page-title {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-.favorites-container {
+.favorites-content {
   background: #fff;
   border-radius: 12px;
-  padding: 20px;
+  overflow: hidden;
 }
 
-.favorite-card {
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
-  overflow: hidden;
-  transition: box-shadow .2s;
+.favorites-items {
+  padding: 8px 20px;
+}
 
-  & + & {
-    margin-top: 16px;
-  }
+.favorite-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f5f5f5;
 
-  &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .06);
-  }
+  &:last-child { border-bottom: none; }
 
-  &__body {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  &__image {
+  &__img {
     width: 80px;
     height: 80px;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
     flex-shrink: 0;
+    cursor: pointer;
   }
 
   &__info {
     flex: 1;
     min-width: 0;
-    cursor: pointer;
   }
 
   &__name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
-    color: #1a1a1a;
-    margin-bottom: 6px;
-    overflow: hidden;
+
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
   }
 
-  &__meta {
+  &__spec {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
   }
 
   &__price {
-    font-size: 16px;
+    width: 100px;
+    font-size: 15px;
     font-weight: 600;
-    color: #e6423a;
-  }
-
-  &__stock {
-    font-size: 13px;
-    color: #999;
+    text-align: center;
+    flex-shrink: 0;
   }
 
   &__actions {
@@ -210,18 +244,71 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 768px) {
-  .favorite-card {
-    &__body {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-    }
+.spec-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-    &__image {
-      width: 100%;
-      height: 180px;
-    }
+.spec-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all .2s;
+
+  &:hover { border-color: #409eff; }
+
+  &--active {
+    border-color: #409eff;
+    background: rgba(64, 158, 255, .08);
+  }
+
+  &--disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    &:hover { border-color: #eee; }
+  }
+
+  &__img {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #f0f0f0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name { font-size: 13px; font-weight: 600; color: #333; }
+  &__label { font-size: 11px; color: #999; }
+  &__price {
+    font-size: 12px;
+    color: #e6423a;
+    font-family: 'SF Mono', monospace;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .favorite-item {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 0;
+
+    &__info { width: calc(100% - 140px); }
+    &__price { width: auto; font-size: 14px; }
 
     &__actions {
       width: 100%;

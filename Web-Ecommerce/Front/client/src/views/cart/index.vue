@@ -3,15 +3,22 @@
     <h1 class="page-title">购物车</h1>
 
     <div class="cart-content" v-if="cartStore.items.length">
-      <div class="cart-select-all">
-        <el-checkbox v-model="checkAll" size="large">
-          全选（{{ cartStore.checkedItems.length }}/{{ cartStore.items.length }}）
-        </el-checkbox>
+      <div class="cart-toolbar">
+        <div class="cart-toolbar__left">
+          <el-checkbox v-model="checkAll" size="large">
+            全选（{{ cartStore.checkedItems.length }}/{{ cartStore.items.length }}）
+          </el-checkbox>
+        </div>
+        <div class="cart-toolbar__right">
+          <el-button link size="small" @click="handleCheckInverse">反选</el-button>
+          <el-button link size="small" :disabled="!cartStore.checkedItems.length" @click="handleRemoveSelected">删除</el-button>
+          <el-button link size="small" :disabled="!cartStore.checkedItems.length" @click="handleBatchFavorite">移入收藏</el-button>
+        </div>
       </div>
 
       <div class="cart-items">
         <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
-          <el-checkbox v-model="item.checked" class="cart-item__check" @change="handleCheckedChange(item)" />
+          <el-checkbox :model-value="!!item.checked" class="cart-item__check" @change="(val: boolean) => cartStore.updateItem(item.id, item.quantity, val)" />
           <div class="cart-item__img" @click="$router.push(`/products/${item.productId}`)">
             <ProductImage :src="item.productImage" :seed="item.productName + item.productId" fit="cover" />
           </div>
@@ -74,9 +81,7 @@
       </div>
 
       <div class="cart-footer">
-        <div class="cart-footer__left">
-          <el-button link @click="cartStore.clearAll">清空购物车</el-button>
-        </div>
+        <div class="cart-footer__left" />
         <div class="cart-footer__right">
           <span class="cart-footer__label">
             已选 <strong>{{ cartStore.checkedItems.length }}</strong> 件，合计：
@@ -104,10 +109,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import { useCartStore } from '@/stores/cart'
 import { getProductById } from '@/api/product'
+import { batchAddFavorites } from '@/api/favorite'
 import { formatPrice } from '@/utils/format'
 import type { CartItem } from '@shared/types/cart'
 import type { ProductSku } from '@shared/types/product'
@@ -142,13 +148,28 @@ function handleQuantityChange(item: CartItem) {
   cartStore.updateItem(item.id, item.quantity, item.checked)
 }
 
-function handleCheckedChange(item: CartItem) {
-  cartStore.updateItem(item.id, item.quantity, item.checked)
+async function handleCheckInverse() {
+  await cartStore.toggleCheckInverse()
 }
 
 async function handleRemove(id: number) {
   await ElMessageBox.confirm('确定要删除该商品吗？', '提示', { type: 'warning' })
-  cartStore.removeItem(id)
+  await cartStore.removeItem(id)
+}
+
+async function handleRemoveSelected() {
+  await ElMessageBox.confirm(`确定要删除选中的 ${cartStore.checkedItems.length} 件商品吗？`, '提示', { type: 'warning' })
+  await cartStore.removeSelected()
+  ElMessage.success('已删除')
+}
+
+async function handleBatchFavorite() {
+  const items = cartStore.checkedItems.map((item) => ({
+    productId: item.productId,
+    skuId: item.skuId,
+  }))
+  await batchAddFavorites(items)
+  ElMessage.success(`已将 ${items.length} 件商品移入收藏`)
 }
 
 function handleCheckout() {
@@ -176,8 +197,18 @@ onMounted(() => { cartStore.fetchCart() })
   overflow: hidden;
 }
 
-.cart-select-all {
-  padding: 16px 20px 0;
+.cart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 }
 
 .cart-items {

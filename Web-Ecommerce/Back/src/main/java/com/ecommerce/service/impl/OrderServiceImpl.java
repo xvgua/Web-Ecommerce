@@ -190,12 +190,19 @@ public class OrderServiceImpl implements OrderService {
             fillOrderDetail(order);
         }
 
+        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+
         // Calculate review status for each order
         String filter = query.getReviewFilter();
         java.util.List<Order> filtered = new java.util.ArrayList<>();
         for (Order order : allOrders) {
             int itemCount = order.getItems() != null ? order.getItems().size() : 0;
             if (itemCount == 0) continue;
+
+            // Orders completed more than 1 month ago: closed for review, only visible in "Completed" tab
+            if (order.getDealTime() != null && order.getDealTime().isBefore(oneMonthAgo)) {
+                continue;
+            }
 
             long reviewCount = reviewMapper.selectCount(
                     new LambdaQueryWrapper<Review>().eq(Review::getOrderId, order.getId()));
@@ -373,6 +380,78 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void updateAddress(Long userId, Long id, Long addressId) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_SHIP) {
+            throw new BusinessException("仅待发货订单可修改地址");
+        }
+        if (order.getAddressModified() != null && order.getAddressModified() == 1) {
+            throw new BusinessException("您已经修改过地址啦");
+        }
+        Address address = addressMapper.selectById(addressId);
+        if (address == null || !address.getUserId().equals(userId)) {
+            throw new BusinessException("地址不存在");
+        }
+        order.setAddressId(addressId);
+        order.setAddressModified(1);
+        orderMapper.updateById(order);
+        log.info("Order address updated: orderNo={}, newAddressId={}", order.getOrderNo(), addressId);
+    }
+
+    @Override
+    @Transactional
+    public void refundOrder(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_SHIP && order.getStatus() != OrderStatus.SHIPPED) {
+            throw new BusinessException("当前订单状态不支持退款");
+        }
+        restoreStock(order);
+        order.setStatus(OrderStatus.REFUNDING);
+        orderMapper.updateById(order);
+        log.info("Order refund requested: orderNo={}", order.getOrderNo());
+    }
+
+    @Override
+    @Transactional
+    public void reorder(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new BusinessException("该订单状态不支持此操作");
+        }
+        List<OrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, id));
+        for (OrderItem item : items) {
+            Long skuId = item.getSkuId() != null ? item.getSkuId() : 0L;
+            Cart existing = cartMapper.selectOne(new LambdaQueryWrapper<Cart>()
+                    .eq(Cart::getUserId, userId)
+                    .eq(Cart::getProductId, item.getProductId())
+                    .eq(Cart::getSkuId, skuId));
+            if (existing != null) {
+                existing.setQuantity(existing.getQuantity() + item.getQuantity());
+                cartMapper.updateById(existing);
+            } else {
+                Cart cart = new Cart();
+                cart.setUserId(userId);
+                cart.setProductId(item.getProductId());
+                cart.setSkuId(skuId);
+                cart.setQuantity(item.getQuantity());
+                cart.setChecked(1);
+                cartMapper.insert(cart);
+            }
+        }
+        log.info("Order reordered: orderNo={}, userId={}, items={}", order.getOrderNo(), userId, items.size());
+    }
+
+    @Override
     public void confirmReceive(Long userId, Long id) {
         Order order = orderMapper.selectById(id);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -382,6 +461,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("订单状态不正确");
         }
         order.setStatus(OrderStatus.COMPLETED);
+        order.setDealTime(LocalDateTime.now());
         orderMapper.updateById(order);
         log.info("Order confirmed: orderNo={}", order.getOrderNo());
     }

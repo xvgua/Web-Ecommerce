@@ -11,7 +11,7 @@
     <el-table :data="announcements" border>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="title" label="标题" min-width="200" />
-      <el-table-column prop="createTime" label="发布时间" width="170" />
+      <el-table-column prop="createTime" label="发布时间" width="170" :formatter="(_, __, val) => formatDate(val)" />
       <el-table-column label="操作" width="160">
         <template #default="{ row }">
           <el-button text type="primary" @click="handleEdit(row)">编辑</el-button>
@@ -24,6 +24,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { formatDate } from '@/utils/format'
 
 interface Announcement {
   id: number

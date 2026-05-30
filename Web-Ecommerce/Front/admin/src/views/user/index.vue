@@ -36,7 +36,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="注册时间" width="170" />
+        <el-table-column prop="createTime" label="注册时间" width="170" :formatter="(_, __, val) => formatDate(val)" />
         <el-table-column label="操作" width="100" fixed="right" align="center">
           <template #default="{ row }">
             <el-button
@@ -79,6 +79,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useDebounceFn } from '@vueuse/core'
 import { getUserList, toggleUserStatus } from '@/api/admin'
+import { formatDate } from '@/utils/format'
 import type { User } from '@shared/types/user'
 
 const users = ref<User[]>([])

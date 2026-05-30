@@ -2,17 +2,19 @@ package com.ecommerce.service.impl;
 
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.service.FileService;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+@Slf4j
 @Service
 public class FileServiceImpl implements FileService {
 
@@ -25,7 +27,12 @@ public class FileServiceImpl implements FileService {
     @Value("${upload.max-size:2097152}")
     private long maxSize;
 
-    private static final Set<String> ALLOWED_EXT = new HashSet<>();
+    private final Set<String> allowedExt = new HashSet<>();
+
+    @PostConstruct
+    public void init() {
+        allowedExt.addAll(Arrays.asList(allowedExtensions.split(",")));
+    }
 
     @Override
     public Map<String, String> upload(MultipartFile file) {
@@ -41,19 +48,17 @@ public class FileServiceImpl implements FileService {
         if (originalName != null && originalName.contains(".")) {
             ext = originalName.substring(originalName.lastIndexOf(".")).toLowerCase();
         }
-        if (ALLOWED_EXT.isEmpty()) {
-            ALLOWED_EXT.addAll(Arrays.asList(allowedExtensions.split(",")));
-        }
-        if (!ALLOWED_EXT.contains(ext.replace(".", ""))) {
+        if (!allowedExt.contains(ext.replace(".", ""))) {
             throw new BusinessException("不支持的文件格式，仅允许: " + allowedExtensions);
         }
 
         String fileName = UUID.randomUUID().toString() + ext;
-        Path dir = Paths.get(uploadPath);
+        Path dir = Paths.get(uploadPath).toAbsolutePath().normalize();
         try {
             Files.createDirectories(dir);
-            file.transferTo(dir.resolve(fileName).toFile());
+            Files.copy(file.getInputStream(), dir.resolve(fileName));
         } catch (IOException e) {
+            log.error("File upload failed: dir={}, fileName={}", dir, fileName, e);
             throw new BusinessException("文件上传失败");
         }
 

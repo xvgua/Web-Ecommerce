@@ -41,3 +41,23 @@ export function confirmPay(id: number): Promise<ApiResponse<null>> {
 export function confirmReceive(id: number): Promise<ApiResponse<null>> {
   return request.put(`/orders/${id}/confirm`)
 }
+
+export function remindShip(id: number): Promise<ApiResponse<null>> {
+  return request.post(`/orders/${id}/remind`)
+}
+
+export function refundOrder(id: number): Promise<ApiResponse<null>> {
+  return request.put(`/orders/${id}/refund`)
+}
+
+export function reorderOrder(id: number): Promise<ApiResponse<null>> {
+  return request.post(`/orders/${id}/reorder`)
+}
+
+export function getLogistics(id: number): Promise<ApiResponse<any>> {
+  return request.get(`/orders/${id}/logistics`)
+}
+
+export function updateOrderAddress(id: number, data: { addressId: number }): Promise<ApiResponse<null>> {
+  return request.put(`/orders/${id}/address`, data)
+}

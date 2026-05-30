@@ -1,6 +1,6 @@
 <template>
   <div class="order-confirm">
-    <h1>确认订单</h1>
+    <h1 class="page-title">确认订单</h1>
 
     <div class="confirm-section">
       <div class="section-header">
@@ -190,19 +190,24 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .order-confirm {
-  h1 {
+  max-width: 1000px;
+  margin: 0 auto;
+
+  .page-title {
     font-size: 22px;
+    font-weight: 700;
     margin-bottom: 20px;
   }
 
   .confirm-section {
     background: #fff;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 24px;
+    border-radius: 12px;
     margin-bottom: 16px;
 
     h2 {
       font-size: 16px;
+      font-weight: 600;
       margin-bottom: 0;
     }
 
@@ -222,7 +227,7 @@ onMounted(() => {
 
   .address-card {
     border: 2px solid #eee;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 16px;
     cursor: pointer;
     transition: border-color 0.2s;
@@ -258,16 +263,17 @@ onMounted(() => {
     gap: 12px;
 
     &__img {
-      width: 50px;
-      height: 50px;
-      border-radius: 4px;
+      width: 56px;
+      height: 56px;
+      border-radius: 6px;
+      overflow: hidden;
       flex-shrink: 0;
     }
 
     &__spec {
       font-size: 12px;
       color: #999;
-      margin-top: 4px;
+      margin-top: 2px;
     }
   }
 
@@ -277,8 +283,8 @@ onMounted(() => {
     z-index: 100;
     background: #fff;
     margin-top: 20px;
-    padding: 16px 20px;
-    border-radius: 8px;
+    padding: 16px 24px;
+    border-radius: 12px;
     display: flex;
     justify-content: flex-end;
     align-items: center;

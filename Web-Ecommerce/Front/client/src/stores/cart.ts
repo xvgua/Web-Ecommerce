@@ -14,6 +14,8 @@ export const useCartStore = defineStore('cart', () => {
     checkedItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
   )
 
+  const checkedIds = computed(() => checkedItems.value.map((item) => item.id))
+
   async function fetchCart() {
     const res = await getCartList()
     items.value = res.data.map((item) => ({ ...item, checked: !!item.checked }))
@@ -34,11 +36,30 @@ export const useCartStore = defineStore('cart', () => {
     await fetchCart()
   }
 
-  function toggleCheckAll(checked: boolean) {
-    items.value.forEach((item) => {
-      item.checked = checked
-    })
+  async function removeSelected() {
+    for (const id of checkedIds.value) {
+      await removeCartItem(id)
+    }
+    await fetchCart()
   }
 
-  return { items, totalCount, checkedItems, checkedTotal, fetchCart, addItem, updateItem, removeItem, toggleCheckAll }
+  async function toggleCheckAll(checked: boolean) {
+    for (const item of items.value) {
+      await updateCartItem({ id: item.id, quantity: item.quantity, checked, skuId: item.skuId ?? undefined })
+    }
+    await fetchCart()
+  }
+
+  async function toggleCheckInverse() {
+    for (const item of items.value) {
+      await updateCartItem({ id: item.id, quantity: item.quantity, checked: !item.checked, skuId: item.skuId ?? undefined })
+    }
+    await fetchCart()
+  }
+
+  return {
+    items, totalCount, checkedItems, checkedTotal, checkedIds,
+    fetchCart, addItem, updateItem, removeItem, removeSelected,
+    toggleCheckAll, toggleCheckInverse,
+  }
 })

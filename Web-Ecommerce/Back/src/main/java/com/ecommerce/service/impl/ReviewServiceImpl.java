@@ -2,6 +2,7 @@ package com.ecommerce.service.impl;
 
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.CreateFollowUpReviewRequest;
 import com.ecommerce.dto.CreateReviewRequest;
 import com.ecommerce.dto.ReviewRatingStats;
 import com.ecommerce.entity.Product;
@@ -89,6 +90,7 @@ public class ReviewServiceImpl implements ReviewService {
         review.setOrderId(request.getOrderId());
         review.setRating(request.getRating());
         review.setContent(request.getContent());
+        review.setIsFollowup(0);
 
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             try {
@@ -114,6 +116,43 @@ public class ReviewServiceImpl implements ReviewService {
         product.setReviewCount(newCount);
         productMapper.updateById(product);
 
+        return review;
+    }
+
+    @Override
+    @Transactional
+    public Review createFollowUpReview(Long userId, CreateFollowUpReviewRequest request) {
+        Product product = productMapper.selectById(request.getProductId());
+        if (product == null) {
+            throw new BusinessException("商品不存在");
+        }
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        Review review = new Review();
+        review.setUserId(userId);
+        review.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+        review.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
+        review.setProductId(request.getProductId());
+        review.setOrderId(request.getOrderId());
+        review.setRating(0);
+        review.setContent(request.getContent());
+        review.setIsFollowup(1);
+
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            try {
+                review.setImages(objectMapper.writeValueAsString(request.getImages()));
+            } catch (JsonProcessingException e) {
+                throw new BusinessException("图片数据处理失败");
+            }
+        } else {
+            review.setImages("[]");
+        }
+
+        reviewMapper.insert(review);
         return review;
     }
 }
