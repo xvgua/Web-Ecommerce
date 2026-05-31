@@ -45,11 +45,18 @@
 
         <div class="coupon-card__action">
           <button
-            v-if="coupon.received"
-            class="coupon-card__btn coupon-card__btn--received"
+            v-if="coupon.userCouponStatus === 1"
+            class="coupon-card__btn coupon-card__btn--used"
             disabled
           >
-            已领取
+            已使用
+          </button>
+          <button
+            v-else-if="coupon.received && coupon.userCouponStatus === 0"
+            class="coupon-card__btn coupon-card__btn--go"
+            @click.stop="handleGoUse(coupon)"
+          >
+            去使用
           </button>
           <button
             v-else-if="!userStore.isLoggedIn"
@@ -136,12 +143,40 @@ async function handleReceive(coupon: Coupon) {
   try {
     await receiveCoupon(coupon.id)
     coupon.received = true
+    coupon.userCouponStatus = 0
     coupon.remainQty = Math.max(0, coupon.remainQty - 1)
     ElMessage.success('领取成功')
   } catch {
     // handled by interceptor
   } finally {
     receiving.value[coupon.id] = false
+  }
+}
+
+function handleGoUse(coupon: Coupon) {
+  const scopeType = coupon.scopeType || 1
+  if (scopeType === 1) {
+    router.push('/')
+  } else if (scopeType === 2 && coupon.scopeIds) {
+    try {
+      const ids = JSON.parse(coupon.scopeIds)
+      if (Array.isArray(ids) && ids.length > 0) {
+        router.push(`/products?categoryId=${ids[0]}`)
+        return
+      }
+    } catch { /* fall through */ }
+    router.push('/products')
+  } else if (scopeType === 3 && coupon.scopeIds) {
+    try {
+      const ids = JSON.parse(coupon.scopeIds)
+      if (Array.isArray(ids) && ids.length > 0) {
+        router.push(`/products/${ids[0]}`)
+        return
+      }
+    } catch { /* fall through */ }
+    router.push('/products')
+  } else {
+    router.push('/')
   }
 }
 
@@ -333,6 +368,17 @@ onMounted(() => { loadCoupons() })
     &--received {
       background: #d0d0d0;
       color: #999;
+    }
+
+    &--go {
+      background: #fff;
+      color: #e6423a;
+      border: 1px solid #e6423a;
+    }
+
+    &--used {
+      background: #e8e8e8;
+      color: #b0b0b0;
     }
   }
 

@@ -47,6 +47,12 @@ public class OrderServiceImpl implements OrderService {
     private ReviewMapper reviewMapper;
     @Autowired
     private PaymentSessionMapper paymentSessionMapper;
+    @Autowired
+    private CouponService couponService;
+    @Autowired
+    private CouponMapper couponMapper;
+    @Autowired
+    private UserCouponMapper userCouponMapper;
 
     @Override
     @Transactional
@@ -162,7 +168,22 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setTotalAmount(totalAmount);
+
+        // Apply coupon if provided
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        if (req.getUserCouponId() != null) {
+            couponDiscount = couponService.calculateDiscount(req.getUserCouponId(), totalAmount);
+            order.setCouponId(req.getUserCouponId());
+            order.setCouponDiscount(couponDiscount);
+        }
+        order.setDiscountAmount(BigDecimal.ZERO);
+        order.setPayAmount(totalAmount.subtract(couponDiscount));
         orderMapper.insert(order);
+
+        // Mark coupon as used
+        if (req.getUserCouponId() != null) {
+            couponService.markAsUsed(req.getUserCouponId(), order.getId());
+        }
 
         for (OrderItem item : items) {
             item.setOrderId(order.getId());
@@ -308,8 +329,10 @@ public class OrderServiceImpl implements OrderService {
         PaymentSession existing = paymentSessionMapper.selectOne(
                 new LambdaQueryWrapper<PaymentSession>().eq(PaymentSession::getOrderId, id));
         if (existing != null && "WAITING_SCAN".equals(existing.getStatus())) {
+            BigDecimal amount = order.getPayAmount() != null && order.getPayAmount().compareTo(BigDecimal.ZERO) > 0
+                    ? order.getPayAmount() : order.getTotalAmount();
             return new PayIntentResponse(existing.getQrToken(), order.getOrderNo(),
-                    order.getTotalAmount(), existing.getPayMethod());
+                    amount, existing.getPayMethod());
         }
 
         String qrToken = UUID.randomUUID().toString().replace("-", "");
@@ -321,8 +344,10 @@ public class OrderServiceImpl implements OrderService {
         session.setStatus("WAITING_SCAN");
         paymentSessionMapper.insert(session);
 
+        BigDecimal amount = order.getPayAmount() != null && order.getPayAmount().compareTo(BigDecimal.ZERO) > 0
+                ? order.getPayAmount() : order.getTotalAmount();
         log.info("Pay intent created: orderNo={}, payMethod={}", order.getOrderNo(), payMethod);
-        return new PayIntentResponse(qrToken, order.getOrderNo(), order.getTotalAmount(), payMethod);
+        return new PayIntentResponse(qrToken, order.getOrderNo(), amount, payMethod);
     }
 
     @Override
@@ -403,6 +428,9 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("只能取消待支付订单");
         }
         restoreStock(order);
+        if (order.getCouponId() != null) {
+            couponService.releaseCoupon(order.getCouponId());
+        }
         order.setStatus(OrderStatus.CANCELLED);
         orderMapper.updateById(order);
         log.info("Order cancelled: orderNo={}", order.getOrderNo());
@@ -667,6 +695,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setItems(items);
+
+        // Populate coupon name if a coupon was used
+        if (order.getCouponId() != null) {
+            UserCoupon uc = userCouponMapper.selectById(order.getCouponId());
+            if (uc != null) {
+                Coupon coupon = couponMapper.selectById(uc.getCouponId());
+                if (coupon != null) {
+                    order.setCouponName(coupon.getName());
+                }
+            }
+        }
 
         Address address = addressMapper.selectById(order.getAddressId());
         order.setAddress(address);

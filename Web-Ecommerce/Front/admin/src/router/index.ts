@@ -62,6 +62,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '用户管理' },
       },
       {
+        path: 'coupons',
+        name: 'CouponManage',
+        component: () => import('@/views/coupon/index.vue'),
+        meta: { title: '优惠券管理' },
+      },
+      {
+        path: 'coupons/create',
+        name: 'CouponCreate',
+        component: () => import('@/views/coupon/form.vue'),
+        meta: { title: '新增优惠券' },
+      },
+      {
+        path: 'coupons/:id/edit',
+        name: 'CouponEdit',
+        component: () => import('@/views/coupon/form.vue'),
+        meta: { title: '编辑优惠券' },
+      },
+      {
         path: 'system/banners',
         name: 'BannerManage',
         component: () => import('@/views/system/banner.vue'),

@@ -81,9 +81,48 @@
       </el-table>
     </div>
 
+    <div class="confirm-section" v-if="availableCoupons.length > 0">
+      <h2>优惠券</h2>
+      <div class="coupon-select">
+        <div
+          :class="['coupon-option', { 'coupon-option--active': selectedCouponId === 0 }]"
+          @click="selectCoupon(0)"
+        >
+          <span>不使用优惠券</span>
+        </div>
+        <div
+          v-for="uc in availableCoupons"
+          :key="uc.id"
+          :class="['coupon-option', { 'coupon-option--active': selectedCouponId === uc.id }]"
+          @click="selectCoupon(uc.id)"
+        >
+          <span class="coupon-option__name">{{ uc.coupon?.name }}</span>
+          <span class="coupon-option__discount">-{{ formatPrice(getCouponDiscount(uc)) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-section">
+      <h2>费用明细</h2>
+      <div class="fee-breakdown">
+        <div class="fee-row">
+          <span>商品合计</span>
+          <span>{{ formatPrice(cartStore.checkedTotal) }}</span>
+        </div>
+        <div class="fee-row fee-row--discount" v-if="couponDiscount > 0">
+          <span>优惠券抵扣</span>
+          <span>-{{ formatPrice(couponDiscount) }}</span>
+        </div>
+        <div class="fee-row fee-row--total">
+          <span>应付金额</span>
+          <span class="fee-row__price">{{ formatPrice(payAmount) }}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="confirm-footer">
       <div class="confirm-footer__total">
-        合计：<span class="confirm-footer__price">{{ formatPrice(cartStore.checkedTotal) }}</span>
+        应付：<span class="confirm-footer__price">{{ formatPrice(payAmount) }}</span>
       </div>
       <el-button type="danger" size="large" :loading="submitting" :disabled="!selectedAddressId" @click="handleSubmit">
         提交订单
@@ -93,16 +132,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { getAddressList, createAddress } from '@/api/user'
 import { createOrder } from '@/api/order'
+import { getAvailableForOrder } from '@/api/coupon'
 import { formatPrice } from '@/utils/format'
 import { requiredRule, phoneRules } from '@shared/validators'
 import type { Address, AddressForm } from '@shared/types/user'
+import type { UserCoupon } from '@shared/types/coupon'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
@@ -111,6 +152,19 @@ const cartStore = useCartStore()
 const addresses = ref<Address[]>([])
 const selectedAddressId = ref<number>(0)
 const submitting = ref(false)
+
+const availableCoupons = ref<UserCoupon[]>([])
+const selectedCouponId = ref<number>(0)
+
+const couponDiscount = computed(() => {
+  if (selectedCouponId.value === 0) return 0
+  const uc = availableCoupons.value.find(c => c.id === selectedCouponId.value)
+  return uc ? getCouponDiscount(uc) : 0
+})
+
+const payAmount = computed(() => {
+  return Math.max(0, cartStore.checkedTotal - couponDiscount.value)
+})
 
 const addressDialogVisible = ref(false)
 const addressSubmitting = ref(false)
@@ -148,6 +202,28 @@ function handleAddAddress() {
   addressDialogVisible.value = true
 }
 
+function getCouponDiscount(uc: UserCoupon): number {
+  if (!uc.coupon) return 0
+  const amount = cartStore.checkedTotal
+  if (uc.coupon.type === 1) {
+    return uc.coupon.discount
+  } else if (uc.coupon.type === 2) {
+    return Math.round(amount * (1 - uc.coupon.discount) * 100) / 100
+  }
+  return 0
+}
+
+function selectCoupon(id: number) {
+  selectedCouponId.value = id
+}
+
+async function loadAvailableCoupons() {
+  try {
+    const res = await getAvailableForOrder(cartStore.checkedTotal)
+    availableCoupons.value = res.data || []
+  } catch { /* ignore */ }
+}
+
 async function handleSubmitAddress() {
   const valid = await addressFormRef.value?.validate()
   if (!valid) return
@@ -174,6 +250,7 @@ async function handleSubmit() {
       addressId: selectedAddressId.value,
       cartItemIds: cartStore.checkedItems.map((item) => item.id),
       remark: '',
+      userCouponId: selectedCouponId.value > 0 ? selectedCouponId.value : undefined,
     })
     ElMessage.success('订单已提交')
     cartStore.fetchCart()
@@ -185,6 +262,7 @@ async function handleSubmit() {
 
 onMounted(() => {
   loadAddresses()
+  loadAvailableCoupons()
 })
 </script>
 
@@ -274,6 +352,72 @@ onMounted(() => {
       font-size: 12px;
       color: #999;
       margin-top: 2px;
+    }
+  }
+
+  .coupon-select {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .coupon-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color .2s;
+
+    &--active {
+      border-color: #409eff;
+      background: rgba(64, 158, 255, .04);
+    }
+
+    &:hover {
+      border-color: #409eff;
+    }
+
+    &__name {
+      font-weight: 500;
+    }
+
+    &__discount {
+      color: #e6423a;
+      font-weight: 600;
+    }
+  }
+
+  .fee-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fee-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #666;
+
+    &--discount {
+      color: #e6423a;
+    }
+
+    &--total {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+
+    &__price {
+      font-size: 20px;
+      font-weight: 700;
+      color: #e6423a;
     }
   }
 

@@ -3,6 +3,7 @@ import type { ApiResponse, PageResponse } from '@shared/types'
 import type { Product, ProductQuery, Category, ProductForm } from '@shared/types/product'
 import type { Order, OrderQuery } from '@shared/types/order'
 import type { User } from '@shared/types/user'
+import type { Coupon, CouponForm } from '@shared/types/coupon'
 
 // ===== Auth =====
 export function adminLogin(data: { username: string; password: string }): Promise<ApiResponse<{ token: string }>> {
@@ -93,4 +94,29 @@ export function getUserList(params: PageQuery): Promise<ApiResponse<PageResponse
 
 export function toggleUserStatus(id: number, status: number): Promise<ApiResponse<null>> {
   return request.put(`/admin/users/${id}/status`, { status })
+}
+
+// ===== Coupon Management =====
+export function getCouponList(params: PageQuery & { keyword?: string; type?: number; status?: number }): Promise<ApiResponse<PageResponse<Coupon>>> {
+  return request.get('/admin/coupons', { params })
+}
+
+export function getCouponById(id: number): Promise<ApiResponse<Coupon>> {
+  return request.get(`/admin/coupons/${id}`)
+}
+
+export function createCoupon(data: CouponForm): Promise<ApiResponse<Coupon>> {
+  return request.post('/admin/coupons', data)
+}
+
+export function updateCoupon(id: number, data: CouponForm): Promise<ApiResponse<null>> {
+  return request.put(`/admin/coupons/${id}`, data)
+}
+
+export function deleteCoupon(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/coupons/${id}`)
+}
+
+export function toggleCouponStatus(id: number, status: number): Promise<ApiResponse<null>> {
+  return request.put(`/admin/coupons/${id}/status`, { status })
 }

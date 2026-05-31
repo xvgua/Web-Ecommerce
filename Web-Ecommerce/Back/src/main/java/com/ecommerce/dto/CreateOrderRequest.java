@@ -14,4 +14,5 @@ public class CreateOrderRequest {
     private Long skuId;
     private Integer quantity;
     private String remark;
+    private Long userCouponId;
 }

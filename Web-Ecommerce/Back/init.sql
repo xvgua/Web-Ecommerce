@@ -109,7 +109,11 @@ CREATE TABLE IF NOT EXISTS `order` (
   order_no      VARCHAR(32)    NOT NULL UNIQUE,
   user_id       BIGINT         NOT NULL,
   address_id    BIGINT         NOT NULL,
-  total_amount  DECIMAL(10,2)  NOT NULL,
+  total_amount  DECIMAL(10,2)  NOT NULL COMMENT '商品原价合计',
+  coupon_id     BIGINT         DEFAULT NULL COMMENT '使用的user_coupon.id',
+  coupon_discount DECIMAL(10,2) DEFAULT 0.00 COMMENT '优惠券抵扣金额',
+  discount_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '商品级折扣金额',
+  pay_amount    DECIMAL(10,2)  DEFAULT 0.00 COMMENT '实付金额',
   status        TINYINT        DEFAULT 0 COMMENT '0=待支付 1=待发货 2=待收货 3=已完成 4=已取消 5=退款中',
   remark        VARCHAR(500)   DEFAULT '',
   pay_time      DATETIME       NULL,
@@ -261,8 +265,13 @@ CREATE TABLE IF NOT EXISTS `coupon` (
   min_amount  DECIMAL(10,2)  DEFAULT 0 COMMENT '最低消费门槛',
   total_qty   INT            DEFAULT 0 COMMENT '发行总量',
   remain_qty  INT            DEFAULT 0 COMMENT '剩余数量',
-  start_time  DATETIME       NOT NULL,
-  end_time    DATETIME       NOT NULL,
+  start_time  DATETIME       NOT NULL COMMENT '有效期开始',
+  end_time    DATETIME       NOT NULL COMMENT '有效期结束',
+  grab_start_time DATETIME   DEFAULT NULL COMMENT '抢购开始时间(NULL=无抢购限制)',
+  grab_end_time   DATETIME   DEFAULT NULL COMMENT '抢购结束时间',
+  scope_type  TINYINT        DEFAULT 1 COMMENT '适用范围: 1=通用 2=指定分类 3=指定商品',
+  scope_ids   VARCHAR(500)   DEFAULT '' COMMENT '适用范围ID列表(JSON数组)',
+  is_large    TINYINT        DEFAULT 0 COMMENT '是否大额券: 0=小额 1=大额(有抢购时间)',
   status      TINYINT        DEFAULT 1 COMMENT '1=启用 0=停用',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -421,8 +430,13 @@ CREATE TABLE IF NOT EXISTS `coupon` (
   min_amount  DECIMAL(10,2)  DEFAULT 0 COMMENT '最低消费门槛',
   total_qty   INT            DEFAULT 0 COMMENT '发行总量',
   remain_qty  INT            DEFAULT 0 COMMENT '剩余数量',
-  start_time  DATETIME       NOT NULL,
-  end_time    DATETIME       NOT NULL,
+  start_time  DATETIME       NOT NULL COMMENT '有效期开始',
+  end_time    DATETIME       NOT NULL COMMENT '有效期结束',
+  grab_start_time DATETIME   DEFAULT NULL COMMENT '抢购开始时间(NULL=无抢购限制)',
+  grab_end_time   DATETIME   DEFAULT NULL COMMENT '抢购结束时间',
+  scope_type  TINYINT        DEFAULT 1 COMMENT '适用范围: 1=通用 2=指定分类 3=指定商品',
+  scope_ids   VARCHAR(500)   DEFAULT '' COMMENT '适用范围ID列表(JSON数组)',
+  is_large    TINYINT        DEFAULT 0 COMMENT '是否大额券: 0=小额 1=大额(有抢购时间)',
   status      TINYINT        DEFAULT 1 COMMENT '1=启用 0=停用',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -448,6 +462,21 @@ INSERT IGNORE INTO `coupon` (name, type, discount, min_amount, total_qty, remain
 ('满200享8.8折', 2, 0.88, 200.00, 200, 190, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
 ('免邮券', 3, 0.00, 0.00, 500, 460, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 90 DAY, 1),
 ('满300减30', 1, 30.00, 300.00, 300, 295, NOW() + INTERVAL 3 DAY, NOW() + INTERVAL 45 DAY, 1);
+
+-- 订单表优惠券/折扣字段（已有数据库升级用）
+ALTER TABLE `order`
+  ADD COLUMN IF NOT EXISTS `coupon_id`        BIGINT        DEFAULT NULL COMMENT '使用的user_coupon.id',
+  ADD COLUMN IF NOT EXISTS `coupon_discount`  DECIMAL(10,2) DEFAULT 0.00 COMMENT '优惠券抵扣金额',
+  ADD COLUMN IF NOT EXISTS `discount_amount`  DECIMAL(10,2) DEFAULT 0.00 COMMENT '商品级折扣金额',
+  ADD COLUMN IF NOT EXISTS `pay_amount`       DECIMAL(10,2) DEFAULT 0.00 COMMENT '实付金额';
+
+-- 优惠券表抢购/适用范围字段（已有数据库升级用）
+ALTER TABLE `coupon`
+  ADD COLUMN IF NOT EXISTS `grab_start_time` DATETIME     DEFAULT NULL COMMENT '抢购开始时间(NULL=无抢购限制)',
+  ADD COLUMN IF NOT EXISTS `grab_end_time`   DATETIME     DEFAULT NULL COMMENT '抢购结束时间',
+  ADD COLUMN IF NOT EXISTS `scope_type`      TINYINT      DEFAULT 1   COMMENT '适用范围: 1=通用 2=指定分类 3=指定商品',
+  ADD COLUMN IF NOT EXISTS `scope_ids`       VARCHAR(500) DEFAULT ''  COMMENT '适用范围ID列表(JSON数组)',
+  ADD COLUMN IF NOT EXISTS `is_large`        TINYINT      DEFAULT 0   COMMENT '是否大额券: 0=小额 1=大额';
 
 UPDATE `product` SET `detail` = '<table class=\"param-table\"><tr><td>品牌</td><td>Samsung</td></tr><tr><td>型号</td><td>Galaxy S24 Ultra</td></tr><tr><td>处理器</td><td>骁龙 8 Gen 3 for Galaxy</td></tr><tr><td>屏幕尺寸</td><td>6.8 英寸</td></tr><tr><td>屏幕类型</td><td>Dynamic AMOLED 2X</td></tr><tr><td>分辨率</td><td>3120×1440 像素</td></tr><tr><td>运行内存</td><td>12GB</td></tr><tr><td>存储容量</td><td>256GB</td></tr><tr><td>后置摄像头</td><td>2亿主摄 + 5000万长焦 + 1200万超广角 + 1000万长焦</td></tr><tr><td>前置摄像头</td><td>1200万像素</td></tr><tr><td>电池容量</td><td>5000mAh</td></tr><tr><td>机身重量</td><td>232g</td></tr><tr><td>操作系统</td><td>One UI 6.1 (Android 14)</td></tr></table>' WHERE `name` = 'Samsung Galaxy S24 Ultra' AND (`detail` IS NULL OR `detail` = '');
 

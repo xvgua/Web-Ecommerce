@@ -44,6 +44,11 @@
           <span>用户管理</span>
         </el-menu-item>
 
+        <el-menu-item index="/coupons">
+          <el-icon><Ticket /></el-icon>
+          <span>优惠券管理</span>
+        </el-menu-item>
+
         <el-sub-menu index="system-group">
           <template #title>
             <el-icon><Setting /></el-icon>
@@ -93,7 +98,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  DataAnalysis, Goods, Document, User, Setting,
+  DataAnalysis, Goods, Document, User, Ticket, Setting,
   Bell, ArrowDown,
 } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'

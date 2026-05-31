@@ -61,7 +61,10 @@
                 <div class="qr-info">
                   <div class="qr-amount">
                     <span class="qr-amount__label">应付金额</span>
-                    <span class="qr-amount__value">{{ formatPrice(order.totalAmount) }}</span>
+                    <span class="qr-amount__value">{{ formatPrice(order.payAmount || order.totalAmount) }}</span>
+                  </div>
+                  <div class="qr-discount" v-if="order.couponDiscount && order.couponDiscount > 0">
+                    <span>已优惠 {{ formatPrice(order.couponDiscount) }}</span>
                   </div>
                   <div class="qr-status" v-if="phase === 'qrcode'">
                     <el-icon class="qr-status__icon is-loading" :size="16"><Loading /></el-icon>

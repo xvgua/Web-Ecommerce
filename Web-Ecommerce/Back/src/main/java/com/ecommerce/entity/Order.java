@@ -15,6 +15,10 @@ public class Order {
     private Long userId;
     private Long addressId;
     private BigDecimal totalAmount;
+    private Long couponId;
+    private BigDecimal couponDiscount;
+    private BigDecimal discountAmount;
+    private BigDecimal payAmount;
     private Integer status;
     private String remark;
     private LocalDateTime payTime;
@@ -33,4 +37,6 @@ public class Order {
     private Object address;
     @TableField(exist = false)
     private Long reviewCount;
+    @TableField(exist = false)
+    private String couponName;
 }

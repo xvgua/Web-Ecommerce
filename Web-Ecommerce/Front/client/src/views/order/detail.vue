@@ -53,7 +53,10 @@
         </div>
         <div class="product-list__footer">
           <span>共 {{ order.items.length }} 件商品，合计：</span>
-          <strong>{{ formatPrice(order.totalAmount) }}</strong>
+          <strong>{{ formatPrice(order.payAmount || order.totalAmount) }}</strong>
+          <span v-if="order.couponDiscount && order.couponDiscount > 0" class="coupon-hint">
+            （{{ order.couponName || '优惠券' }}：-{{ formatPrice(order.couponDiscount) }}）
+          </span>
         </div>
       </div>
 
@@ -85,8 +88,16 @@
             <span class="info-list__value">{{ formatDate(order.dealTime) }}</span>
           </div>
           <div class="info-list__row">
-            <span class="info-list__label">订单金额</span>
+            <span class="info-list__label">商品合计</span>
             <span class="info-list__value">{{ formatPrice(order.totalAmount) }}</span>
+          </div>
+          <div class="info-list__row" v-if="order.couponDiscount && order.couponDiscount > 0">
+            <span class="info-list__label">优惠券抵扣</span>
+            <span class="info-list__value" style="color:#e6423a">-{{ formatPrice(order.couponDiscount) }}</span>
+          </div>
+          <div class="info-list__row">
+            <span class="info-list__label">实付金额</span>
+            <span class="info-list__value" style="font-weight:700;color:#e6423a">{{ formatPrice(order.payAmount || order.totalAmount) }}</span>
           </div>
         </div>
       </div>

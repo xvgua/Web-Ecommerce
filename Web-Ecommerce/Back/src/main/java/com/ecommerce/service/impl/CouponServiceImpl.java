@@ -1,9 +1,11 @@
 package com.ecommerce.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.CouponForm;
 import com.ecommerce.entity.Coupon;
 import com.ecommerce.entity.UserCoupon;
 import com.ecommerce.mapper.CouponMapper;
@@ -14,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -47,11 +51,14 @@ public class CouponServiceImpl implements CouponService {
                     new LambdaQueryWrapper<UserCoupon>()
                             .eq(UserCoupon::getUserId, userId)
                             .in(UserCoupon::getCouponId, couponIds));
-            Set<Long> receivedIds = received.stream()
-                    .map(UserCoupon::getCouponId)
-                    .collect(Collectors.toSet());
+            java.util.Map<Long, UserCoupon> ucMap = received.stream()
+                    .collect(Collectors.toMap(UserCoupon::getCouponId, uc -> uc, (a, b) -> a));
             for (Coupon c : result.getRecords()) {
-                c.setReceived(receivedIds.contains(c.getId()));
+                UserCoupon uc = ucMap.get(c.getId());
+                if (uc != null) {
+                    c.setReceived(true);
+                    c.setUserCouponStatus(uc.getStatus());
+                }
             }
         }
 
@@ -97,5 +104,212 @@ public class CouponServiceImpl implements CouponService {
         userCouponMapper.insert(uc);
 
         log.info("Coupon received: userId={}, couponId={}", userId, couponId);
+    }
+
+    @Override
+    public PageResult<UserCoupon> getUserCoupons(Long userId, Integer status, int page, int pageSize) {
+        LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<UserCoupon>()
+                .eq(UserCoupon::getUserId, userId);
+        if (status != null) {
+            wrapper.eq(UserCoupon::getStatus, status);
+        }
+        wrapper.orderByDesc(UserCoupon::getCreateTime);
+
+        Page<UserCoupon> result = userCouponMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        if (!result.getRecords().isEmpty()) {
+            List<Long> couponIds = result.getRecords().stream()
+                    .map(UserCoupon::getCouponId).toList();
+            List<Coupon> coupons = couponMapper.selectBatchIds(couponIds);
+            java.util.Map<Long, Coupon> couponMap = coupons.stream()
+                    .collect(Collectors.toMap(Coupon::getId, c -> c));
+            for (UserCoupon uc : result.getRecords()) {
+                uc.setCoupon(couponMap.get(uc.getCouponId()));
+            }
+        }
+        return PageResult.of(result.getRecords(), result.getTotal(), page, pageSize);
+    }
+
+    @Override
+    public List<UserCoupon> getAvailableForOrder(Long userId, BigDecimal orderAmount) {
+        LocalDateTime now = LocalDateTime.now();
+        List<UserCoupon> userCoupons = userCouponMapper.selectList(
+                new LambdaQueryWrapper<UserCoupon>()
+                        .eq(UserCoupon::getUserId, userId)
+                        .eq(UserCoupon::getStatus, 0));
+
+        if (userCoupons.isEmpty()) return List.of();
+
+        List<Long> couponIds = userCoupons.stream().map(UserCoupon::getCouponId).toList();
+        List<Coupon> coupons = couponMapper.selectList(
+                new LambdaQueryWrapper<Coupon>()
+                        .in(Coupon::getId, couponIds)
+                        .eq(Coupon::getStatus, 1)
+                        .le(Coupon::getStartTime, now)
+                        .ge(Coupon::getEndTime, now));
+
+        java.util.Map<Long, Coupon> couponMap = coupons.stream()
+                .collect(Collectors.toMap(Coupon::getId, c -> c));
+
+        return userCoupons.stream()
+                .filter(uc -> {
+                    Coupon c = couponMap.get(uc.getCouponId());
+                    if (c == null) return false;
+                    return orderAmount.compareTo(c.getMinAmount()) >= 0;
+                })
+                .peek(uc -> uc.setCoupon(couponMap.get(uc.getCouponId())))
+                .toList();
+    }
+
+    @Override
+    public BigDecimal calculateDiscount(Long userCouponId, BigDecimal orderAmount) {
+        UserCoupon uc = userCouponMapper.selectById(userCouponId);
+        if (uc == null || uc.getStatus() != 0) {
+            throw new BusinessException("优惠券不存在或已使用");
+        }
+        Coupon coupon = couponMapper.selectById(uc.getCouponId());
+        if (coupon == null || coupon.getStatus() != 1) {
+            throw new BusinessException("优惠券已失效");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(coupon.getStartTime()) || now.isAfter(coupon.getEndTime())) {
+            throw new BusinessException("优惠券不在有效期内");
+        }
+        if (orderAmount.compareTo(coupon.getMinAmount()) < 0) {
+            throw new BusinessException("订单金额未达到优惠券使用门槛");
+        }
+
+        if (coupon.getType() == 1) {
+            return coupon.getDiscount();
+        } else if (coupon.getType() == 2) {
+            return orderAmount.multiply(
+                    BigDecimal.ONE.subtract(coupon.getDiscount())
+            ).setScale(2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    @Override
+    @Transactional
+    public void markAsUsed(Long userCouponId, Long orderId) {
+        int affected = userCouponMapper.update(null,
+                new LambdaUpdateWrapper<UserCoupon>()
+                        .eq(UserCoupon::getId, userCouponId)
+                        .eq(UserCoupon::getStatus, 0)
+                        .set(UserCoupon::getStatus, 1)
+                        .set(UserCoupon::getUseOrderId, orderId)
+                        .set(UserCoupon::getUsedTime, LocalDateTime.now()));
+        if (affected == 0) {
+            throw new BusinessException("优惠券使用失败");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void releaseCoupon(Long userCouponId) {
+        UserCoupon uc = userCouponMapper.selectById(userCouponId);
+        if (uc == null) return;
+        userCouponMapper.update(null,
+                new LambdaUpdateWrapper<UserCoupon>()
+                        .eq(UserCoupon::getId, userCouponId)
+                        .set(UserCoupon::getStatus, 0)
+                        .set(UserCoupon::getUseOrderId, null)
+                        .set(UserCoupon::getUsedTime, null));
+    }
+
+    @Override
+    public PageResult<Coupon> adminGetPage(int page, int pageSize, String keyword, Integer type, Integer status) {
+        LambdaQueryWrapper<Coupon> wrapper = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.like(Coupon::getName, keyword.trim());
+        }
+        if (type != null) {
+            wrapper.eq(Coupon::getType, type);
+        }
+        if (status != null) {
+            wrapper.eq(Coupon::getStatus, status);
+        }
+        wrapper.orderByDesc(Coupon::getCreateTime);
+        Page<Coupon> result = couponMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        return PageResult.of(result.getRecords(), result.getTotal(), page, pageSize);
+    }
+
+    @Override
+    public Coupon adminGetById(Long id) {
+        Coupon coupon = couponMapper.selectById(id);
+        if (coupon == null) {
+            throw new BusinessException(404, "优惠券不存在");
+        }
+        return coupon;
+    }
+
+    @Override
+    @Transactional
+    public Coupon adminCreate(CouponForm form) {
+        Coupon coupon = new Coupon();
+        coupon.setName(form.getName());
+        coupon.setType(form.getType());
+        coupon.setDiscount(form.getDiscount());
+        coupon.setMinAmount(form.getMinAmount() != null ? form.getMinAmount() : BigDecimal.ZERO);
+        coupon.setTotalQty(form.getTotalQty());
+        coupon.setRemainQty(form.getTotalQty());
+        coupon.setStartTime(form.getStartTime());
+        coupon.setEndTime(form.getEndTime());
+        coupon.setGrabStartTime(form.getGrabStartTime());
+        coupon.setGrabEndTime(form.getGrabEndTime());
+        coupon.setScopeType(form.getScopeType() != null ? form.getScopeType() : 1);
+        coupon.setScopeIds(form.getScopeIds() != null ? form.getScopeIds() : "");
+        coupon.setIsLarge(form.getIsLarge() != null ? form.getIsLarge() : 0);
+        coupon.setStatus(form.getStatus() != null ? form.getStatus() : 1);
+        couponMapper.insert(coupon);
+        log.info("Coupon admin created: id={}, name={}", coupon.getId(), coupon.getName());
+        return coupon;
+    }
+
+    @Override
+    @Transactional
+    public void adminUpdate(Long id, CouponForm form) {
+        Coupon coupon = couponMapper.selectById(id);
+        if (coupon == null) {
+            throw new BusinessException(404, "优惠券不存在");
+        }
+        coupon.setName(form.getName());
+        coupon.setType(form.getType());
+        coupon.setDiscount(form.getDiscount());
+        coupon.setMinAmount(form.getMinAmount() != null ? form.getMinAmount() : BigDecimal.ZERO);
+        coupon.setStartTime(form.getStartTime());
+        coupon.setEndTime(form.getEndTime());
+        coupon.setGrabStartTime(form.getGrabStartTime());
+        coupon.setGrabEndTime(form.getGrabEndTime());
+        coupon.setScopeType(form.getScopeType() != null ? form.getScopeType() : 1);
+        coupon.setScopeIds(form.getScopeIds() != null ? form.getScopeIds() : "");
+        coupon.setIsLarge(form.getIsLarge() != null ? form.getIsLarge() : 0);
+        coupon.setStatus(form.getStatus() != null ? form.getStatus() : 1);
+        // Update totalQty only if increased
+        if (form.getTotalQty() > coupon.getTotalQty()) {
+            int diff = form.getTotalQty() - coupon.getTotalQty();
+            coupon.setTotalQty(form.getTotalQty());
+            coupon.setRemainQty(coupon.getRemainQty() + diff);
+        }
+        couponMapper.updateById(coupon);
+        log.info("Coupon admin updated: id={}", id);
+    }
+
+    @Override
+    @Transactional
+    public void adminDelete(Long id) {
+        couponMapper.deleteById(id);
+        log.info("Coupon admin deleted: id={}", id);
+    }
+
+    @Override
+    @Transactional
+    public void adminToggleStatus(Long id, Integer status) {
+        Coupon coupon = couponMapper.selectById(id);
+        if (coupon == null) {
+            throw new BusinessException(404, "优惠券不存在");
+        }
+        coupon.setStatus(status);
+        couponMapper.updateById(coupon);
+        log.info("Coupon status toggled: id={}, status={}", id, status);
     }
 }
