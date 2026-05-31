@@ -125,10 +125,16 @@ public class OrderServiceImpl implements OrderService {
                         new LambdaUpdateWrapper<ProductSku>()
                                 .eq(ProductSku::getId, cart.getSkuId())
                                 .ge(ProductSku::getStock, cart.getQuantity())
-                                .setSql("stock = stock - " + cart.getQuantity()));
+                                .setSql("stock = stock - " + cart.getQuantity())
+                                .setSql("sales = sales + " + cart.getQuantity()));
                 if (affected == 0) {
                     throw new BusinessException("商品「" + product.getName() + "」库存不足");
                 }
+                // Also increment product-level sales
+                productMapper.update(null,
+                        new LambdaUpdateWrapper<Product>()
+                                .eq(Product::getId, product.getId())
+                                .setSql("sales = sales + " + cart.getQuantity()));
             } else {
                 int affected = productMapper.update(null,
                         new LambdaUpdateWrapper<Product>()
@@ -223,15 +229,19 @@ public class OrderServiceImpl implements OrderService {
                 continue;
             }
 
-            long reviewCount = reviewMapper.selectCount(
+            // Count distinct products that have an initial review (not follow-up)
+            List<Review> reviews = reviewMapper.selectList(
                     new LambdaQueryWrapper<Review>().eq(Review::getOrderId, order.getId()));
-            order.setReviewCount(reviewCount);
+            long reviewedItemCount = reviews.stream()
+                    .filter(r -> r.getIsFollowup() == 0)
+                    .map(Review::getProductId)
+                    .distinct()
+                    .count();
+            order.setReviewCount(reviewedItemCount);
 
-            if ("pending".equals(filter) && reviewCount == 0) {
+            if ("pending".equals(filter) && reviewedItemCount < itemCount) {
                 filtered.add(order);
-            } else if ("followup".equals(filter) && reviewCount > 0 && reviewCount < itemCount) {
-                filtered.add(order);
-            } else if ("reviewed".equals(filter) && reviewCount == itemCount) {
+            } else if ("reviewed".equals(filter) && reviewedItemCount >= itemCount) {
                 filtered.add(order);
             }
         }
@@ -427,7 +437,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(404, "订单不存在");
         }
-        if (order.getStatus() != OrderStatus.PENDING_SHIP && order.getStatus() != OrderStatus.SHIPPED) {
+        if (order.getStatus() != OrderStatus.PENDING_SHIP && order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.COMPLETED) {
             throw new BusinessException("当前订单状态不支持退款");
         }
         restoreStock(order);
@@ -490,8 +500,14 @@ public class OrderServiceImpl implements OrderService {
                             new LambdaUpdateWrapper<ProductSku>()
                                     .eq(ProductSku::getId, oldItem.getSkuId())
                                     .ge(ProductSku::getStock, oldItem.getQuantity())
-                                    .setSql("stock = stock - " + oldItem.getQuantity()));
+                                    .setSql("stock = stock - " + oldItem.getQuantity())
+                                    .setSql("sales = sales + " + oldItem.getQuantity()));
                     if (affected == 0) throw new BusinessException("商品「" + oldItem.getProductName() + "」库存不足");
+                    // Also increment product-level sales
+                    productMapper.update(null,
+                            new LambdaUpdateWrapper<Product>()
+                                    .eq(Product::getId, oldItem.getProductId())
+                                    .setSql("sales = sales + " + oldItem.getQuantity()));
                     price = sku.getPrice();
                 } else {
                     Product product = productMapper.selectById(oldItem.getProductId());
@@ -577,9 +593,11 @@ public class OrderServiceImpl implements OrderService {
         if (query.getStatus() != null) {
             wrapper.eq(Order::getStatus, query.getStatus());
         }
+        if (query.getUserId() != null) {
+            wrapper.eq(Order::getUserId, query.getUserId());
+        }
         if (StringUtils.hasText(query.getKeyword())) {
-            wrapper.and(w -> w.eq(Order::getOrderNo, query.getKeyword())
-                    .or().eq(Order::getUserId, query.getKeyword()));
+            wrapper.eq(Order::getOrderNo, query.getKeyword());
         }
         wrapper.orderByDesc(Order::getCreateTime);
 
@@ -632,14 +650,20 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
 
-        // Mark items that have been reviewed
+        // Mark items that have been reviewed and whether a follow-up exists
         List<Review> reviews = reviewMapper.selectList(
                 new LambdaQueryWrapper<Review>().eq(Review::getOrderId, order.getId()));
         Set<Long> reviewedProductIds = reviews.stream()
+                .filter(r -> r.getIsFollowup() == 0)
+                .map(Review::getProductId)
+                .collect(Collectors.toSet());
+        Set<Long> followUpProductIds = reviews.stream()
+                .filter(r -> r.getIsFollowup() == 1)
                 .map(Review::getProductId)
                 .collect(Collectors.toSet());
         for (OrderItem item : items) {
             item.setReviewed(reviewedProductIds.contains(item.getProductId()));
+            item.setHasFollowUp(followUpProductIds.contains(item.getProductId()));
         }
 
         order.setItems(items);

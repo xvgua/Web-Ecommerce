@@ -214,7 +214,7 @@ onMounted(() => { loadFavorites() })
   &__name {
     font-size: 15px;
     font-weight: 500;
-
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;

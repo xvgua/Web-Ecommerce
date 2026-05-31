@@ -14,5 +14,7 @@ public class ProductSku {
     private String specValue;
     private BigDecimal price;
     private Integer stock;
+    private Integer sales;
+    private Integer status;
     private String image;
 }

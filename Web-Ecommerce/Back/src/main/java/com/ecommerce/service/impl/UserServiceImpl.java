@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,6 +54,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = new User();
+        user.setAccountId(generateAccountId());
         user.setUsername(req.getUsername());
         user.setPassword(encoder.encode(req.getPassword()));
         user.setEmail(req.getEmail());
@@ -118,5 +120,29 @@ public class UserServiceImpl implements UserService {
         if (user.getEmail() != null) dbUser.setEmail(user.getEmail());
         userMapper.updateById(dbUser);
         return Result.success();
+    }
+
+    private synchronized long generateAccountId() {
+        LocalDate today = LocalDate.now();
+        int datePart = (today.getYear() % 100) * 10000
+                     + today.getMonthValue() * 100
+                     + today.getDayOfMonth();
+        long prefix = datePart * 100L;
+
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(User::getAccountId, prefix);
+        wrapper.lt(User::getAccountId, prefix + 100);
+        wrapper.orderByDesc(User::getAccountId);
+        wrapper.last("LIMIT 1");
+        User last = userMapper.selectOne(wrapper);
+
+        long seq = 1;
+        if (last != null) {
+            seq = (last.getAccountId() % 100) + 1;
+        }
+        if (seq > 99) {
+            throw new BusinessException("今日注册名额已满，请明天再试");
+        }
+        return prefix + seq;
     }
 }

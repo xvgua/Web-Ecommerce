@@ -13,5 +13,6 @@ public class SkuForm {
     @NotNull(message = "价格不能为空")
     private BigDecimal price;
     private Integer stock;
+    private Integer status;
     private String image;
 }

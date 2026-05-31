@@ -3,15 +3,16 @@
     <h1 class="page-title">订单管理</h1>
 
     <div class="toolbar">
-      <div class="toolbar-left">
-        <el-input v-model="keyword" placeholder="搜索订单号" clearable class="tbar-input" @keyup.enter="handleSearch">
-          <template #prefix><el-icon><Search /></el-icon></template>
-        </el-input>
-        <el-select v-model="status" placeholder="订单状态" clearable class="tbar-select" @change="handleSearch">
-          <el-option v-for="(text, val) in ORDER_STATUS_MAP" :key="val" :label="text" :value="Number(val)" />
-        </el-select>
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-      </div>
+      <el-input v-model="keyword" placeholder="搜索订单号" clearable class="toolbar-search" @keyup.enter="handleSearch">
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+      <el-input v-model="userId" placeholder="用户ID" clearable class="toolbar-select" @keyup.enter="handleSearch">
+        <template #prefix><el-icon><User /></el-icon></template>
+      </el-input>
+      <el-select v-model="status" placeholder="订单状态" clearable class="toolbar-select" @change="handleSearch">
+        <el-option v-for="(text, val) in ORDER_STATUS_MAP" :key="val" :label="text" :value="Number(val)" />
+      </el-select>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
 
     <div class="table-card">
@@ -71,7 +72,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, User } from '@element-plus/icons-vue'
 import { getOrderList, shipOrder, cancelOrder } from '@/api/admin'
 import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_MAP, ORDER_STATUS_COLOR } from '@shared/constants'
@@ -83,6 +84,7 @@ const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const keyword = ref('')
+const userId = ref('')
 const status = ref<number | ''>('')
 
 async function loadOrders() {
@@ -92,6 +94,7 @@ async function loadOrders() {
       page: page.value,
       pageSize: pageSize.value,
       keyword: keyword.value || undefined,
+      userId: userId.value ? Number(userId.value) : undefined,
       status: status.value || undefined,
     })
     orders.value = res.data.records
@@ -132,8 +135,15 @@ onMounted(() => { loadOrders() })
   margin-bottom: 20px;
 }
 
-.tbar-input { width: 220px; }
-.tbar-select { width: 140px; }
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  &-search { width: 260px; }
+  &-select { width: 160px; }
+  &-select-sm { width: 120px; }
+}
 
 .table-card {
   background: #fff;

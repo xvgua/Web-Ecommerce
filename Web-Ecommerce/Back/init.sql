@@ -12,6 +12,7 @@ USE ecommerce;
 -- ============================================
 CREATE TABLE IF NOT EXISTS `user` (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  account_id  BIGINT       NOT NULL UNIQUE COMMENT '8位系统账号ID(YYMMDDNN)',
   username    VARCHAR(50)  NOT NULL UNIQUE,
   password    VARCHAR(255) NOT NULL,
   email       VARCHAR(100) NOT NULL,
@@ -81,6 +82,8 @@ CREATE TABLE IF NOT EXISTS `product_sku` (
   spec_value  VARCHAR(255)   DEFAULT '',
   price       DECIMAL(10,2)  NOT NULL,
   stock       INT            DEFAULT 0,
+  sales       INT            DEFAULT 0 COMMENT 'SKU销量',
+  status      TINYINT        DEFAULT 1 COMMENT '1=上架 0=下架',
   image       VARCHAR(255)   DEFAULT NULL COMMENT '规格缩略图'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -172,14 +175,19 @@ CREATE TABLE IF NOT EXISTS `review` (
   avatar      VARCHAR(500)   DEFAULT '',
   product_id  BIGINT         NOT NULL,
   order_id    BIGINT         NOT NULL,
-  rating      TINYINT        NOT NULL COMMENT '1-5星',
+  rating             DECIMAL(2,1)   NOT NULL COMMENT '综合评分 0.0~5.0（三维度平均）',
+  rating_desc        DECIMAL(2,1)   DEFAULT NULL COMMENT '描述相符 0.5~5.0',
+  rating_logistics   DECIMAL(2,1)   DEFAULT NULL COMMENT '物流服务 0.5~5.0',
+  rating_service     DECIMAL(2,1)   DEFAULT NULL COMMENT '服务态度 0.5~5.0',
   content     TEXT,
   images      VARCHAR(2000)  DEFAULT '',
   is_followup TINYINT        NOT NULL DEFAULT 0 COMMENT '0=initial, 1=followup',
+  like_count  INT            DEFAULT 0 COMMENT '点赞数',
+  comment_count INT          DEFAULT 0 COMMENT '评论数',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_product_id (product_id),
   INDEX idx_user_id (user_id),
-  UNIQUE KEY uk_order_product_type (order_id, product_id, is_followup)
+  UNIQUE KEY uk_order_product_user_type (order_id, product_id, user_id, is_followup)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -192,6 +200,31 @@ CREATE TABLE IF NOT EXISTS `favorite` (
   sku_id      BIGINT   DEFAULT 0,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_user_product (user_id, product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
+-- 11-b. 评价点赞表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `review_like` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT   NOT NULL,
+  review_id   BIGINT   NOT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_review (user_id, review_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
+-- 11-c. 评价评论表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `review_comment` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  review_id   BIGINT       NOT NULL,
+  user_id     BIGINT       NOT NULL,
+  username    VARCHAR(50)  NOT NULL,
+  avatar      VARCHAR(500) DEFAULT '',
+  content     TEXT         NOT NULL,
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_review_id (review_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -215,6 +248,37 @@ CREATE TABLE IF NOT EXISTS `announcement` (
   content     TEXT         NOT NULL,
   create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
+-- 14. 优惠券表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `coupon` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100)   NOT NULL COMMENT '券名称',
+  type        TINYINT        NOT NULL COMMENT '1=满减券 2=折扣券 3=免邮券',
+  discount    DECIMAL(10,2)  NOT NULL COMMENT '优惠金额/折扣率',
+  min_amount  DECIMAL(10,2)  DEFAULT 0 COMMENT '最低消费门槛',
+  total_qty   INT            DEFAULT 0 COMMENT '发行总量',
+  remain_qty  INT            DEFAULT 0 COMMENT '剩余数量',
+  start_time  DATETIME       NOT NULL,
+  end_time    DATETIME       NOT NULL,
+  status      TINYINT        DEFAULT 1 COMMENT '1=启用 0=停用',
+  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================
+-- 15. 用户优惠券表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `user_coupon` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT   NOT NULL,
+  coupon_id   BIGINT   NOT NULL,
+  status      TINYINT  DEFAULT 0 COMMENT '0=未使用 1=已使用 2=已过期',
+  used_time   DATETIME DEFAULT NULL,
+  use_order_id BIGINT  DEFAULT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_coupon (user_id, coupon_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -291,19 +355,19 @@ INSERT INTO `banner` (title, image_url, link_url, sort_order) VALUES
 
 -- 示例评价（需先有已完成的订单，此处为演示数据）
 -- 用户 user_demo / 密码 123456
-INSERT INTO `user` (username, password, email, nickname, status) VALUES
-('user_demo', '$2b$12$Ep/yDhIzfHNsC2Bt0GiJNOul.Gi1O6tkimFmmcE9PLUMHp9ek9w0C', 'demo@example.com', 'Demo用户', 1);
+INSERT INTO `user` (account_id, username, password, email, nickname, status) VALUES
+(26010101, 'user_demo', '$2b$12$Ep/yDhIzfHNsC2Bt0GiJNOul.Gi1O6tkimFmmcE9PLUMHp9ek9w0C', 'demo@example.com', 'Demo用户', 1);
 
-INSERT INTO `review` (user_id, username, avatar, product_id, order_id, rating, content, images, create_time) VALUES
-(1, 'Demo用户', '', 1, 1, 5, '手机非常好用，拍照效果一流，续航也很给力！', '', NOW() - INTERVAL 3 DAY),
-(1, 'Demo用户', '', 2, 2, 4, '三星屏幕果然名不虚传，显示效果很棒。', '', NOW() - INTERVAL 2 DAY),
-(1, 'Demo用户', '', 3, 3, 5, '性价比超高！徕卡拍照真的厉害，充电也快。', '', NOW() - INTERVAL 4 DAY),
-(1, 'Demo用户', '', 3, 4, 3, '用了一个月，系统偶尔卡顿，待优化。', '', NOW() - INTERVAL 6 DAY),
-(1, 'Demo用户', '', 6, 5, 5, '降噪效果惊艳，地铁上也能安静听歌。', '', NOW() - INTERVAL 1 DAY),
-(1, 'Demo用户', '', 6, 6, 4, '音质很好，佩戴舒适，续航也不错。', '', NOW() - INTERVAL 3 DAY),
-(1, 'Demo用户', '', 8, 7, 5, 'M3 Pro 性能炸裂，剪辑视频一点不卡。', '', NOW() - INTERVAL 2 DAY),
-(1, 'Demo用户', '', 11, 8, 4, '内存稳定运行，兼容性好，价格实惠。', '', NOW() - INTERVAL 1 DAY),
-(1, 'Demo用户', '', 12, 9, 5, '读取速度飞快，安装游戏秒开，强烈推荐！', '', NOW() - INTERVAL 1 DAY);
+INSERT INTO `review` (user_id, username, avatar, product_id, order_id, rating, rating_desc, rating_logistics, rating_service, content, images, create_time) VALUES
+(1, 'Demo用户', '', 1, 1, 5, 5, 5, 5, '手机非常好用，拍照效果一流，续航也很给力！', '', NOW() - INTERVAL 3 DAY),
+(1, 'Demo用户', '', 2, 2, 4, 4, 4, 4, '三星屏幕果然名不虚传，显示效果很棒。', '', NOW() - INTERVAL 2 DAY),
+(1, 'Demo用户', '', 3, 3, 5, 5, 5, 5, '性价比超高！徕卡拍照真的厉害，充电也快。', '', NOW() - INTERVAL 4 DAY),
+(1, 'Demo用户', '', 3, 4, 3, 3, 3, 3, '用了一个月，系统偶尔卡顿，待优化。', '', NOW() - INTERVAL 6 DAY),
+(1, 'Demo用户', '', 6, 5, 5, 5, 5, 5, '降噪效果惊艳，地铁上也能安静听歌。', '', NOW() - INTERVAL 1 DAY),
+(1, 'Demo用户', '', 6, 6, 4, 4, 4, 4, '音质很好，佩戴舒适，续航也不错。', '', NOW() - INTERVAL 3 DAY),
+(1, 'Demo用户', '', 8, 7, 5, 5, 5, 5, 'M3 Pro 性能炸裂，剪辑视频一点不卡。', '', NOW() - INTERVAL 2 DAY),
+(1, 'Demo用户', '', 11, 8, 4, 4, 4, 4, '内存稳定运行，兼容性好，价格实惠。', '', NOW() - INTERVAL 1 DAY),
+(1, 'Demo用户', '', 12, 9, 5, 5, 5, 5, '读取速度飞快，安装游戏秒开，强烈推荐！', '', NOW() - INTERVAL 1 DAY);
 
 -- 更新商品的评分和评价数
 UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 1;
@@ -314,14 +378,76 @@ UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 8;
 UPDATE product SET avg_rating = 4.0, review_count = 1 WHERE id = 11;
 UPDATE product SET avg_rating = 5.0, review_count = 1 WHERE id = 12;
 
+-- 示例优惠券
+INSERT INTO `coupon` (name, type, discount, min_amount, total_qty, remain_qty, start_time, end_time, status) VALUES
+('满100减5', 1, 5.00, 100.00, 1000, 980, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('满200减15', 1, 15.00, 200.00, 500, 498, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('满500减50', 1, 50.00, 500.00, 200, 200, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 15 DAY, 1),
+('满1000减120', 1, 120.00, 1000.00, 100, 96, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 15 DAY, 1),
+('9.5折优惠券', 2, 0.95, 0.00, 300, 288, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 60 DAY, 1),
+('满200享8.8折', 2, 0.88, 200.00, 200, 190, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('免邮券', 3, 0.00, 0.00, 500, 460, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 90 DAY, 1),
+('满300减30', 1, 30.00, 300.00, 300, 295, NOW() + INTERVAL 3 DAY, NOW() + INTERVAL 45 DAY, 1);
+
 -- ============================================
 -- 14. 数据库迁移（已有数据库升级用，新库跳过）
 -- ============================================
 -- 新增商品详细参数字段（若已存在则忽略）
 ALTER TABLE `product` ADD COLUMN `detail` TEXT COMMENT '商品详细参数（HTML）' AFTER `description`;
 
+-- 新增SKU销量字段
+ALTER TABLE `product_sku` ADD COLUMN `sales` INT DEFAULT 0 COMMENT 'SKU销量' AFTER `stock`;
+
+-- 新增SKU状态字段
+ALTER TABLE `product_sku` ADD COLUMN `status` TINYINT DEFAULT 1 COMMENT '1=上架 0=下架' AFTER `sales`;
+
+-- 评价三维度评分字段（若已存在则忽略）
+ALTER TABLE `review` ADD COLUMN `rating_desc` DECIMAL(2,1) DEFAULT NULL COMMENT '描述相符 0.5~5.0' AFTER `rating`,
+                    ADD COLUMN `rating_logistics` DECIMAL(2,1) DEFAULT NULL COMMENT '物流服务 0.5~5.0' AFTER `rating_desc`,
+                    ADD COLUMN `rating_service` DECIMAL(2,1) DEFAULT NULL COMMENT '服务态度 0.5~5.0' AFTER `rating_logistics`;
+
+-- 评价综合评分字段改为支持半星（若已是 DECIMAL 则忽略）
+ALTER TABLE `review` MODIFY COLUMN `rating` DECIMAL(2,1) NOT NULL COMMENT '综合评分 0.0~5.0（三维度平均）';
+
 -- 为已有商品填充详细参数
 UPDATE `product` SET `detail` = '<table class=\"param-table\"><tr><td>品牌</td><td>Apple</td></tr><tr><td>型号</td><td>iPhone 15 Pro Max</td></tr><tr><td>处理器</td><td>A17 Pro 芯片</td></tr><tr><td>屏幕尺寸</td><td>6.7 英寸</td></tr><tr><td>屏幕类型</td><td>Super Retina XDR OLED</td></tr><tr><td>分辨率</td><td>2796×1290 像素</td></tr><tr><td>运行内存</td><td>8GB</td></tr><tr><td>存储容量</td><td>256GB</td></tr><tr><td>后置摄像头</td><td>4800万主摄 + 1200万超广角 + 1200万长焦</td></tr><tr><td>前置摄像头</td><td>1200万像素</td></tr><tr><td>电池容量</td><td>4422mAh</td></tr><tr><td>充电接口</td><td>USB-C</td></tr><tr><td>机身重量</td><td>221g</td></tr><tr><td>操作系统</td><td>iOS 17</td></tr></table>' WHERE `name` = 'iPhone 15 Pro Max 256GB' AND (`detail` IS NULL OR `detail` = '');
+
+-- 新增优惠券表（若已存在则跳过）
+CREATE TABLE IF NOT EXISTS `coupon` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100)   NOT NULL COMMENT '券名称',
+  type        TINYINT        NOT NULL COMMENT '1=满减券 2=折扣券 3=免邮券',
+  discount    DECIMAL(10,2)  NOT NULL COMMENT '优惠金额/折扣率',
+  min_amount  DECIMAL(10,2)  DEFAULT 0 COMMENT '最低消费门槛',
+  total_qty   INT            DEFAULT 0 COMMENT '发行总量',
+  remain_qty  INT            DEFAULT 0 COMMENT '剩余数量',
+  start_time  DATETIME       NOT NULL,
+  end_time    DATETIME       NOT NULL,
+  status      TINYINT        DEFAULT 1 COMMENT '1=启用 0=停用',
+  create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `user_coupon` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT   NOT NULL,
+  coupon_id   BIGINT   NOT NULL,
+  status      TINYINT  DEFAULT 0 COMMENT '0=未使用 1=已使用 2=已过期',
+  used_time   DATETIME DEFAULT NULL,
+  use_order_id BIGINT  DEFAULT NULL,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_coupon (user_id, coupon_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 优惠券种子数据（仅当 coupon 表为空时插入）
+INSERT IGNORE INTO `coupon` (name, type, discount, min_amount, total_qty, remain_qty, start_time, end_time, status) VALUES
+('满100减5', 1, 5.00, 100.00, 1000, 980, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('满200减15', 1, 15.00, 200.00, 500, 498, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('满500减50', 1, 50.00, 500.00, 200, 200, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 15 DAY, 1),
+('满1000减120', 1, 120.00, 1000.00, 100, 96, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 15 DAY, 1),
+('9.5折优惠券', 2, 0.95, 0.00, 300, 288, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 60 DAY, 1),
+('满200享8.8折', 2, 0.88, 200.00, 200, 190, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 30 DAY, 1),
+('免邮券', 3, 0.00, 0.00, 500, 460, NOW() - INTERVAL 1 DAY, NOW() + INTERVAL 90 DAY, 1),
+('满300减30', 1, 30.00, 300.00, 300, 295, NOW() + INTERVAL 3 DAY, NOW() + INTERVAL 45 DAY, 1);
 
 UPDATE `product` SET `detail` = '<table class=\"param-table\"><tr><td>品牌</td><td>Samsung</td></tr><tr><td>型号</td><td>Galaxy S24 Ultra</td></tr><tr><td>处理器</td><td>骁龙 8 Gen 3 for Galaxy</td></tr><tr><td>屏幕尺寸</td><td>6.8 英寸</td></tr><tr><td>屏幕类型</td><td>Dynamic AMOLED 2X</td></tr><tr><td>分辨率</td><td>3120×1440 像素</td></tr><tr><td>运行内存</td><td>12GB</td></tr><tr><td>存储容量</td><td>256GB</td></tr><tr><td>后置摄像头</td><td>2亿主摄 + 5000万长焦 + 1200万超广角 + 1000万长焦</td></tr><tr><td>前置摄像头</td><td>1200万像素</td></tr><tr><td>电池容量</td><td>5000mAh</td></tr><tr><td>机身重量</td><td>232g</td></tr><tr><td>操作系统</td><td>One UI 6.1 (Android 14)</td></tr></table>' WHERE `name` = 'Samsung Galaxy S24 Ultra' AND (`detail` IS NULL OR `detail` = '');
 

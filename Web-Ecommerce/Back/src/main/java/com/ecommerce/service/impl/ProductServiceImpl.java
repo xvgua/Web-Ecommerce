@@ -105,6 +105,7 @@ public class ProductServiceImpl implements ProductService {
                 escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryIds, offset, pageSize);
 
         fillCategoryNames(records);
+        fillSkus(records);
         return PageResult.of(records, total, page, pageSize);
     }
 
@@ -136,6 +137,7 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> result = productMapper.selectPage(page, wrapper);
 
         fillCategoryNames(result.getRecords());
+        fillSkus(result.getRecords());
         return PageResult.of(result.getRecords(), result.getTotal(),
                 query.getPage(), query.getPageSize());
     }
@@ -188,6 +190,22 @@ public class ProductServiceImpl implements ProductService {
         }
         for (Product p : products) {
             p.setCategoryName(nameMap.get(p.getCategoryId()));
+        }
+    }
+
+    private void fillSkus(List<Product> products) {
+        if (products.isEmpty()) return;
+        List<Long> productIds = products.stream()
+                .map(Product::getId)
+                .collect(java.util.stream.Collectors.toList());
+        List<ProductSku> allSkus = skuMapper.selectList(
+                new LambdaQueryWrapper<ProductSku>().in(ProductSku::getProductId, productIds));
+        Map<Long, List<ProductSku>> skuMap = new HashMap<>();
+        for (ProductSku sku : allSkus) {
+            skuMap.computeIfAbsent(sku.getProductId(), k -> new ArrayList<>()).add(sku);
+        }
+        for (Product p : products) {
+            p.setSkus(skuMap.getOrDefault(p.getId(), java.util.Collections.emptyList()));
         }
     }
 
@@ -271,6 +289,7 @@ public class ProductServiceImpl implements ProductService {
                 sku.setSpecValue(sf.getSpecValue());
                 sku.setPrice(sf.getPrice());
                 sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
+                sku.setStatus(sf.getStatus() != null ? sf.getStatus() : 1);
                 sku.setImage(sf.getImage());
                 skuMapper.insert(sku);
             }
@@ -316,6 +335,7 @@ public class ProductServiceImpl implements ProductService {
                     sku.setSpecValue(sf.getSpecValue());
                     sku.setPrice(sf.getPrice());
                     sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
+                    sku.setStatus(sf.getStatus() != null ? sf.getStatus() : 1);
                     sku.setImage(sf.getImage());
                     skuMapper.insert(sku);
                 }
@@ -359,6 +379,7 @@ public class ProductServiceImpl implements ProductService {
         sku.setSpecValue("");
         sku.setPrice(product.getPrice());
         sku.setStock(product.getStock() != null ? product.getStock() : 0);
+        sku.setStatus(1);
         sku.setImage(product.getMainImage());
         skuMapper.insert(sku);
     }
@@ -370,5 +391,27 @@ public class ProductServiceImpl implements ProductService {
         }
         productMapper.deleteById(id);
         skuMapper.delete(new LambdaQueryWrapper<ProductSku>().eq(ProductSku::getProductId, id));
+    }
+
+    @Override
+    public void toggleSkuStatus(Long productId, Long skuId, Integer status) {
+        if (status == null || (status != 0 && status != 1)) {
+            throw new BusinessException(400, "状态值无效");
+        }
+        ProductSku sku = skuMapper.selectById(skuId);
+        if (sku == null || !sku.getProductId().equals(productId)) {
+            throw new BusinessException(404, "规格不存在");
+        }
+        sku.setStatus(status);
+        skuMapper.updateById(sku);
+    }
+
+    @Override
+    public void deleteSku(Long productId, Long skuId) {
+        ProductSku sku = skuMapper.selectById(skuId);
+        if (sku == null || !sku.getProductId().equals(productId)) {
+            throw new BusinessException(404, "规格不存在");
+        }
+        skuMapper.deleteById(skuId);
     }
 }

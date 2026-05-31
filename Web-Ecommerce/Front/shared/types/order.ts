@@ -36,6 +36,7 @@ export interface Order {
 
 export interface OrderQuery extends PageQuery {
   status?: number
+  userId?: number
   reviewFilter?: string  // 'pending' | 'followup' | 'reviewed'
 }
 

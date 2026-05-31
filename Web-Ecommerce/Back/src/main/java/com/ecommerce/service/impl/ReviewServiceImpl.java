@@ -7,8 +7,12 @@ import com.ecommerce.dto.CreateReviewRequest;
 import com.ecommerce.dto.ReviewRatingStats;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.Review;
+import com.ecommerce.entity.ReviewComment;
+import com.ecommerce.entity.ReviewLike;
 import com.ecommerce.entity.User;
 import com.ecommerce.mapper.ProductMapper;
+import com.ecommerce.mapper.ReviewCommentMapper;
+import com.ecommerce.mapper.ReviewLikeMapper;
 import com.ecommerce.mapper.ReviewMapper;
 import com.ecommerce.mapper.UserMapper;
 import com.ecommerce.service.ReviewService;
@@ -33,6 +37,10 @@ public class ReviewServiceImpl implements ReviewService {
     private ProductMapper productMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private ReviewLikeMapper reviewLikeMapper;
+    @Autowired
+    private ReviewCommentMapper reviewCommentMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -82,13 +90,33 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BusinessException("用户不存在");
         }
 
+        // 检查是否已发表过初始评价（同一订单同一商品只能评价一次）
+        Long count = reviewMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                        .eq(Review::getUserId, userId)
+                        .eq(Review::getOrderId, request.getOrderId())
+                        .eq(Review::getProductId, request.getProductId())
+                        .eq(Review::getIsFollowup, 0));
+        if (count > 0) {
+            throw new BusinessException("您已评价过该商品");
+        }
+
+        BigDecimal ratingDesc = request.getRatingDesc();
+        BigDecimal ratingLogistics = request.getRatingLogistics();
+        BigDecimal ratingService = request.getRatingService();
+        BigDecimal overallRating = ratingDesc.add(ratingLogistics).add(ratingService)
+                .divide(BigDecimal.valueOf(3), 1, RoundingMode.HALF_UP);
+
         Review review = new Review();
         review.setUserId(userId);
         review.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
         review.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
         review.setProductId(request.getProductId());
         review.setOrderId(request.getOrderId());
-        review.setRating(request.getRating());
+        review.setRating(overallRating);
+        review.setRatingDesc(ratingDesc);
+        review.setRatingLogistics(ratingLogistics);
+        review.setRatingService(ratingService);
         review.setContent(request.getContent());
         review.setIsFollowup(0);
 
@@ -109,7 +137,7 @@ public class ReviewServiceImpl implements ReviewService {
         int newCount = oldCount + 1;
         BigDecimal newAvg = oldAvg
                 .multiply(BigDecimal.valueOf(oldCount))
-                .add(BigDecimal.valueOf(request.getRating()))
+                .add(overallRating)
                 .divide(BigDecimal.valueOf(newCount), 1, RoundingMode.HALF_UP);
 
         product.setAvgRating(newAvg);
@@ -138,7 +166,7 @@ public class ReviewServiceImpl implements ReviewService {
         review.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
         review.setProductId(request.getProductId());
         review.setOrderId(request.getOrderId());
-        review.setRating(0);
+        review.setRating(BigDecimal.ZERO);
         review.setContent(request.getContent());
         review.setIsFollowup(1);
 
@@ -154,5 +182,114 @@ public class ReviewServiceImpl implements ReviewService {
 
         reviewMapper.insert(review);
         return review;
+    }
+
+    @Override
+    public PageResult<Review> getUserReviews(Long userId, int page, int pageSize) {
+        int offset = (page - 1) * pageSize;
+        long total = reviewMapper.countByUserId(userId);
+        List<Review> records = reviewMapper.selectByUserId(userId, offset, pageSize);
+
+        if (!records.isEmpty()) {
+            // Batch check which reviews the user has liked
+            List<Long> reviewIds = records.stream().map(Review::getId).toList();
+            List<ReviewLike> likes = reviewLikeMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewLike>()
+                            .eq(ReviewLike::getUserId, userId)
+                            .in(ReviewLike::getReviewId, reviewIds));
+            java.util.Set<Long> likedIds = likes.stream().map(ReviewLike::getReviewId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            // Batch fetch follow-up reviews (same user, is_followup=1)
+            List<Review> allFollowUps = reviewMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                            .eq(Review::getUserId, userId)
+                            .eq(Review::getIsFollowup, 1)
+                            .in(Review::getOrderId, records.stream().map(Review::getOrderId).toList())
+                            .orderByAsc(Review::getCreateTime));
+            java.util.Map<String, java.util.List<Review>> followUpMap = allFollowUps.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            r -> r.getOrderId() + "_" + r.getProductId()));
+
+            for (Review review : records) {
+                review.setIsLiked(likedIds.contains(review.getId()));
+                String key = review.getOrderId() + "_" + review.getProductId();
+                java.util.List<Review> followUps = followUpMap.get(key);
+                review.setHasFollowUp(followUps != null && !followUps.isEmpty());
+                review.setFollowUpReviews(followUps != null ? followUps : java.util.Collections.emptyList());
+            }
+        }
+
+        return PageResult.of(records, total, page, pageSize);
+    }
+
+    @Override
+    public boolean likeReview(Long userId, Long reviewId) {
+        Review review = reviewMapper.selectById(reviewId);
+        if (review == null) {
+            throw new BusinessException("评价不存在");
+        }
+        Long count = reviewLikeMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewLike>()
+                        .eq(ReviewLike::getUserId, userId)
+                        .eq(ReviewLike::getReviewId, reviewId));
+        if (count > 0) {
+            return false;
+        }
+        ReviewLike like = new ReviewLike();
+        like.setUserId(userId);
+        like.setReviewId(reviewId);
+        reviewLikeMapper.insert(like);
+        reviewMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Review>()
+                        .eq(Review::getId, reviewId)
+                        .setSql("like_count = like_count + 1"));
+        return true;
+    }
+
+    @Override
+    public boolean unlikeReview(Long userId, Long reviewId) {
+        int affected = reviewLikeMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewLike>()
+                        .eq(ReviewLike::getUserId, userId)
+                        .eq(ReviewLike::getReviewId, reviewId));
+        if (affected > 0) {
+            reviewMapper.update(null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Review>()
+                            .eq(Review::getId, reviewId)
+                            .setSql("like_count = GREATEST(like_count - 1, 0)"));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<ReviewComment> getReviewComments(Long reviewId) {
+        return reviewCommentMapper.selectByReviewId(reviewId);
+    }
+
+    @Override
+    @Transactional
+    public ReviewComment addReviewComment(Long userId, Long reviewId, String content) {
+        Review review = reviewMapper.selectById(reviewId);
+        if (review == null) {
+            throw new BusinessException("评价不存在");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        ReviewComment comment = new ReviewComment();
+        comment.setReviewId(reviewId);
+        comment.setUserId(userId);
+        comment.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+        comment.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
+        comment.setContent(content);
+        reviewCommentMapper.insert(comment);
+        reviewMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Review>()
+                        .eq(Review::getId, reviewId)
+                        .setSql("comment_count = comment_count + 1"));
+        return comment;
     }
 }

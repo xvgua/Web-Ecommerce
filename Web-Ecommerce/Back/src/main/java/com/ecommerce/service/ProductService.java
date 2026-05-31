@@ -15,4 +15,6 @@ public interface ProductService {
     Product create(ProductForm form);
     void update(Long id, ProductForm form);
     void delete(Long id);
+    void toggleSkuStatus(Long productId, Long skuId, Integer status);
+    void deleteSku(Long productId, Long skuId);
 }

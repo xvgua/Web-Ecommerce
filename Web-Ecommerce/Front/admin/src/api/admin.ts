@@ -41,6 +41,14 @@ export function deleteProduct(id: number): Promise<ApiResponse<null>> {
   return request.delete(`/admin/products/${id}`)
 }
 
+export function toggleSkuStatus(productId: number, skuId: number, status: number): Promise<ApiResponse<null>> {
+  return request.put(`/admin/products/${productId}/skus/${skuId}/status`, { status })
+}
+
+export function deleteSku(productId: number, skuId: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/products/${productId}/skus/${skuId}`)
+}
+
 export function getCategoryList(): Promise<ApiResponse<Category[]>> {
   return request.get('/admin/categories')
 }

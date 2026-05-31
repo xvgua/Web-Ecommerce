@@ -13,7 +13,11 @@
 
     <div class="table-card">
       <el-table :data="users" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="70" align="center" />
+        <el-table-column label="账号ID" width="110" align="center">
+          <template #default="{ row }">
+            <span class="account-id">{{ row.accountId }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="用户" min-width="160">
           <template #default="{ row }">
             <div class="user-cell">
@@ -22,7 +26,7 @@
               </el-avatar>
               <div>
                 <div class="user-cell__name">{{ row.nickname || row.username }}</div>
-                <div class="user-cell__id">@{{ row.username }}</div>
+                <div class="user-cell__id">{{ row.accountId }}</div>
               </div>
             </div>
           </template>
@@ -143,13 +147,19 @@ onMounted(() => { loadUsers() })
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
 }
 
+.account-id {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-weight: 600;
+  color: #303133;
+}
+
 .user-cell {
   display: flex;
   align-items: center;
   gap: 10px;
 
   &__name { font-size: 14px; font-weight: 500; }
-  &__id   { font-size: 12px; color: #999; }
+  &__id   { font-size: 12px; color: #999; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
 }
 
 .pagination-wrap {

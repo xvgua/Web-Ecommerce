@@ -232,7 +232,7 @@ const rightCards = [
     title: '领券中心',
     desc: '大额优惠券',
     bg: 'linear-gradient(160deg, #f49b3f 0%, #f0628b 100%)',
-    link: '/products?coupon=1',
+    link: '/coupons',
   },
 ]
 

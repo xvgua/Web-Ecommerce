@@ -20,7 +20,116 @@
       </el-radio-group>
     </div>
 
-    <div v-loading="loading" class="order-list" :class="{ 'order-list--review': activeTab === 'review' }">
+    <!-- 已评价：直接展示评价列表 -->
+    <div v-if="activeTab === 'review' && reviewSubTab === 'reviewed'" v-loading="reviewLoading" class="review-list">
+      <div v-for="review in reviews" :key="review.id" class="review-card">
+        <div class="review-card__product" @click="$router.push(`/products/${review.productId}`)">
+          <ProductImage :src="review.productImage" :seed="(review.productName || '') + review.productId" fit="cover" class="review-card__product-img" />
+          <div class="review-card__product-info">
+            <div class="review-card__product-name">{{ review.productName || '' }}</div>
+            <div class="review-card__product-price">{{ formatPrice(review.productPrice ?? 0) }}</div>
+          </div>
+        </div>
+        <div class="review-card__body">
+          <div class="review-card__rating">
+            <el-rate :model-value="review.rating" disabled :max="5" size="small" />
+            <span class="review-card__rating-text">{{ review.rating }} 分</span>
+            <span class="review-card__date">{{ formatDate(review.createTime) }}</span>
+          </div>
+          <div class="review-card__content">{{ review.content }}</div>
+          <div v-if="review.images && review.images.length" class="review-card__images">
+            <el-image
+              v-for="(img, i) in review.images"
+              :key="i"
+              :src="img"
+              fit="cover"
+              :preview-src-list="review.images"
+              :initial-index="i"
+              class="review-card__image-item"
+            />
+          </div>
+        </div>
+        <!-- 追评列表 -->
+        <div v-if="review.followUpReviews?.length" class="review-card__followups">
+          <div v-for="fu in review.followUpReviews" :key="fu.id" class="followup-item">
+            <div class="followup-item__header">
+              <span class="followup-item__label">{{ daysAfter(review.createTime, fu.createTime) }}天后追评</span>
+              <span class="followup-item__date">{{ formatDate(fu.createTime) }}</span>
+            </div>
+            <div class="followup-item__content">{{ fu.content }}</div>
+            <div v-if="fu.images && fu.images.length" class="review-card__images followup-item__images">
+              <el-image
+                v-for="(img, i) in fu.images"
+                :key="i"
+                :src="img"
+                fit="cover"
+                :preview-src-list="fu.images"
+                :initial-index="i"
+                class="review-card__image-item"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card__actions">
+          <span class="review-card__action-btn" :class="{ 'is-active': review.isLiked }" @click.stop="handleToggleLike(review)">
+            <el-icon><CaretTop /></el-icon>
+            <span>{{ review.likeCount || 0 }}</span>
+          </span>
+          <span class="review-card__action-btn" @click.stop="handleToggleComments(review)">
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>{{ review.commentCount || 0 }}</span>
+          </span>
+          <el-button
+            size="small"
+            type="warning"
+            @click.stop="handleFollowUp(review)"
+          >
+            追评
+          </el-button>
+        </div>
+        <div v-if="commentsVisible[review.id]" class="review-card__comments">
+          <div class="review-card__comments-list" v-if="commentMap[review.id]?.length">
+            <div v-for="c in commentMap[review.id]" :key="c.id" class="comment-item">
+              <span class="comment-item__user">{{ c.username }}</span>
+              <span class="comment-item__content">{{ c.content }}</span>
+              <span class="comment-item__time">{{ formatDate(c.createTime) }}</span>
+            </div>
+          </div>
+          <el-empty v-else description="暂无评论" :image-size="40" />
+          <div class="comment-input-row">
+            <el-input
+              v-model="commentInput[review.id]"
+              placeholder="写评论..."
+              size="small"
+              maxlength="200"
+              @keyup.enter="handleAddComment(review)"
+            />
+            <el-button size="small" type="primary" :loading="commentSubmitting[review.id]" @click.stop="handleAddComment(review)">
+              发送
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <el-empty v-if="activeTab === 'review' && reviewSubTab === 'reviewed' && !reviewLoading && !reviews.length" description="暂无已评价的商品" />
+
+    <!-- 评价-已评价分页 -->
+    <div class="pagination-wrap" v-if="activeTab === 'review' && reviewSubTab === 'reviewed' && reviewTotal > 0">
+      <el-pagination
+        v-model:current-page="reviewPage"
+        v-model:page-size="reviewPageSize"
+        :total="reviewTotal"
+        :page-sizes="[10, 20]"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        @current-change="loadReviews"
+        @size-change="loadReviews"
+      />
+    </div>
+
+    <div v-if="activeTab !== 'review' || reviewSubTab !== 'reviewed'" v-loading="loading" class="order-list" :class="{ 'order-list--review': activeTab === 'review' }">
       <div v-for="order in orders" :key="order.id" class="order-card" @click="$router.push(`/orders/${order.id}`)">
         <div class="order-card__header">
           <span class="order-card__no">订单号：{{ order.orderNo }}</span>
@@ -59,7 +168,7 @@
             <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消</el-button>
             <!-- 待发货 -->
             <el-button v-if="order.status === 1" size="small" @click="handleEditAddress(order)">修改地址</el-button>
-            <el-button v-if="order.status === 1 || order.status === 2" size="small" @click="handleRefund(order.id)">申请退款</el-button>
+            <el-button v-if="order.status === 1 || order.status === 2 || order.status === 3" size="small" @click="handleRefund(order.id)">申请退款</el-button>
             <!-- 已完成 -->
             <el-button v-if="order.status === 3" size="small" @click="handleReorder(order.id)">再来一单</el-button>
             <!-- 已取消 -->
@@ -75,11 +184,11 @@
           </div>
         </div>
       </div>
+      <el-empty v-if="!loading && !orders.length" description="暂无订单" />
     </div>
 
-    <el-empty v-if="!loading && !orders.length" description="暂无订单" />
-
-    <div class="pagination-wrap" v-if="total > 0">
+    <!-- 非评价tab & 待评价：底部分页 -->
+    <div class="pagination-wrap" v-if="activeTab !== 'review' || reviewSubTab !== 'reviewed'">
       <el-pagination
         v-model:current-page="page"
         v-model:page-size="pageSize"
@@ -96,15 +205,19 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { CaretTop, ChatDotSquare } from '@element-plus/icons-vue'
 import { getOrderList, cancelOrder, confirmReceive, refundOrder, reorderOrder } from '@/api/order'
+import { getMyReviews, likeReview, unlikeReview, getReviewComments, addReviewComment } from '@/api/product'
 import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
+import type { Review, ReviewComment } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
 
 const router = useRouter()
+const route = useRoute()
 const orders = ref<Order[]>([])
 const loading = ref(false)
 const page = ref(1)
@@ -113,7 +226,23 @@ const total = ref(0)
 const activeTab = ref('')
 const reviewSubTab = ref('pending')
 
+// 评价列表状态
+const reviews = ref<Review[]>([])
+const reviewLoading = ref(false)
+const reviewPage = ref(1)
+const reviewPageSize = ref(10)
+const reviewTotal = ref(0)
+const commentsVisible = ref<Record<number, boolean>>({})
+const commentMap = ref<Record<number, ReviewComment[]>>({})
+const commentInput = ref<Record<number, string>>({})
+const commentSubmitting = ref<Record<number, boolean>>({})
+
 async function loadOrders() {
+  // "已评价"子标签走评价列表接口
+  if (activeTab.value === 'review' && reviewSubTab.value === 'reviewed') {
+    await loadReviews()
+    return
+  }
   loading.value = true
   try {
     const status = activeTab.value === 'review' ? 3
@@ -133,6 +262,17 @@ async function loadOrders() {
   }
 }
 
+async function loadReviews() {
+  reviewLoading.value = true
+  try {
+    const res = await getMyReviews(reviewPage.value, reviewPageSize.value)
+    reviews.value = res.data.records
+    reviewTotal.value = res.data.total
+  } finally {
+    reviewLoading.value = false
+  }
+}
+
 function enrichReviewInfo(order: Order): Order & { _reviewInfo?: { reviewed: number; total: number } } {
   if (activeTab.value !== 'review') return order as Order & { _reviewInfo?: any }
   const total = order.items?.length || 0
@@ -142,6 +282,7 @@ function enrichReviewInfo(order: Order): Order & { _reviewInfo?: { reviewed: num
 
 function handleTabChange() {
   page.value = 1
+  reviewPage.value = 1
   if (activeTab.value === 'review') {
     reviewSubTab.value = 'pending'
   }
@@ -150,7 +291,68 @@ function handleTabChange() {
 
 function handleSubTabChange() {
   page.value = 1
+  reviewPage.value = 1
   loadOrders()
+}
+
+async function handleToggleLike(review: Review) {
+  try {
+    if (review.isLiked) {
+      await unlikeReview(review.id)
+      review.isLiked = false
+      review.likeCount = Math.max((review.likeCount || 1) - 1, 0)
+    } else {
+      await likeReview(review.id)
+      review.isLiked = true
+      review.likeCount = (review.likeCount || 0) + 1
+    }
+  } catch { /* handled by interceptor */ }
+}
+
+async function handleToggleComments(review: Review) {
+  if (!review.commentCount) return
+  const id = review.id
+  if (commentsVisible.value[id]) {
+    commentsVisible.value[id] = false
+    return
+  }
+  commentsVisible.value[id] = true
+  if (!commentMap.value[id]) {
+    try {
+      const res = await getReviewComments(id)
+      commentMap.value[id] = res.data
+    } catch {
+      commentMap.value[id] = []
+    }
+  }
+  if (commentInput.value[id] === undefined) {
+    commentInput.value[id] = ''
+  }
+}
+
+async function handleAddComment(review: Review) {
+  const content = (commentInput.value[review.id] || '').trim()
+  if (!content) return
+  commentSubmitting.value[review.id] = true
+  try {
+    await addReviewComment(review.id, content)
+    commentInput.value[review.id] = ''
+    review.commentCount = (review.commentCount || 0) + 1
+    ElMessage.success('评论成功')
+    const res = await getReviewComments(review.id)
+    commentMap.value[review.id] = res.data
+  } finally {
+    commentSubmitting.value[review.id] = false
+  }
+}
+
+function daysAfter(from: string, to: string): number {
+  const diff = new Date(to).getTime() - new Date(from).getTime()
+  return Math.max(1, Math.round(diff / 86400000))
+}
+
+function handleFollowUp(review: Review) {
+  router.push(`/orders/${review.orderId}/review/${review.productId}?followUp=1`)
 }
 
 async function handleCancel(id: number) {
@@ -201,7 +403,15 @@ function handleViewLogistics(id: number) {
   router.push(`/orders/${id}`)
 }
 
-onMounted(() => { loadOrders() })
+onMounted(() => {
+  if (route.query.tab) {
+    activeTab.value = route.query.tab as string
+  }
+  if (route.query.subTab) {
+    reviewSubTab.value = route.query.subTab as string
+  }
+  loadOrders()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -330,5 +540,185 @@ onMounted(() => { loadOrders() })
   display: flex;
   justify-content: center;
   margin-top: 28px;
+}
+
+// 追评区域
+.review-card__followups {
+  margin: 0 16px 12px;
+  border-left: 3px solid #e6a23c;
+  padding-left: 14px;
+}
+
+.followup-item {
+  padding: 8px 0;
+  border-bottom: 1px dashed #f0f0f0;
+
+  &:last-child { border-bottom: none; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: #e6a23c;
+    font-weight: 500;
+  }
+
+  &__date {
+    font-size: 12px;
+    color: #bbb;
+  }
+
+  &__content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__images {
+    margin-top: 8px;
+  }
+}
+
+// 已评价列表
+.review-list {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  padding: 0 20px;
+}
+
+.review-card {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child { border-bottom: none; }
+
+  &__product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+
+  &__product-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__product-info { flex: 1; min-width: 0; }
+
+  &__product-name {
+    font-size: 15px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__product-price {
+    font-size: 14px;
+    color: #e6423a;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  &__body { margin-bottom: 12px; }
+
+  &__rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  &__rating-text { font-size: 13px; color: #e6423a; font-weight: 600; }
+
+  &__date { font-size: 12px; color: #999; margin-left: auto; }
+
+  &__content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__images {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__image-item {
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all .2s;
+
+    &:hover { color: #409eff; background: #ecf5ff; }
+
+    &.is-active { color: #409eff; }
+  }
+
+  &__comments {
+    margin-top: 14px;
+    padding: 14px;
+    background: #fafafa;
+    border-radius: 8px;
+  }
+
+  &__comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+}
+
+.comment-item {
+  font-size: 13px;
+  line-height: 1.6;
+
+  &__user { color: #409eff; font-weight: 500; margin-right: 8px; }
+  &__content { color: #333; }
+  &__time { color: #ccc; margin-left: 8px; font-size: 11px; }
+}
+
+.comment-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 </style>

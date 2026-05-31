@@ -12,4 +12,5 @@ public class ProductQuery {
     private Double minPrice;
     private Double maxPrice;
     private Integer status;
+    private Long userId;
 }

@@ -22,7 +22,65 @@
     </div>
 
     <div class="table-card">
-      <el-table :data="products" v-loading="loading" stripe>
+      <el-table :data="products" v-loading="loading" stripe row-key="id">
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div class="sku-expand" v-if="row.skus && row.skus.length > 0">
+              <div class="sku-expand__table">
+                <div
+                  v-for="(sku, idx) in row.skus"
+                  :key="sku.id"
+                  class="sku-row"
+                  :class="{ 'sku-row--off': sku.status === 0 }"
+                >
+                  <span class="sku-row__offset" />
+                  <span class="sku-row__id">#{{ idx + 1 }}</span>
+                  <div class="sku-row__img">
+                    <el-image v-if="sku.image" :src="sku.image" fit="cover">
+                      <template #error>
+                        <ProductPlaceholder :seed="sku.specName + sku.id" :size="40" />
+                      </template>
+                    </el-image>
+                    <ProductPlaceholder v-else :seed="sku.specName + sku.id" :size="40" />
+                  </div>
+                  <span class="sku-row__name" :title="sku.specName">{{ sku.specName }}</span>
+                  <span class="sku-row__category" />
+                  <span class="sku-row__cell sku-row__cell--price">{{ formatPrice(sku.price) }}</span>
+                  <span class="sku-row__cell sku-row__cell--stock">{{ sku.stock }}</span>
+                  <span class="sku-row__cell sku-row__cell--sales">{{ sku.sales }}</span>
+                  <span class="sku-row__cell sku-row__cell--status">
+                    <el-tag
+                      :type="sku.status === 1 ? 'success' : 'info'"
+                      size="small"
+                      effect="dark"
+                    >
+                      {{ sku.status === 1 ? '上架' : '下架' }}
+                    </el-tag>
+                  </span>
+                  <span class="sku-row__cell sku-row__cell--action">
+                    <el-button
+                      text
+                      :type="sku.status === 1 ? 'warning' : 'success'"
+                      size="small"
+                      @click.stop="toggleSku(row.id, sku)"
+                    >
+                      {{ sku.status === 1 ? '下架' : '上架' }}
+                    </el-button>
+                    <el-button
+                      text
+                      type="danger"
+                      size="small"
+                      @click.stop="handleDeleteSku(row.id, sku)"
+                    >
+                      删除
+                    </el-button>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <span v-else class="sku-none">暂无规格</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column label="主图" width="90">
           <template #default="{ row }">
@@ -34,12 +92,20 @@
         <el-table-column prop="name" label="商品名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="categoryName" label="分类" width="100" />
         <el-table-column label="价格" width="110" sortable>
-          <template #default="{ row }">
-            <span class="price-cell">{{ formatPrice(row.price) }}</span>
+          <template #default>
+            <span class="price-empty">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="stock" label="库存" width="80" align="center" />
-        <el-table-column prop="sales" label="销量" width="80" align="center" />
+        <el-table-column label="库存" width="80" align="center">
+          <template #default="{ row }">
+            {{ skuTotalStock(row) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="销量" width="80" align="center">
+          <template #default="{ row }">
+            {{ skuTotalSales(row) }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small" effect="dark">
@@ -84,9 +150,9 @@ import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { useDebounceFn } from '@vueuse/core'
-import { getProductList, deleteProduct, updateProduct, getCategoryList } from '@/api/admin'
+import { getProductList, deleteProduct, updateProduct, getCategoryList, toggleSkuStatus, deleteSku } from '@/api/admin'
 import { formatPrice } from '@/utils/format'
-import type { Product, Category, ProductForm } from '@shared/types/product'
+import type { Product, ProductSku, Category, ProductForm } from '@shared/types/product'
 import ProductPlaceholder from '@/components/common/ProductPlaceholder.vue'
 
 const products = ref<Product[]>([])
@@ -141,6 +207,36 @@ async function toggleStatus(row: Product) {
   loadProducts()
 }
 
+async function toggleSku(productId: number, sku: ProductSku) {
+  const newStatus = sku.status === 1 ? 0 : 1
+  const label = newStatus === 1 ? '上架' : '下架'
+  await ElMessageBox.confirm(`确定要${label}规格「${sku.specName}」吗？`, '提示', { type: 'warning' })
+  await toggleSkuStatus(productId, sku.id, newStatus)
+  ElMessage.success(`已${label}`)
+  loadProducts()
+}
+
+async function handleDeleteSku(productId: number, sku: ProductSku) {
+  await ElMessageBox.confirm(`确定要删除规格「${sku.specName}」吗？`, '提示', { type: 'warning' })
+  await deleteSku(productId, sku.id)
+  ElMessage.success('已删除')
+  loadProducts()
+}
+
+function skuTotalStock(row: Product) {
+  if (row.skus && row.skus.length > 0) {
+    return row.skus.reduce((sum, sku) => sum + sku.stock, 0)
+  }
+  return row.stock
+}
+
+function skuTotalSales(row: Product) {
+  if (row.skus && row.skus.length > 0) {
+    return row.skus.reduce((sum, sku) => sum + sku.sales, 0)
+  }
+  return row.sales
+}
+
 onMounted(async () => {
   loadProducts()
   const res = await getCategoryList()
@@ -183,6 +279,119 @@ onMounted(async () => {
 .price-cell {
   color: #e6423a;
   font-weight: 600;
+}
+
+.price-empty {
+  color: #c0c4cc;
+}
+
+.sku-expand {
+  padding: 0;
+
+  &__table {
+    position: relative;
+  }
+}
+
+.sku-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px dashed #ebeef5;
+  transition: background .15s;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f8f9fb;
+  }
+
+  &--off {
+    opacity: .5;
+
+    .sku-row__img {
+      filter: grayscale(1);
+    }
+  }
+
+  /* 偏移量：跳过 expand(48px) + ID(70px) + 主图(90px)，到达商品名称列 */
+  &__offset {
+    width: 208px;
+    flex-shrink: 0;
+  }
+
+  &__id {
+    width: 32px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #909399;
+    text-align: center;
+  }
+
+  &__img {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f0f0f0;
+    margin-right: 10px;
+
+    :deep(.el-image) {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: #303133;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 12px;
+  }
+
+  /* 分类列占位：对齐主表分类列 */
+  &__category {
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  /* 单元格：固定宽度，与主表头对齐 */
+  &__cell {
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 13px;
+    color: #606266;
+
+    &--price {
+      width: 110px;
+      color: #e6423a;
+      font-weight: 600;
+      text-align: right;
+      padding-right: 8px;
+    }
+
+    &--stock { width: 80px; }
+    &--sales { width: 80px; }
+    &--status {
+      width: 80px;
+      display: flex;
+      justify-content: center;
+    }
+    &--action { width: 200px; }
+  }
+}
+
+.sku-none {
+  font-size: 13px;
+  color: #c0c4cc;
+  padding: 8px 0;
 }
 
 .pagination-wrap {

@@ -14,7 +14,8 @@ public interface ReviewMapper extends BaseMapper<Review> {
 
     @Select("<script>" +
             "SELECT r.id, r.user_id, r.username, r.avatar, r.product_id, r.order_id, " +
-            "r.rating, r.content, r.images, r.create_time " +
+            "r.rating, r.rating_desc, r.rating_logistics, r.rating_service, " +
+            "r.content, r.images, r.is_followup, r.like_count, r.comment_count, r.create_time " +
             "FROM review r WHERE r.product_id = #{productId}" +
             "<if test='ratingMin != null'> AND r.rating <![CDATA[ >= ]]> #{ratingMin}</if>" +
             "<if test='ratingMax != null'> AND r.rating <![CDATA[ <= ]]> #{ratingMax}</if>" +
@@ -36,6 +37,17 @@ public interface ReviewMapper extends BaseMapper<Review> {
                           @Param("ratingMax") Integer ratingMax);
 
     @Select("SELECT rating, COUNT(*) AS cnt FROM review " +
-            "WHERE product_id = #{productId} GROUP BY rating")
+            "WHERE product_id = #{productId} AND is_followup = 0 GROUP BY rating")
     List<Map<String, Object>> getRatingDistribution(@Param("productId") Long productId);
+
+    @Select("SELECT r.*, p.name AS product_name, p.main_image AS product_image, p.price AS product_price " +
+            "FROM review r LEFT JOIN product p ON r.product_id = p.id " +
+            "WHERE r.user_id = #{userId} AND r.is_followup = 0 " +
+            "ORDER BY r.create_time DESC LIMIT #{offset}, #{pageSize}")
+    List<Review> selectByUserId(@Param("userId") Long userId,
+                                @Param("offset") int offset,
+                                @Param("pageSize") int pageSize);
+
+    @Select("SELECT COUNT(*) FROM review WHERE user_id = #{userId} AND is_followup = 0")
+    long countByUserId(@Param("userId") Long userId);
 }

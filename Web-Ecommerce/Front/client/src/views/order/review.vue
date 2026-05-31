@@ -10,52 +10,65 @@
         <div class="review-card__product-info">
           <div class="review-card__product-name">{{ orderItem.productName }}</div>
           <div class="review-card__product-spec" v-if="orderItem.specDesc">{{ orderItem.specDesc }}</div>
-          <div class="review-card__product-price">{{ formatPrice(orderItem.price) }}</div>
         </div>
       </div>
 
       <el-divider />
 
       <div class="review-card__form">
-        <div class="review-card__rating">
-          <span class="review-card__label">评分</span>
-          <el-rate v-model="rating" :max="5" show-score :texts="rateTexts" />
+        <!-- Three-dimension rating (initial review only) -->
+        <div v-if="!isFollowUp" class="review-card__ratings">
+          <div class="review-card__rating-row">
+            <span class="review-card__rating-label">描述相符</span>
+            <el-rate v-model="ratingDesc" :max="5" allow-half :texts="rateTexts" show-text />
+          </div>
+          <div class="review-card__rating-row">
+            <span class="review-card__rating-label">物流服务</span>
+            <el-rate v-model="ratingLogistics" :max="5" allow-half :texts="rateTexts" show-text />
+          </div>
+          <div class="review-card__rating-row">
+            <span class="review-card__rating-label">服务态度</span>
+            <el-rate v-model="ratingService" :max="5" allow-half :texts="rateTexts" show-text />
+          </div>
+          <div v-if="averageRating > 0" class="review-card__rating-avg">
+            <span class="review-card__rating-avg-label">综合评分</span>
+            <span class="review-card__rating-avg-value">{{ averageRating + '分' }}</span>
+          </div>
         </div>
 
-        <div class="review-card__content">
-          <span class="review-card__label">评价内容</span>
+        <!-- Review content with upload inside -->
+        <div class="review-card__content-box">
           <el-input
             v-model="content"
             type="textarea"
-            :rows="5"
+            :rows="6"
             maxlength="1000"
             show-word-limit
             placeholder="请分享您对这件商品的使用感受..."
+            class="review-card__textarea"
           />
-        </div>
-
-        <div class="review-card__images">
-          <span class="review-card__label">上传图片 <span class="review-card__label-hint">（可选，最多5张）</span></span>
-          <div class="review-card__upload-list">
-            <div v-for="(img, i) in imageUrls" :key="i" class="review-card__upload-item">
-              <el-image :src="img" fit="cover" class="review-card__upload-preview" />
-              <span class="review-card__upload-remove" @click="removeImage(i)">
-                <el-icon><Close /></el-icon>
-              </span>
+          <div class="review-card__content-footer">
+            <div class="review-card__upload-area">
+              <div v-for="(img, i) in imageUrls" :key="i" class="review-card__upload-item">
+                <el-image :src="img" fit="cover" class="review-card__upload-preview" />
+                <span class="review-card__upload-remove" @click="removeImage(i)">
+                  <el-icon><Close /></el-icon>
+                </span>
+              </div>
+              <el-upload
+                v-if="imageUrls.length < 5"
+                :action="uploadUrl"
+                :headers="uploadHeaders"
+                :show-file-list="false"
+                :before-upload="beforeUpload"
+                :on-success="onUploadSuccess"
+                :on-error="onUploadError"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                class="review-card__upload-btn"
+              >
+                <el-icon :size="20"><Plus /></el-icon>
+              </el-upload>
             </div>
-            <el-upload
-              v-if="imageUrls.length < 5"
-              :action="uploadUrl"
-              :headers="uploadHeaders"
-              :show-file-list="false"
-              :before-upload="beforeUpload"
-              :on-success="onUploadSuccess"
-              :on-error="onUploadError"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              class="review-card__upload-btn"
-            >
-              <el-icon :size="24"><Plus /></el-icon>
-            </el-upload>
           </div>
         </div>
       </div>
@@ -81,7 +94,6 @@ import { ElMessage } from 'element-plus'
 import { Plus, Close } from '@element-plus/icons-vue'
 import { getOrderById } from '@/api/order'
 import { createReview, createFollowUpReview } from '@/api/product'
-import { formatPrice } from '@/utils/format'
 import { TOKEN_KEY } from '@shared/constants'
 import type { OrderItem } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -97,11 +109,21 @@ const loading = ref(false)
 const submitting = ref(false)
 const orderItem = ref<OrderItem | null>(null)
 
-const rating = ref(0)
+const ratingDesc = ref(0)
+const ratingLogistics = ref(0)
+const ratingService = ref(0)
 const content = ref('')
 const imageUrls = ref<string[]>([])
 
-const canSubmit = computed(() => isFollowUp.value ? content.value.trim().length > 0 : rating.value > 0)
+const averageRating = computed(() => {
+  if (ratingDesc.value === 0 || ratingLogistics.value === 0 || ratingService.value === 0) return 0
+  return ((ratingDesc.value + ratingLogistics.value + ratingService.value) / 3).toFixed(1)
+})
+
+const canSubmit = computed(() => {
+  if (isFollowUp.value) return content.value.trim().length > 0
+  return ratingDesc.value > 0 && ratingLogistics.value > 0 && ratingService.value > 0
+})
 
 const rateTexts = ['非常差', '差', '一般', '好', '非常好']
 
@@ -153,7 +175,7 @@ async function loadOrderItem() {
         return
       }
     }
-    const item = order.items?.find(i => i.productId === productId)
+    const item = order.items?.find((i: OrderItem) => i.productId === productId)
     if (item) {
       orderItem.value = item
     }
@@ -163,9 +185,11 @@ async function loadOrderItem() {
 }
 
 async function handleSubmit() {
-  if (!isFollowUp.value && !rating.value) {
-    ElMessage.warning('请给商品评分')
-    return
+  if (!isFollowUp.value) {
+    if (!ratingDesc.value || !ratingLogistics.value || !ratingService.value) {
+      ElMessage.warning('请完成全部三项评分')
+      return
+    }
   }
   if (!content.value.trim()) {
     ElMessage.warning('请填写评价内容')
@@ -174,21 +198,27 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    const data = {
-      productId,
-      orderId,
-      rating: rating.value,
-      content: content.value.trim(),
-      images: imageUrls.value,
-    }
     if (isFollowUp.value) {
-      await createFollowUpReview(data)
+      await createFollowUpReview({
+        productId,
+        orderId,
+        content: content.value.trim(),
+        images: imageUrls.value,
+      })
       ElMessage.success('追加评价成功')
     } else {
-      await createReview(data)
+      await createReview({
+        productId,
+        orderId,
+        ratingDesc: ratingDesc.value,
+        ratingLogistics: ratingLogistics.value,
+        ratingService: ratingService.value,
+        content: content.value.trim(),
+        images: imageUrls.value,
+      })
       ElMessage.success('评价成功')
     }
-    router.push(`/orders/${orderId}`)
+    router.push('/orders?tab=review&subTab=reviewed')
   } catch {
     // error handled by interceptor
   } finally {
@@ -238,39 +268,93 @@ onMounted(() => {
     &-name { font-size: 14px; font-weight: 600; }
 
     &-spec { font-size: 12px; color: #999; margin-top: 4px; }
-
-    &-price { font-size: 14px; font-weight: 600; color: #e6423a; margin-top: 6px; }
   }
 
   &__form { display: flex; flex-direction: column; gap: 20px; }
 
-  &__label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-
-    &-hint { font-weight: 400; font-size: 12px; color: #999; }
+  &__ratings {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  &__rating {
+  &__rating-row {
     display: flex;
     align-items: center;
     gap: 16px;
   }
 
-  &__upload-list {
+  &__rating-label {
+    font-size: 14px;
+    color: #333;
+    width: 72px;
+    flex-shrink: 0;
+  }
+
+  &__rating-avg {
+    margin-top: 8px;
+    padding: 10px 16px;
+    background: #f5f7fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__rating-avg-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  &__rating-avg-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #e6423a;
+  }
+
+  &__content-box {
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color .2s;
+
+    &:focus-within {
+      border-color: #409eff;
+    }
+  }
+
+  &__textarea {
+    :deep(.el-textarea__inner) {
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      resize: none;
+
+      &:focus {
+        box-shadow: none;
+      }
+    }
+  }
+
+  &__content-footer {
+    padding: 8px 12px;
+    border-top: 1px solid #ebeef5;
+    background: #fafafa;
+  }
+
+  &__upload-area {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
+    align-items: flex-end;
   }
 
   &__upload-item {
     position: relative;
-    width: 80px;
-    height: 80px;
-    border-radius: 6px;
+    width: 64px;
+    height: 64px;
+    border-radius: 4px;
     overflow: hidden;
     border: 1px solid #e5e5e5;
   }
@@ -284,8 +368,8 @@ onMounted(() => {
     position: absolute;
     top: -4px;
     right: -4px;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     background: #e6423a;
     color: #fff;
     border-radius: 50%;
@@ -293,15 +377,15 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 8px;
   }
 
   &__upload-btn {
     :deep(.el-upload) {
-      width: 80px;
-      height: 80px;
+      width: 64px;
+      height: 64px;
       border: 1px dashed #d9d9d9;
-      border-radius: 6px;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;

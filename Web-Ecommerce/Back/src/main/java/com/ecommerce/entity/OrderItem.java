@@ -20,4 +20,6 @@ public class OrderItem {
 
     @TableField(exist = false)
     private boolean isReviewed;
+    @TableField(exist = false)
+    private boolean hasFollowUp;
 }

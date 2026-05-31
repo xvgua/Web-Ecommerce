@@ -34,6 +34,8 @@ export interface ProductSku {
   specValue?: string
   price: number
   stock: number
+  sales: number
+  status: number
   image?: string
 }
 
@@ -42,11 +44,13 @@ export interface SkuForm {
   specValue?: string
   price: number
   stock: number
+  status?: number
   image?: string
 }
 
 export interface ProductQuery extends PageQuery {
   categoryId?: number
+  status?: number
   sort?: 'price_asc' | 'price_desc' | 'sales_desc' | 'newest' | 'rating_desc' | 'rating_asc'
   minPrice?: number
   maxPrice?: number
@@ -73,8 +77,30 @@ export interface Review {
   productId: number
   orderId: number
   rating: number
+  ratingDesc?: number
+  ratingLogistics?: number
+  ratingService?: number
   content: string
   images: string[]
+  isFollowup?: number
+  likeCount?: number
+  commentCount?: number
+  isLiked?: boolean
+  hasFollowUp?: boolean
+  followUpReviews?: Review[]
+  productName?: string
+  productImage?: string
+  productPrice?: number
+  createTime: string
+}
+
+export interface ReviewComment {
+  id: number
+  reviewId: number
+  userId: number
+  username: string
+  avatar: string
+  content: string
   createTime: string
 }
 

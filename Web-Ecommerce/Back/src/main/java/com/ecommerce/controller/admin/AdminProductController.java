@@ -43,4 +43,18 @@ public class AdminProductController {
         productService.delete(id);
         return Result.success();
     }
+
+    @PutMapping("/{productId}/skus/{skuId}/status")
+    public Result<Void> toggleSkuStatus(@PathVariable Long productId,
+                                         @PathVariable Long skuId,
+                                         @RequestBody java.util.Map<String, Integer> body) {
+        productService.toggleSkuStatus(productId, skuId, body.get("status"));
+        return Result.success();
+    }
+
+    @DeleteMapping("/{productId}/skus/{skuId}")
+    public Result<Void> deleteSku(@PathVariable Long productId, @PathVariable Long skuId) {
+        productService.deleteSku(productId, skuId);
+        return Result.success();
+    }
 }
