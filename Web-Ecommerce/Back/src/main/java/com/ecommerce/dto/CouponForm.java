@@ -38,6 +38,7 @@ public class CouponForm {
     private String scopeIds;
 
     private Integer isLarge;
+    private Integer stackable;
 
     private Integer status;
 }

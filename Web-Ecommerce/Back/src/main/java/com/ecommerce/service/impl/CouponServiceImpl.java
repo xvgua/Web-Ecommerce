@@ -161,59 +161,83 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public BigDecimal calculateDiscount(Long userCouponId, BigDecimal orderAmount) {
-        UserCoupon uc = userCouponMapper.selectById(userCouponId);
-        if (uc == null || uc.getStatus() != 0) {
-            throw new BusinessException("优惠券不存在或已使用");
+    public BigDecimal calculateTotalDiscount(List<Long> userCouponIds, BigDecimal orderAmount) {
+        if (userCouponIds == null || userCouponIds.isEmpty()) return BigDecimal.ZERO;
+
+        List<UserCoupon> ucs = userCouponMapper.selectBatchIds(userCouponIds);
+        if (ucs.size() != userCouponIds.size()) {
+            throw new BusinessException("部分优惠券不存在");
         }
-        Coupon coupon = couponMapper.selectById(uc.getCouponId());
-        if (coupon == null || coupon.getStatus() != 1) {
-            throw new BusinessException("优惠券已失效");
-        }
+        List<Long> couponIds = ucs.stream().map(UserCoupon::getCouponId).toList();
+        List<Coupon> coupons = couponMapper.selectBatchIds(couponIds);
+        java.util.Map<Long, Coupon> couponMap = coupons.stream()
+                .collect(Collectors.toMap(Coupon::getId, c -> c));
+
         LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(coupon.getStartTime()) || now.isAfter(coupon.getEndTime())) {
-            throw new BusinessException("优惠券不在有效期内");
-        }
-        if (orderAmount.compareTo(coupon.getMinAmount()) < 0) {
-            throw new BusinessException("订单金额未达到优惠券使用门槛");
+        boolean hasNonStackable = false;
+
+        for (UserCoupon uc : ucs) {
+            if (uc.getStatus() != 0) throw new BusinessException("优惠券已使用或已过期");
+            Coupon c = couponMap.get(uc.getCouponId());
+            if (c == null || c.getStatus() != 1) throw new BusinessException("优惠券已失效");
+            if (now.isBefore(c.getStartTime()) || now.isAfter(c.getEndTime()))
+                throw new BusinessException("优惠券不在有效期内");
+            if (orderAmount.compareTo(c.getMinAmount()) < 0)
+                throw new BusinessException("订单金额未达到优惠券「" + c.getName() + "」使用门槛");
+            if (c.getStackable() == null || c.getStackable() == 0) {
+                hasNonStackable = true;
+            }
         }
 
-        if (coupon.getType() == 1) {
-            return coupon.getDiscount();
-        } else if (coupon.getType() == 2) {
-            return orderAmount.multiply(
-                    BigDecimal.ONE.subtract(coupon.getDiscount())
-            ).setScale(2, RoundingMode.HALF_UP);
+        // Non-stackable check: if any coupon is non-stackable, only 1 allowed
+        if (hasNonStackable && userCouponIds.size() > 1) {
+            throw new BusinessException("不可叠加的优惠券只能单独使用");
         }
-        return BigDecimal.ZERO;
+
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        for (UserCoupon uc : ucs) {
+            Coupon c = couponMap.get(uc.getCouponId());
+            if (c.getType() == 1) {
+                totalDiscount = totalDiscount.add(c.getDiscount());
+            } else if (c.getType() == 2) {
+                totalDiscount = totalDiscount.add(
+                        orderAmount.multiply(BigDecimal.ONE.subtract(c.getDiscount()))
+                );
+            }
+        }
+        return totalDiscount.setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
     @Transactional
-    public void markAsUsed(Long userCouponId, Long orderId) {
-        int affected = userCouponMapper.update(null,
-                new LambdaUpdateWrapper<UserCoupon>()
-                        .eq(UserCoupon::getId, userCouponId)
-                        .eq(UserCoupon::getStatus, 0)
-                        .set(UserCoupon::getStatus, 1)
-                        .set(UserCoupon::getUseOrderId, orderId)
-                        .set(UserCoupon::getUsedTime, LocalDateTime.now()));
-        if (affected == 0) {
-            throw new BusinessException("优惠券使用失败");
+    public void markAsUsed(List<Long> userCouponIds, Long orderId) {
+        for (Long id : userCouponIds) {
+            int affected = userCouponMapper.update(null,
+                    new LambdaUpdateWrapper<UserCoupon>()
+                            .eq(UserCoupon::getId, id)
+                            .eq(UserCoupon::getStatus, 0)
+                            .set(UserCoupon::getStatus, 1)
+                            .set(UserCoupon::getUseOrderId, orderId)
+                            .set(UserCoupon::getUsedTime, LocalDateTime.now()));
+            if (affected == 0) {
+                throw new BusinessException("优惠券使用失败");
+            }
         }
     }
 
     @Override
     @Transactional
-    public void releaseCoupon(Long userCouponId) {
-        UserCoupon uc = userCouponMapper.selectById(userCouponId);
-        if (uc == null) return;
-        userCouponMapper.update(null,
-                new LambdaUpdateWrapper<UserCoupon>()
-                        .eq(UserCoupon::getId, userCouponId)
-                        .set(UserCoupon::getStatus, 0)
-                        .set(UserCoupon::getUseOrderId, null)
-                        .set(UserCoupon::getUsedTime, null));
+    public void releaseCoupons(String couponIds) {
+        if (couponIds == null || couponIds.isBlank()) return;
+        for (String idStr : couponIds.split(",")) {
+            Long id = Long.parseLong(idStr.trim());
+            userCouponMapper.update(null,
+                    new LambdaUpdateWrapper<UserCoupon>()
+                            .eq(UserCoupon::getId, id)
+                            .set(UserCoupon::getStatus, 0)
+                            .set(UserCoupon::getUseOrderId, null)
+                            .set(UserCoupon::getUsedTime, null));
+        }
     }
 
     @Override
@@ -259,6 +283,7 @@ public class CouponServiceImpl implements CouponService {
         coupon.setScopeType(form.getScopeType() != null ? form.getScopeType() : 1);
         coupon.setScopeIds(form.getScopeIds() != null ? form.getScopeIds() : "");
         coupon.setIsLarge(form.getIsLarge() != null ? form.getIsLarge() : 0);
+        coupon.setStackable(form.getStackable() != null ? form.getStackable() : 0);
         coupon.setStatus(form.getStatus() != null ? form.getStatus() : 1);
         couponMapper.insert(coupon);
         log.info("Coupon admin created: id={}, name={}", coupon.getId(), coupon.getName());
@@ -283,6 +308,7 @@ public class CouponServiceImpl implements CouponService {
         coupon.setScopeType(form.getScopeType() != null ? form.getScopeType() : 1);
         coupon.setScopeIds(form.getScopeIds() != null ? form.getScopeIds() : "");
         coupon.setIsLarge(form.getIsLarge() != null ? form.getIsLarge() : 0);
+        coupon.setStackable(form.getStackable() != null ? form.getStackable() : 0);
         coupon.setStatus(form.getStatus() != null ? form.getStatus() : 1);
         // Update totalQty only if increased
         if (form.getTotalQty() > coupon.getTotalQty()) {

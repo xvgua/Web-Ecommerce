@@ -104,6 +104,9 @@
           <el-button type="primary" size="large" class="btn-buy-now" @click="handleBuyNow">
             立即购买
           </el-button>
+          <el-button size="large" :icon="ChatDotSquare" class="btn-chat" @click="openProductChat">
+            咨询客服
+          </el-button>
         </div>
       </div>
     </div>
@@ -223,17 +226,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Box, TrendCharts, ShoppingCart, Star, StarFilled } from '@element-plus/icons-vue'
+import { Box, TrendCharts, ShoppingCart, Star, StarFilled, ChatDotSquare } from '@element-plus/icons-vue'
 import { getProductById, getProductReviews } from '@/api/product'
 import { checkFavorite, addFavorite, removeFavorite } from '@/api/favorite'
-import { createOrder } from '@/api/order'
-import { getAddressList } from '@/api/user'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { formatPrice } from '@/utils/format'
 import type { Product, Review, ReviewRatingStats } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
+import { useChat } from '@/composables/useChat'
 
+const { openChat } = useChat()
 const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
@@ -399,6 +402,19 @@ async function handleAddToCart() {
   }
 }
 
+function openProductChat() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  openChat({
+    sourceType: 1,
+    sourceId: product.value?.id,
+    sourceName: product.value?.name || '',
+  })
+}
+
 async function handleBuyNow() {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
@@ -413,25 +429,14 @@ async function handleBuyNow() {
     ElMessage.warning('该规格已售罄')
     return
   }
-  addLoading.value = true
-  try {
-    const addrRes = await getAddressList()
-    if (!addrRes.data?.length) {
-      ElMessage.warning('请先添加收货地址')
-      router.push('/user/addresses')
-      return
-    }
-    const orderRes = await createOrder({
-      addressId: addrRes.data[0].id,
+  router.push({
+    path: '/order/confirm',
+    query: {
       productId: product.value!.id,
       skuId: selectedSkuId.value || 0,
       quantity: quantity.value,
-    })
-    ElMessage.success('下单成功，即将跳转支付页面')
-    router.push(`/orders/${orderRes.data.id}/pay`)
-  } finally {
-    addLoading.value = false
-  }
+    },
+  })
 }
 
 onMounted(() => {

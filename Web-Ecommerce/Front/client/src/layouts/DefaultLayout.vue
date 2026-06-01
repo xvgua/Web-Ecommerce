@@ -112,7 +112,7 @@
           <h4>售后服务</h4>
           <a href="#">退换货政策</a>
           <a href="#">退款说明</a>
-          <a href="#">联系客服</a>
+          <a href="#" @click.prevent="openChat">联系客服</a>
         </div>
         <div class="footer__col">
           <h4>关于我们</h4>
@@ -126,6 +126,8 @@
         </div>
       </div>
     </footer>
+    <ChatFloatButton />
+    <ChatPanel />
   </div>
 </template>
 
@@ -143,6 +145,11 @@ import { useSearchHistory } from '@/composables/useSearchHistory'
 import { getCategories } from '@/api/product'
 import type { SearchHistoryItem } from '@/composables/useSearchHistory'
 import type { Category } from '@shared/types/product'
+import ChatFloatButton from '@/components/business/ChatFloatButton.vue'
+import ChatPanel from '@/components/business/ChatPanel.vue'
+import { useChat } from '@/composables/useChat'
+
+const { openChat } = useChat()
 
 const router = useRouter()
 const route = useRoute()

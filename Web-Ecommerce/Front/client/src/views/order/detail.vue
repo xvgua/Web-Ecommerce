@@ -5,6 +5,7 @@
         <h1 class="page-title">{{ order.statusText }}</h1>
         <el-button v-if="order.status === 1 || order.status === 2" size="small" @click="handleRefund">申请退款</el-button>
         <el-button v-if="order.status === 3" size="small" @click="handleReorder">再来一单</el-button>
+        <el-button v-if="order.status === 3" size="small" :icon="ChatDotSquare" @click="openOrderChat">联系客服</el-button>
         <el-button v-if="order.status === 4" size="small" @click="handleReorder">加入购物车</el-button>
       </div>
 
@@ -111,12 +112,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ChatDotSquare } from '@element-plus/icons-vue'
 import { getOrderById, refundOrder, reorderOrder } from '@/api/order'
 import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
+import { useChat } from '@/composables/useChat'
 
+const { openChat } = useChat()
 const route = useRoute()
 const router = useRouter()
 const order = ref<Order | null>(null)
@@ -139,6 +143,14 @@ async function handleRefund() {
   } catch {
     // cancelled
   }
+}
+
+function openOrderChat() {
+  openChat({
+    sourceType: 2,
+    sourceId: Number(route.params.id),
+    sourceName: order.value?.orderNo || '',
+  })
 }
 
 async function handleReorder() {

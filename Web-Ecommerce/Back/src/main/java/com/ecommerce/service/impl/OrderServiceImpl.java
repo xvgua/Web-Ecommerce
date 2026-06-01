@@ -12,6 +12,7 @@ import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
+import com.ecommerce.service.CouponService;
 import com.ecommerce.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -169,20 +170,21 @@ public class OrderServiceImpl implements OrderService {
 
         order.setTotalAmount(totalAmount);
 
-        // Apply coupon if provided
+        // Apply coupons if provided
         BigDecimal couponDiscount = BigDecimal.ZERO;
-        if (req.getUserCouponId() != null) {
-            couponDiscount = couponService.calculateDiscount(req.getUserCouponId(), totalAmount);
-            order.setCouponId(req.getUserCouponId());
+        if (req.getUserCouponIds() != null && !req.getUserCouponIds().isEmpty()) {
+            couponDiscount = couponService.calculateTotalDiscount(req.getUserCouponIds(), totalAmount);
+            order.setCouponIds(req.getUserCouponIds().stream()
+                    .map(String::valueOf).collect(Collectors.joining(",")));
             order.setCouponDiscount(couponDiscount);
         }
         order.setDiscountAmount(BigDecimal.ZERO);
         order.setPayAmount(totalAmount.subtract(couponDiscount));
         orderMapper.insert(order);
 
-        // Mark coupon as used
-        if (req.getUserCouponId() != null) {
-            couponService.markAsUsed(req.getUserCouponId(), order.getId());
+        // Mark coupons as used
+        if (req.getUserCouponIds() != null && !req.getUserCouponIds().isEmpty()) {
+            couponService.markAsUsed(req.getUserCouponIds(), order.getId());
         }
 
         for (OrderItem item : items) {
@@ -428,8 +430,8 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("只能取消待支付订单");
         }
         restoreStock(order);
-        if (order.getCouponId() != null) {
-            couponService.releaseCoupon(order.getCouponId());
+        if (order.getCouponIds() != null && !order.getCouponIds().isBlank()) {
+            couponService.releaseCoupons(order.getCouponIds());
         }
         order.setStatus(OrderStatus.CANCELLED);
         orderMapper.updateById(order);
@@ -696,15 +698,20 @@ public class OrderServiceImpl implements OrderService {
 
         order.setItems(items);
 
-        // Populate coupon name if a coupon was used
-        if (order.getCouponId() != null) {
-            UserCoupon uc = userCouponMapper.selectById(order.getCouponId());
-            if (uc != null) {
-                Coupon coupon = couponMapper.selectById(uc.getCouponId());
-                if (coupon != null) {
-                    order.setCouponName(coupon.getName());
-                }
+        // Populate coupon name if coupons were used
+        if (order.getCouponIds() != null && !order.getCouponIds().isBlank()) {
+            List<String> names = new java.util.ArrayList<>();
+            for (String idStr : order.getCouponIds().split(",")) {
+                try {
+                    Long ucId = Long.parseLong(idStr.trim());
+                    UserCoupon uc = userCouponMapper.selectById(ucId);
+                    if (uc != null) {
+                        Coupon coupon = couponMapper.selectById(uc.getCouponId());
+                        if (coupon != null) names.add(coupon.getName());
+                    }
+                } catch (NumberFormatException ignored) {}
             }
+            order.setCouponName(String.join("、", names));
         }
 
         Address address = addressMapper.selectById(order.getAddressId());

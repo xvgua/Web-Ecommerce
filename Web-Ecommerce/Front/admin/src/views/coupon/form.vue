@@ -89,6 +89,13 @@
           />
         </el-form-item>
 
+        <el-divider content-position="left">叠加规则</el-divider>
+
+        <el-form-item label="可否叠加">
+          <el-switch v-model="isStackable" />
+          <span class="unit-text" style="margin-left: 8px">开启后用户可同时使用多张可叠加优惠券</span>
+        </el-form-item>
+
         <el-divider content-position="left">适用范围</el-divider>
 
         <el-form-item label="适用范围">
@@ -152,6 +159,7 @@ const form = reactive<CouponForm>({
 })
 
 const isLarge = ref(false)
+const isStackable = ref(false)
 const grabStartTime = ref('')
 const grabEndTime = ref('')
 
@@ -169,6 +177,10 @@ watch(isLarge, (val) => {
     grabStartTime.value = ''
     grabEndTime.value = ''
   }
+})
+
+watch(isStackable, (val) => {
+  form.stackable = val ? 1 : 0
 })
 
 watch([grabStartTime, grabEndTime], () => {
@@ -212,6 +224,9 @@ onMounted(async () => {
       isLarge.value = true
       grabStartTime.value = c.grabStartTime || ''
       grabEndTime.value = c.grabEndTime || ''
+    }
+    if (c.stackable) {
+      isStackable.value = true
     }
   }
 })

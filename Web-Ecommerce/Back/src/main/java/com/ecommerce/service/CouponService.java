@@ -14,9 +14,9 @@ public interface CouponService {
 
     PageResult<UserCoupon> getUserCoupons(Long userId, Integer status, int page, int pageSize);
     List<UserCoupon> getAvailableForOrder(Long userId, BigDecimal orderAmount);
-    BigDecimal calculateDiscount(Long userCouponId, BigDecimal orderAmount);
-    void markAsUsed(Long userCouponId, Long orderId);
-    void releaseCoupon(Long userCouponId);
+    BigDecimal calculateTotalDiscount(List<Long> userCouponIds, BigDecimal orderAmount);
+    void markAsUsed(List<Long> userCouponIds, Long orderId);
+    void releaseCoupons(String couponIds);
 
     // Admin methods
     PageResult<Coupon> adminGetPage(int page, int pageSize, String keyword, Integer type, Integer status);

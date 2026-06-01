@@ -21,7 +21,7 @@ export interface Order {
   addressId: number
   address: Address
   totalAmount: number
-  couponId?: number
+  couponIds?: string
   couponDiscount?: number
   discountAmount?: number
   payAmount?: number
@@ -52,7 +52,7 @@ export interface CreateOrderForm {
   skuId?: number
   quantity?: number
   remark?: string
-  userCouponId?: number
+  userCouponIds?: number[]
 }
 
 export interface PaymentForm {

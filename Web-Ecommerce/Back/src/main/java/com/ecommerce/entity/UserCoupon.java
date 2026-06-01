@@ -16,4 +16,7 @@ public class UserCoupon {
     private Long useOrderId;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    @TableField(exist = false)
+    private Coupon coupon;
 }

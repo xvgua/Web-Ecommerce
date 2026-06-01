@@ -23,6 +23,7 @@ public class Coupon {
     private Integer scopeType;
     private String scopeIds;
     private Integer isLarge;
+    private Integer stackable;
     private Integer status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

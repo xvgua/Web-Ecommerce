@@ -49,6 +49,15 @@
           <span>优惠券管理</span>
         </el-menu-item>
 
+        <el-sub-menu index="cs-group">
+          <template #title>
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>客服管理</span>
+          </template>
+          <el-menu-item index="/customer-service">在线客服</el-menu-item>
+          <el-menu-item index="/customer-service/quick-replies">快捷回复</el-menu-item>
+        </el-sub-menu>
+
         <el-sub-menu index="system-group">
           <template #title>
             <el-icon><Setting /></el-icon>
@@ -98,8 +107,8 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  DataAnalysis, Goods, Document, User, Ticket, Setting,
-  Bell, ArrowDown,
+  DataAnalysis, Goods, Document, User, Ticket, ChatDotSquare,
+  Setting, Bell, ArrowDown,
 } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 

@@ -15,7 +15,7 @@ public class Order {
     private Long userId;
     private Long addressId;
     private BigDecimal totalAmount;
-    private Long couponId;
+    private String couponIds;
     private BigDecimal couponDiscount;
     private BigDecimal discountAmount;
     private BigDecimal payAmount;

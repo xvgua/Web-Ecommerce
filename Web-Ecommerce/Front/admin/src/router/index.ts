@@ -80,6 +80,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '编辑优惠券' },
       },
       {
+        path: 'customer-service',
+        name: 'CustomerService',
+        component: () => import('@/views/customer-service/index.vue'),
+        meta: { title: '客服管理' },
+      },
+      {
+        path: 'customer-service/quick-replies',
+        name: 'QuickReplies',
+        component: () => import('@/views/customer-service/quick-replies.vue'),
+        meta: { title: '快捷回复管理' },
+      },
+      {
         path: 'system/banners',
         name: 'BannerManage',
         component: () => import('@/views/system/banner.vue'),
