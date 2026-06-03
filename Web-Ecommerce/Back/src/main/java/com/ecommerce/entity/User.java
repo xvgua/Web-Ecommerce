@@ -16,6 +16,9 @@ public class User {
     private String nickname;
     private String avatar;
     private String phone;
+    private Integer gender;
+    private String intro;
+    private LocalDateTime usernameUpdateTime;
     private Integer status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

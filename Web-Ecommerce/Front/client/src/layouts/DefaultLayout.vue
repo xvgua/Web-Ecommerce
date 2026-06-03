@@ -54,6 +54,12 @@
           </div>
 
           <div class="header__bar-right">
+            <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
+              <router-link to="/cart" class="header__quick-link">
+                <el-icon><ShoppingCart /></el-icon>
+                <span>购物车</span>
+              </router-link>
+            </el-badge>
             <router-link to="/user/favorites" class="header__quick-link">
               <el-icon><Star /></el-icon>
               <span>我的收藏</span>
@@ -65,7 +71,7 @@
             <template v-if="userStore.isLoggedIn">
               <el-dropdown>
                 <span class="header__user">
-                  <el-avatar :size="32">
+                  <el-avatar :size="32" :src="userStore.user?.avatar">
                     <span>{{ (userStore.user?.nickname || userStore.user?.username)?.[0]?.toUpperCase() }}</span>
                   </el-avatar>
                   <span class="header__user-name">
@@ -87,9 +93,6 @@
             <template v-else>
               <el-button type="primary" size="small" @click="$router.push('/login')">登录</el-button>
             </template>
-            <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
-              <el-button circle :icon="ShoppingCart" class="cart-btn" @click="$router.push('/cart')" />
-            </el-badge>
           </div>
         </div>
       </div>
@@ -399,17 +402,6 @@ function handleLogout() {
     font-size: 14px;
     font-weight: 500;
     color: var(--text1);
-  }
-}
-
-.cart-btn {
-  font-size: 18px;
-  border: 1px solid var(--line-light);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    color: var(--brand-primary);
-    border-color: var(--brand-primary);
   }
 }
 

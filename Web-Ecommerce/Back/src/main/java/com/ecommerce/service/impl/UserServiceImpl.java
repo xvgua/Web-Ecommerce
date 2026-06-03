@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -97,7 +98,7 @@ public class UserServiceImpl implements UserService {
     public User getUserById(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {
-            throw new BusinessException(404, "用户不存在");
+            throw new BusinessException(401, "用户不存在");
         }
         user.setPassword(null);
         return user;
@@ -112,12 +113,30 @@ public class UserServiceImpl implements UserService {
     public Result<Void> updateUserInfo(Long userId, User user) {
         User dbUser = userMapper.selectById(userId);
         if (dbUser == null) {
-            throw new BusinessException(404, "用户不存在");
+            throw new BusinessException(401, "用户不存在");
         }
         if (user.getNickname() != null) dbUser.setNickname(user.getNickname());
         if (user.getAvatar() != null) dbUser.setAvatar(user.getAvatar());
         if (user.getPhone() != null) dbUser.setPhone(user.getPhone());
         if (user.getEmail() != null) dbUser.setEmail(user.getEmail());
+        if (user.getGender() != null) dbUser.setGender(user.getGender());
+        if (user.getIntro() != null) dbUser.setIntro(user.getIntro());
+
+        // Username update: once per month, must be unique
+        if (user.getUsername() != null && !user.getUsername().equals(dbUser.getUsername())) {
+            LocalDateTime lastUpdate = dbUser.getUsernameUpdateTime();
+            if (lastUpdate != null && lastUpdate.plusMonths(1).isAfter(LocalDateTime.now())) {
+                throw new BusinessException("用户名每月只能修改一次");
+            }
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getUsername, user.getUsername());
+            if (userMapper.selectCount(wrapper) > 0) {
+                throw new BusinessException("用户名已存在");
+            }
+            dbUser.setUsername(user.getUsername());
+            dbUser.setUsernameUpdateTime(LocalDateTime.now());
+        }
+
         userMapper.updateById(dbUser);
         return Result.success();
     }

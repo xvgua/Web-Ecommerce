@@ -501,7 +501,15 @@ UPDATE `product` SET `detail` = '<table class=\"param-table\"><tr><td>品牌</td
 UPDATE `product` SET `detail` = '<table class=\"param-table\"><tr><td>品牌</td><td>Samsung</td></tr><tr><td>型号</td><td>990 Pro</td></tr><tr><td>容量</td><td>2TB</td></tr><tr><td>接口类型</td><td>PCIe 4.0 ×4 / NVMe M.2</td></tr><tr><td>顺序读取</td><td>最高 7450 MB/s</td></tr><tr><td>顺序写入</td><td>最高 6900 MB/s</td></tr><tr><td>随机读取</td><td>最高 1400K IOPS</td></tr><tr><td>随机写入</td><td>最高 1550K IOPS</td></tr><tr><td>闪存类型</td><td>Samsung V-NAND V8</td></tr><tr><td>缓存</td><td>2GB LPDDR4</td></tr><tr><td>写入寿命</td><td>1200 TBW</td></tr><tr><td>质保</td><td>5年有限保修</td></tr></table>' WHERE `name` = 'Samsung 990 Pro 2TB' AND (`detail` IS NULL OR `detail` = '');
 
 -- ============================================
--- 15. Levenshtein 编辑距离函数（模糊搜索）
+-- 15. 用户扩展字段（已有数据库升级用）
+-- ============================================
+ALTER TABLE `user`
+  ADD COLUMN IF NOT EXISTS `gender`              TINYINT      DEFAULT 0   COMMENT '0=保密 1=男 2=女',
+  ADD COLUMN IF NOT EXISTS `intro`               VARCHAR(200) DEFAULT ''  COMMENT '自我介绍',
+  ADD COLUMN IF NOT EXISTS `username_update_time` DATETIME    DEFAULT NULL COMMENT '用户名最后修改时间';
+
+-- ============================================
+-- 16. Levenshtein 编辑距离函数（模糊搜索）
 -- ============================================
 DROP FUNCTION IF EXISTS levenshtein;
 DELIMITER //
