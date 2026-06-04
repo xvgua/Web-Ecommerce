@@ -3,6 +3,7 @@ package com.ecommerce.controller;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.LoginRequest;
 import com.ecommerce.dto.RegisterRequest;
+import com.ecommerce.dto.ResetPasswordRequest;
 import com.ecommerce.dto.SendCodeRequest;
 import com.ecommerce.service.UserService;
 import com.ecommerce.service.VerificationCodeService;
@@ -34,7 +35,18 @@ public class AuthController {
 
     @PostMapping("/send-register-code")
     public Result<Void> sendRegisterCode(@Valid @RequestBody SendCodeRequest req) {
-        verificationCodeService.generateAndSend(req.getEmail());
-        return Result.success("验证码已发送", null);  // T inferred as Void from method return type
+        verificationCodeService.generateAndSend(req.getEmail(), "register");
+        return Result.success("验证码已发送", null);
+    }
+
+    @PostMapping("/send-reset-code")
+    public Result<Void> sendResetCode(@Valid @RequestBody SendCodeRequest req) {
+        verificationCodeService.generateAndSend(req.getEmail(), "reset");
+        return Result.success("验证码已发送", null);
+    }
+
+    @PostMapping("/reset-password")
+    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        return userService.resetPassword(req);
     }
 }

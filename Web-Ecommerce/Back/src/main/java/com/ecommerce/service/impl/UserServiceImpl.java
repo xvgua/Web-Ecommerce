@@ -3,8 +3,10 @@ package com.ecommerce.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.ChangePasswordRequest;
 import com.ecommerce.dto.LoginRequest;
 import com.ecommerce.dto.RegisterRequest;
+import com.ecommerce.dto.ResetPasswordRequest;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.UserStatus;
 import com.ecommerce.mapper.UserMapper;
@@ -41,17 +43,14 @@ public class UserServiceImpl implements UserService {
         }
 
         // Verify captcha
-        verificationCodeService.verify(req.getEmail(), req.getCaptcha());
+        verificationCodeService.verify(req.getEmail(), req.getCaptcha(), "register");
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getUsername, req.getUsername());
+        wrapper.eq(User::getUsername, req.getUsername())
+               .or()
+               .eq(User::getEmail, req.getEmail());
         if (userMapper.selectCount(wrapper) > 0) {
-            throw new BusinessException("用户名已存在");
-        }
-        wrapper.clear();
-        wrapper.eq(User::getEmail, req.getEmail());
-        if (userMapper.selectCount(wrapper) > 0) {
-            throw new BusinessException("邮箱已被注册");
+            throw new BusinessException("用户名或邮箱已被注册");
         }
 
         User user = new User();
@@ -138,6 +137,42 @@ public class UserServiceImpl implements UserService {
         }
 
         userMapper.updateById(dbUser);
+        return Result.success();
+    }
+
+    @Override
+    public Result<Void> resetPassword(ResetPasswordRequest req) {
+        verificationCodeService.verify(req.getEmail(), req.getCode(), "reset");
+
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getEmail, req.getEmail());
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            throw new BusinessException("操作失败，请稍后重试");
+        }
+
+        user.setPassword(encoder.encode(req.getNewPassword()));
+        userMapper.updateById(user);
+
+        log.info("Password reset for email={}", req.getEmail());
+        return Result.success();
+    }
+
+    @Override
+    public Result<Void> changePassword(Long userId, ChangePasswordRequest req) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(401, "用户不存在");
+        }
+
+        if (!encoder.matches(req.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("旧密码错误");
+        }
+
+        user.setPassword(encoder.encode(req.getNewPassword()));
+        userMapper.updateById(user);
+
+        log.info("Password changed for userId={}", userId);
         return Result.success();
     }
 

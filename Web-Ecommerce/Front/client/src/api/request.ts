@@ -24,7 +24,10 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
+      const skipToast = (response.config as Record<string, unknown>)._skipErrorToast
+      if (!skipToast) {
+        ElMessage.error(res.message || '请求失败')
+      }
       if (res.code === 401) {
         localStorage.removeItem(TOKEN_KEY)
         router.push('/login')
@@ -33,7 +36,13 @@ request.interceptors.response.use(
     }
     return res
   },
-  (error) => handleResponseError(error, TOKEN_KEY, router),
+  (error) => {
+    const skipToast = (error.config as Record<string, unknown>)?._skipErrorToast
+    if (!skipToast) {
+      return handleResponseError(error, TOKEN_KEY, router)
+    }
+    return Promise.reject(error)
+  },
 )
 
 export default request

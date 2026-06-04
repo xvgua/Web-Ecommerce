@@ -1,5 +1,5 @@
 package com.ecommerce.service;
 
 public interface MailService {
-    void sendVerificationCode(String to, String code);
+    void sendVerificationCode(String to, String code, String subject);
 }

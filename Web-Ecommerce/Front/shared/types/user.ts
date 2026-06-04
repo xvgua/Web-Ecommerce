@@ -27,6 +27,17 @@ export interface RegisterForm {
   captcha: string
 }
 
+export interface ResetPasswordForm {
+  email: string
+  code: string
+  newPassword: string
+}
+
+export interface ChangePasswordForm {
+  oldPassword: string
+  newPassword: string
+}
+
 export interface Address {
   id: number
   userId: number

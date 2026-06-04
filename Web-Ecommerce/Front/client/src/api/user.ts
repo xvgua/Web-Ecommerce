@@ -1,6 +1,6 @@
 import request from './request'
 import type { ApiResponse } from '@shared/types'
-import type { LoginForm, RegisterForm, User, Address, AddressForm } from '@shared/types/user'
+import type { LoginForm, RegisterForm, User, Address, AddressForm, ResetPasswordForm, ChangePasswordForm } from '@shared/types/user'
 
 export function login(data: LoginForm): Promise<ApiResponse<{ token: string; user: User }>> {
   return request.post('/auth/login', data)
@@ -11,7 +11,19 @@ export function register(data: RegisterForm): Promise<ApiResponse<null>> {
 }
 
 export function sendRegisterCode(email: string): Promise<ApiResponse<null>> {
-  return request.post('/auth/send-register-code', { email })
+  return request.post('/auth/send-register-code', { email }, { _skipErrorToast: true } as any)
+}
+
+export function sendResetCode(email: string): Promise<ApiResponse<null>> {
+  return request.post('/auth/send-reset-code', { email })
+}
+
+export function resetPassword(data: ResetPasswordForm): Promise<ApiResponse<null>> {
+  return request.post('/auth/reset-password', data)
+}
+
+export function changePassword(data: ChangePasswordForm): Promise<ApiResponse<null>> {
+  return request.put('/user/password', data)
 }
 
 export function getUserInfo(): Promise<ApiResponse<User>> {

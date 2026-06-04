@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { TOKEN_KEY } from '@shared/constants'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -104,11 +105,33 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/user/register.vue'),
     meta: { title: '注册' },
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/user/forgot-password.vue'),
+    meta: { title: '找回密码' },
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem(TOKEN_KEY)
+
+  if (to.meta.requiresAuth && !token) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+    return
+  }
+
+  if ((to.name === 'Login' || to.name === 'Register') && token) {
+    next({ name: 'Home' })
+    return
+  }
+
+  next()
 })
 
 export default router

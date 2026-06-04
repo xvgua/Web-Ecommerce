@@ -1,11 +1,13 @@
 package com.ecommerce.controller;
 
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.ChangePasswordRequest;
 import com.ecommerce.entity.Address;
 import com.ecommerce.entity.User;
 import com.ecommerce.security.UserContext;
 import com.ecommerce.service.AddressService;
 import com.ecommerce.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +30,11 @@ public class UserController {
     @PutMapping("/info")
     public Result<Void> updateUserInfo(@RequestBody User user) {
         return userService.updateUserInfo(UserContext.getUserId(), user);
+    }
+
+    @PutMapping("/password")
+    public Result<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req) {
+        return userService.changePassword(UserContext.getUserId(), req);
     }
 
     @GetMapping("/addresses")

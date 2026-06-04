@@ -47,7 +47,7 @@
           <el-form-item>
             <div class="auth-form__extra">
               <el-checkbox v-model="form.remember">记住密码</el-checkbox>
-              <a href="javascript:void(0)">忘记密码？</a>
+              <router-link to="/forgot-password">忘记密码？</router-link>
             </div>
           </el-form-item>
           <el-form-item>
@@ -66,15 +66,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { usernameRules, passwordRules } from '@shared/validators'
+import { REMEMBERED_USERNAME } from '@shared/constants'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -90,14 +92,28 @@ const rules: FormRules = {
   password: passwordRules,
 }
 
+onMounted(() => {
+  const remembered = localStorage.getItem(REMEMBERED_USERNAME)
+  if (remembered) {
+    form.username = remembered
+    form.remember = true
+  }
+})
+
 async function handleLogin() {
   const valid = await formRef.value?.validate()
   if (!valid) return
   loading.value = true
   try {
-    await userStore.login({ username: form.username, password: form.password })
+    await userStore.login({ username: form.username, password: form.password, remember: form.remember })
+    if (form.remember) {
+      localStorage.setItem(REMEMBERED_USERNAME, form.username)
+    } else {
+      localStorage.removeItem(REMEMBERED_USERNAME)
+    }
     ElMessage.success('登录成功')
-    router.push('/')
+    const redirect = route.query.redirect as string
+    router.push(redirect || '/')
   } catch { /* handled by interceptor */ }
   finally { loading.value = false }
 }

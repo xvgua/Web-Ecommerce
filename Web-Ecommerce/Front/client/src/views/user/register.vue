@@ -29,7 +29,7 @@
           <el-form-item label="用户名" prop="username">
             <el-input v-model="form.username" placeholder="请输入用户名" size="large" :prefix-icon="User" />
           </el-form-item>
-          <el-form-item label="邮箱" prop="email">
+          <el-form-item label="邮箱" prop="email" :error="emailError">
             <div class="email-row">
               <el-input v-model="form.email" placeholder="请输入邮箱" size="large" :prefix-icon="Message" class="email-row__input" />
               <el-button size="large" :disabled="codeCooldown > 0" :loading="sendingCode" @click="sendCode" class="email-row__btn">
@@ -75,10 +75,11 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const sendingCode = ref(false)
 const codeCooldown = ref(0)
+const emailError = ref('')
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
 async function sendCode() {
-  // Pre-validate email format before sending
+  emailError.value = ''
   try {
     await formRef.value?.validateField('email')
   } catch {
@@ -96,7 +97,14 @@ async function sendCode() {
         cooldownTimer = null
       }
     }, 1000)
-  } catch { /* handled by interceptor */ }
+  } catch (err: unknown) {
+    const msg = (err as Error)?.message || ''
+    if (msg.includes('该邮箱已被使用')) {
+      emailError.value = '该邮箱已被使用'
+    } else {
+      ElMessage.error(msg || '验证码发送失败')
+    }
+  }
   finally { sendingCode.value = false }
 }
 
@@ -127,8 +135,9 @@ const rules: FormRules = {
   ],
 }
 
-// Reset cooldown and captcha when user changes email (code is bound to old email)
+// Reset cooldown, captcha, and email error when user changes email
 watch(() => form.email, () => {
+  emailError.value = ''
   if (codeCooldown.value > 0) {
     codeCooldown.value = 0
     if (cooldownTimer) {
