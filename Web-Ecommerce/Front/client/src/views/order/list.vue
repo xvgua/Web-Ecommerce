@@ -10,6 +10,7 @@
       <el-tab-pane label="已完成" name="3" />
       <el-tab-pane label="已取消" name="4" />
       <el-tab-pane label="评价" name="review" />
+      <el-tab-pane label="退款/售后" name="refund" />
     </el-tabs>
 
     <!-- 评价子标签 -->
@@ -130,12 +131,21 @@
     </div>
 
     <div v-if="activeTab !== 'review' || reviewSubTab !== 'reviewed'" v-loading="loading" class="order-list" :class="{ 'order-list--review': activeTab === 'review' }">
-      <div v-for="order in orders" :key="order.id" class="order-card" @click="$router.push(`/orders/${order.id}`)">
+      <div v-for="order in orders" :key="order.id" class="order-card" @click="activeTab === 'refund' && order.refundStatus != null ? $router.push(`/orders/${order.id}/refund`) : $router.push(`/orders/${order.id}`)">
         <div class="order-card__header">
           <span class="order-card__no">订单号：{{ order.orderNo }}</span>
           <span class="order-card__time">{{ formatDate(order.createTime) }}</span>
           <el-tag :type="ORDER_STATUS_COLOR[order.status]" effect="dark" size="small">
             {{ order.statusText }}
+          </el-tag>
+          <el-tag
+            v-if="activeTab === 'refund' && order.refundStatus != null"
+            :type="REFUND_STATUS_COLOR[order.refundStatus]"
+            effect="plain"
+            size="small"
+            style="margin-left: 6px"
+          >
+            {{ order.refundStatusText }}
           </el-tag>
         </div>
         <div class="order-card__body">
@@ -168,7 +178,11 @@
             <el-button v-if="order.status === 0" size="small" @click="handleCancel(order.id)">取消</el-button>
             <!-- 待发货 -->
             <el-button v-if="order.status === 1" size="small" @click="handleEditAddress(order)">修改地址</el-button>
-            <el-button v-if="order.status === 1 || order.status === 2 || order.status === 3" size="small" @click="handleRefund(order.id)">申请退款</el-button>
+            <el-button
+              v-if="canRefund(order)"
+              size="small"
+              @click="handleRefund(order)"
+            >{{ refundButtonText(order) }}</el-button>
             <!-- 已完成 -->
             <el-button v-if="order.status === 3" size="small" @click="handleReorder(order.id)">再来一单</el-button>
             <!-- 已取消 -->
@@ -208,10 +222,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { CaretTop, ChatDotSquare } from '@element-plus/icons-vue'
-import { getOrderList, cancelOrder, confirmReceive, refundOrder, reorderOrder } from '@/api/order'
+import { getOrderList, cancelOrder, confirmReceive, reorderOrder } from '@/api/order'
 import { getMyReviews, likeReview, unlikeReview, getReviewComments, addReviewComment } from '@/api/product'
 import { formatPrice, formatDate } from '@/utils/format'
-import { ORDER_STATUS_COLOR } from '@shared/constants'
+import { ORDER_STATUS_COLOR, REFUND_STATUS_MAP, REFUND_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import type { Review, ReviewComment } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
@@ -249,10 +263,12 @@ async function loadOrders() {
       : activeTab.value ? Number(activeTab.value) : undefined
     const reviewFilter = activeTab.value === 'review' ? reviewSubTab.value : undefined
 
+    const hasRefund = activeTab.value === 'refund'
     const res = await getOrderList({
       page: page.value,
       pageSize: pageSize.value,
-      status,
+      status: hasRefund ? undefined : status,
+      hasRefund: hasRefund || undefined,
       reviewFilter,
     })
     orders.value = res.data.records.map(enrichReviewInfo)
@@ -362,11 +378,24 @@ async function handleCancel(id: number) {
   loadOrders()
 }
 
-async function handleRefund(id: number) {
-  await ElMessageBox.confirm('确定要申请退款吗？退款后将恢复库存。', '提示', { type: 'warning' })
-  await refundOrder(id)
-  ElMessage.success('退款申请已提交')
-  loadOrders()
+function canRefund(order: Order): boolean {
+  const status = order.status
+  if (status !== 1 && status !== 2 && status !== 3) return false
+  if (order.refundStatus != null && order.refundStatus !== 1 && order.refundStatus !== 3) return false
+  return true
+}
+
+function refundButtonText(order: Order): string {
+  if (order.refundStatus === 1 || order.refundStatus === 3) return '再次申请'
+  return '申请退款'
+}
+
+function handleRefund(order: Order) {
+  if (order.refundStatus != null && order.refundStatus !== 1 && order.refundStatus !== 3) {
+    router.push(`/orders/${order.id}/refund`)
+  } else {
+    router.push(`/orders/${order.id}/refund/apply`)
+  }
 }
 
 async function handleReorder(id: number) {

@@ -39,6 +39,11 @@
           <span>订单管理</span>
         </el-menu-item>
 
+        <el-menu-item index="/refunds">
+          <el-icon><Money /></el-icon>
+          <span>退款管理</span>
+        </el-menu-item>
+
         <el-menu-item index="/users">
           <el-icon><User /></el-icon>
           <span>用户管理</span>
@@ -75,6 +80,7 @@
           </template>
           <el-menu-item index="/system/banners">轮播管理</el-menu-item>
           <el-menu-item index="/system/announcements">公告管理</el-menu-item>
+          <el-menu-item index="/system/feedbacks">用户反馈</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </aside>
@@ -118,7 +124,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   DataAnalysis, Goods, Document, User, Ticket, ChatDotSquare,
-  Setting, Bell, ArrowDown, TrendCharts, AlarmClock,
+  Setting, Bell, ArrowDown, TrendCharts, AlarmClock, Money,
 } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 

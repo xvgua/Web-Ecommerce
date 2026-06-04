@@ -115,7 +115,6 @@ public class AdminServiceImpl implements AdminService {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.like(User::getUsername, query.getKeyword())
-                    .or().like(User::getNickname, query.getKeyword())
                     .or().like(User::getPhone, query.getKeyword());
         }
         wrapper.orderByDesc(User::getCreateTime);

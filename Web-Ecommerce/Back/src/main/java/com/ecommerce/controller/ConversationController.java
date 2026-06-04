@@ -52,7 +52,7 @@ public class ConversationController {
         Integer contentType = body.get("contentType") != null ? ((Number) body.get("contentType")).intValue() : 1;
         String extraData = (String) body.get("extraData");
         User user = userService.getUserById(userId);
-        String senderName = user.getNickname() != null ? user.getNickname() : user.getUsername();
+        String senderName = user.getUsername();
         ChatMessage msg = conversationService.sendMessage(id, userId, 1, senderName,
                 user.getAvatar() != null ? user.getAvatar() : "", content, contentType, extraData);
         return Result.success(msg);

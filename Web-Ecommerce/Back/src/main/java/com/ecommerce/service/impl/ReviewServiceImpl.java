@@ -109,7 +109,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review review = new Review();
         review.setUserId(userId);
-        review.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+        review.setUsername(user.getUsername());
         review.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
         review.setProductId(request.getProductId());
         review.setOrderId(request.getOrderId());
@@ -162,7 +162,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review review = new Review();
         review.setUserId(userId);
-        review.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+        review.setUsername(user.getUsername());
         review.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
         review.setProductId(request.getProductId());
         review.setOrderId(request.getOrderId());
@@ -282,7 +282,7 @@ public class ReviewServiceImpl implements ReviewService {
         ReviewComment comment = new ReviewComment();
         comment.setReviewId(reviewId);
         comment.setUserId(userId);
-        comment.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+        comment.setUsername(user.getUsername());
         comment.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
         comment.setContent(content);
         reviewCommentMapper.insert(comment);

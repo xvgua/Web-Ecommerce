@@ -14,7 +14,7 @@
         >
           <div class="profile-avatar">
             <el-avatar :size="80" :src="form.avatar">
-              <span style="font-size:32px">{{ form.nickname?.[0] || form.username?.[0] || 'U' }}</span>
+              <span style="font-size:32px">{{ form.username?.[0] || 'U' }}</span>
             </el-avatar>
             <div class="avatar-overlay">
               <el-icon><Picture /></el-icon>
@@ -35,6 +35,11 @@
             :class="{ 'profile-nav__item--active': currentSection === 'address' }"
             @click="switchToAddress"
           >收货地址</div>
+          <div
+            class="profile-nav__item"
+            :class="{ 'profile-nav__item--active': currentSection === 'feedback' }"
+            @click="switchToFeedback"
+          >用户反馈</div>
         </div>
       </div>
 
@@ -61,9 +66,6 @@
                 <span v-else-if="!canEditUsername" class="field-hint">
                   用户名每月可修改一次
                 </span>
-              </el-form-item>
-              <el-form-item label="昵称">
-                <el-input v-model="form.nickname" placeholder="请输入昵称" maxlength="20" show-word-limit />
               </el-form-item>
               <el-form-item label="自我介绍">
                 <el-input
@@ -123,6 +125,11 @@
             </div>
             <el-empty v-if="!addrLoading && !addresses.length" description="暂无收货地址" />
           </div>
+        </template>
+
+        <!-- 修改密码 -->
+        <template v-else-if="currentSection === 'feedback'">
+          <FeedbackList ref="feedbackListRef" />
         </template>
 
         <!-- 修改密码 -->
@@ -195,11 +202,12 @@ import { TOKEN_KEY } from '@shared/constants'
 import { passwordRules, requiredRule, phoneRules } from '@shared/validators'
 import type { Address, AddressForm } from '@shared/types/user'
 import { useRoute } from 'vue-router'
+import FeedbackList from './feedback-list.vue'
 
 const route = useRoute()
 
 // ---- Section switching ----
-const currentSection = ref<'profile' | 'address' | 'password'>('profile')
+const currentSection = ref<'profile' | 'address' | 'password' | 'feedback'>('profile')
 
 function switchToAddress() {
   currentSection.value = 'address'
@@ -218,6 +226,13 @@ function backToProfile() {
   currentSection.value = 'profile'
 }
 
+const feedbackListRef = ref<InstanceType<typeof FeedbackList>>()
+
+function switchToFeedback() {
+  currentSection.value = 'feedback'
+  feedbackListRef.value?.loadList()
+}
+
 const userStore = useUserStore()
 
 // ---- Profile ----
@@ -230,7 +245,6 @@ const uploadHeaders = computed(() => ({
 const form = reactive({
   accountId: 0,
   username: '',
-  nickname: '',
   intro: '',
   gender: 0,
   email: '',
@@ -280,7 +294,6 @@ async function handleSave() {
   saving.value = true
   try {
     await updateUserInfo({
-      nickname: form.nickname,
       phone: form.phone,
       avatar: form.avatar,
       gender: form.gender,
@@ -448,7 +461,6 @@ onMounted(async () => {
   if (userStore.user) {
     form.accountId = userStore.user.accountId
     form.username = userStore.user.username
-    form.nickname = userStore.user.nickname || ''
     form.intro = userStore.user.intro || ''
     form.gender = userStore.user.gender ?? 0
     form.email = userStore.user.email || ''

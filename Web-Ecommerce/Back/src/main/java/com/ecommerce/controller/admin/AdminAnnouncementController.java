@@ -20,6 +20,11 @@ public class AdminAnnouncementController {
         return Result.success(announcementService.getAnnouncementPage(query));
     }
 
+    @GetMapping("/{id}")
+    public Result<Announcement> getById(@PathVariable Long id) {
+        return Result.success(announcementService.getById(id));
+    }
+
     @PostMapping
     public Result<Announcement> create(@RequestBody Announcement announcement) {
         return Result.success(announcementService.create(announcement));

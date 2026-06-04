@@ -41,16 +41,23 @@
                 <el-icon><Search /></el-icon>
               </template>
               <template #default="{ item }">
-                <div v-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
+                <div v-if="item.type === 'hot-section'" class="hot-section">
+                  <div
+                    v-for="kw in item.keywords"
+                    :key="kw.keyword"
+                    class="history-item hot-item"
+                    @click="handleHotClick(kw)"
+                  >
+                    <span class="hot-item__fire">🔥</span>
+                    <span class="history-item__text">{{ kw.keyword }}</span>
+                    <span class="hot-item__count">{{ kw.count }}</span>
+                  </div>
+                </div>
+                <div v-else-if="item.type === 'history-separator'" class="history-separator">
+                  <span class="history-separator__text">搜索记录</span>
+                </div>
+                <div v-else-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
                   清除全部历史
-                </div>
-                <div v-else-if="item.type === 'hot-separator'" class="hot-separator">
-                  <span class="hot-separator__text">热门搜索</span>
-                </div>
-                <div v-else-if="item.type === 'hot'" class="history-item hot-item" @click="handleSelect(item)">
-                  <span class="hot-item__fire">🔥</span>
-                  <span class="history-item__text">{{ item.keyword }}</span>
-                  <span class="hot-item__count">{{ item.count }}</span>
                 </div>
                 <div v-else class="history-item">
                   <el-icon class="history-item__clock"><Clock /></el-icon>
@@ -80,10 +87,10 @@
               <el-dropdown>
                 <span class="header__user">
                   <el-avatar :size="32" :src="userStore.user?.avatar">
-                    <span>{{ (userStore.user?.nickname || userStore.user?.username)?.[0]?.toUpperCase() }}</span>
+                    <span>{{ userStore.user?.username?.[0]?.toUpperCase() }}</span>
                   </el-avatar>
-                  <span class="header__user-name">
-                    {{ userStore.user?.nickname || userStore.user?.username }}
+                      <span class="header__user-name">
+                    {{ userStore.user?.username }}
                   </span>
                 </span>
                 <template #dropdown>
@@ -130,6 +137,7 @@
           <a href="#">公司介绍</a>
           <a href="#">联系我们</a>
           <a href="#">隐私政策</a>
+          <router-link to="/announcements">平台公告</router-link>
         </div>
         <div class="footer__col footer__col--brand">
           <p>&#x1F6D2; 电商平台</p>
@@ -179,20 +187,30 @@ function fetchSuggestions(queryString: string, callback: (data: any[]) => void) 
     callback([])
     return
   }
-  const history = getHistory()
-  const items: any[] = [...history]
+  const items: any[] = []
+  // Hot keywords — fixed at top, 5 items
   if (hotKeywords.value.length > 0) {
-    items.push({ type: 'hot-separator' })
-    hotKeywords.value.forEach(k => items.push({ type: 'hot', keyword: k.keyword, count: k.searchCount }))
+    items.push({ type: 'hot-section', keywords: hotKeywords.value.slice(0, 3) })
   }
-  items.push({ type: 'clear' })
+  // History — scrollable below
+  const history = getHistory()
+  if (history.length > 0) {
+    items.push({ type: 'history-separator' })
+    items.push(...history)
+    items.push({ type: 'clear' })
+  }
   callback(items)
 }
 
 function handleSelect(item: any) {
-  if (item.type === 'clear' || item.type === 'hot-separator') return
+  if (item.type === 'clear' || item.type === 'hot-section' || item.type === 'history-separator') return
   keyword.value = item.keyword
   router.push({ path: '/products', query: { keyword: item.keyword } })
+}
+
+function handleHotClick(kw: { keyword: string }) {
+  keyword.value = kw.keyword
+  router.push({ path: '/products', query: { keyword: kw.keyword } })
 }
 
 function handleRemoveHistory(keyword: string) {
@@ -218,13 +236,18 @@ watch(() => route.query.keyword, (kw) => {
 
 watch(() => route.query.categoryId, async (catId) => {
   const cid = catId ? Number(catId) : 0
-  if (!cid || keyword.value.trim()) return
+  if (!cid) return
   try {
     const res = await getCategories()
     const name = findCategoryName(res.data, cid)
     if (name) keyword.value = name
   } catch { /* ignore */ }
 }, { immediate: false })
+
+// Clear search box when returning to home page
+watch(() => route.path, (path) => {
+  if (path === '/') keyword.value = ''
+})
 
 onMounted(async () => {
   const tasks: Promise<unknown>[] = []
@@ -562,6 +585,7 @@ function handleLogout() {
 
   .el-autocomplete-suggestion__wrap {
     padding: 4px 0;
+    max-height: 390px;
   }
 
   li {
@@ -579,6 +603,15 @@ function handleLogout() {
     &:last-child {
       border-top: 1px solid #ebeef5;
     }
+  }
+
+  .hot-section {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #ebeef5;
   }
 
   .history-item {
@@ -631,7 +664,7 @@ function handleLogout() {
     }
   }
 
-  .hot-separator {
+  .history-separator {
     padding: 8px 16px 4px;
     font-size: 12px;
     color: #c0c4cc;

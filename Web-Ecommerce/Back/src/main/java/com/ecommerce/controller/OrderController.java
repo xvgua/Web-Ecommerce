@@ -9,6 +9,8 @@ import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.dto.PayIntentResponse;
 import com.ecommerce.dto.PayOrderRequest;
 import com.ecommerce.dto.PayStatusResponse;
+import com.ecommerce.dto.RefundApplyRequest;
+
 import com.ecommerce.entity.Order;
 import com.ecommerce.security.UserContext;
 import com.ecommerce.service.OrderService;
@@ -73,8 +75,19 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/refund")
-    public Result<Void> refund(@PathVariable Long id) {
-        orderService.refundOrder(UserContext.getUserId(), id);
+    public Result<Void> refund(@PathVariable Long id, @Valid @RequestBody RefundApplyRequest req) {
+        orderService.refundOrder(UserContext.getUserId(), id, req);
+        return Result.success();
+    }
+
+    @GetMapping("/{id}/refund")
+    public Result<Order> refundDetail(@PathVariable Long id) {
+        return Result.success(orderService.getRefundDetail(UserContext.getUserId(), id));
+    }
+
+    @PutMapping("/{id}/refund/cancel")
+    public Result<Void> cancelRefund(@PathVariable Long id) {
+        orderService.cancelRefundApplication(UserContext.getUserId(), id);
         return Result.success();
     }
 

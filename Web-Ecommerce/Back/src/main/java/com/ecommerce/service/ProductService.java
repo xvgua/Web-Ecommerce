@@ -1,9 +1,12 @@
 package com.ecommerce.service;
 
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.ImportResultDTO;
 import com.ecommerce.dto.ProductForm;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.entity.Product;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,4 +20,6 @@ public interface ProductService {
     void delete(Long id);
     void toggleSkuStatus(Long productId, Long skuId, Integer status);
     void deleteSku(Long productId, Long skuId);
+    void exportProducts(ProductQuery query, HttpServletResponse response);
+    ImportResultDTO importProducts(MultipartFile file);
 }

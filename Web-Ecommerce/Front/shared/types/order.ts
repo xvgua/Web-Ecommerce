@@ -1,4 +1,5 @@
 import type { Address } from './user'
+import type { PageQuery } from './index'
 
 export interface OrderItem {
   id: number
@@ -37,12 +38,26 @@ export interface Order {
   addressModified?: number
   reviewCount?: number
   items: OrderItem[]
+  // Refund fields
+  refundType?: number
+  refundReason?: string
+  refundReasonText?: string
+  refundDesc?: string
+  refundAmount?: number
+  refundItemIds?: string
+  refundStatus?: number
+  refundStatusText?: string
+  refundRejectReason?: string
+  refundApplyTime?: string
+  refundDealTime?: string
+  refundItems?: OrderItem[]
 }
 
 export interface OrderQuery extends PageQuery {
   status?: number
   userId?: number
   reviewFilter?: string  // 'pending' | 'followup' | 'reviewed'
+  hasRefund?: boolean
 }
 
 export interface CreateOrderForm {

@@ -59,7 +59,6 @@ public class UserServiceImpl implements UserService {
         user.setUsername(req.getUsername());
         user.setPassword(encoder.encode(req.getPassword()));
         user.setEmail(req.getEmail());
-        user.setNickname(req.getUsername());
         user.setStatus(UserStatus.ACTIVE);
         userMapper.insert(user);
 
@@ -115,7 +114,6 @@ public class UserServiceImpl implements UserService {
         if (dbUser == null) {
             throw new BusinessException(401, "用户不存在");
         }
-        if (user.getNickname() != null) dbUser.setNickname(user.getNickname());
         if (user.getAvatar() != null) dbUser.setAvatar(user.getAvatar());
         if (user.getPhone() != null) dbUser.setPhone(user.getPhone());
         if (user.getEmail() != null) dbUser.setEmail(user.getEmail());

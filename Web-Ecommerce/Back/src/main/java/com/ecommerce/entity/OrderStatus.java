@@ -7,6 +7,7 @@ public class OrderStatus {
     public static final int COMPLETED = 3;
     public static final int CANCELLED = 4;
     public static final int REFUNDING = 5;
+    public static final int REFUNDED = 6;
 
     private OrderStatus() {}
 }

@@ -3,7 +3,7 @@
     <div class="order-detail" v-if="order">
       <div class="page-title-row">
         <h1 class="page-title">{{ order.statusText }}</h1>
-        <el-button v-if="order.status === 1 || order.status === 2" size="small" @click="handleRefund">申请退款</el-button>
+        <el-button v-if="canRefund" size="small" @click="handleRefund">{{ refundButtonText }}</el-button>
         <el-button v-if="order.status === 3" size="small" @click="handleReorder">再来一单</el-button>
         <el-button v-if="order.status === 4" size="small" @click="handleReorder">加入购物车</el-button>
       </div>
@@ -111,7 +111,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderById, refundOrder, reorderOrder } from '@/api/order'
+import { getOrderById, reorderOrder } from '@/api/order'
 import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
@@ -129,14 +129,25 @@ function handleEditAddress() {
   router.push(`/orders/${order.value!.id}/edit-address`)
 }
 
-async function handleRefund() {
-  try {
-    await ElMessageBox.confirm('确定要申请退款吗？退款后将恢复库存。', '提示', { type: 'warning' })
-    await refundOrder(order.value!.id)
-    ElMessage.success('退款申请已提交')
-    loadOrder()
-  } catch {
-    // cancelled
+const canRefund = computed(() => {
+  if (!order.value) return false
+  const status = order.value.status
+  if (status !== 1 && status !== 2 && status !== 3) return false
+  if (order.value.refundStatus != null && order.value.refundStatus !== 1 && order.value.refundStatus !== 3) return false
+  return true
+})
+
+const refundButtonText = computed(() => {
+  if (order.value?.refundStatus === 1 || order.value?.refundStatus === 3) return '再次申请'
+  return '申请退款'
+})
+
+function handleRefund() {
+  const o = order.value!
+  if (o.refundStatus != null && o.refundStatus !== 1 && o.refundStatus !== 3) {
+    router.push(`/orders/${o.id}/refund`)
+  } else {
+    router.push(`/orders/${o.id}/refund/apply`)
   }
 }
 

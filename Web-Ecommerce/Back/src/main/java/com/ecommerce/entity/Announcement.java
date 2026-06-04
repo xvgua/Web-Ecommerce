@@ -11,6 +11,9 @@ public class Announcement {
     private Long id;
     private String title;
     private String content;
+    private Integer status;
+    private Integer sortOrder;
+    private String level;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

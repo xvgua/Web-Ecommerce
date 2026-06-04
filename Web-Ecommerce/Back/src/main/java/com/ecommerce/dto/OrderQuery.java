@@ -8,4 +8,5 @@ public class OrderQuery {
     private Integer pageSize = 20;
     private Integer status;
     private String reviewFilter;   // pending | followup | reviewed
+    private Boolean hasRefund;     // filter orders with refund records
 }

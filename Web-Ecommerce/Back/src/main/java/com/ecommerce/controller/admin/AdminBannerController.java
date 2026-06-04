@@ -20,6 +20,11 @@ public class AdminBannerController {
         return Result.success(bannerService.getBannerPage(query));
     }
 
+    @GetMapping("/{id}")
+    public Result<Banner> getById(@PathVariable Long id) {
+        return Result.success(bannerService.getById(id));
+    }
+
     @PostMapping
     public Result<Banner> create(@RequestBody Banner banner) {
         return Result.success(bannerService.create(banner));
@@ -28,6 +33,12 @@ public class AdminBannerController {
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody Banner banner) {
         bannerService.update(id, banner);
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/status")
+    public Result<Void> toggleStatus(@PathVariable Long id, @RequestBody Banner banner) {
+        bannerService.toggleStatus(id, banner.getStatus());
         return Result.success();
     }
 

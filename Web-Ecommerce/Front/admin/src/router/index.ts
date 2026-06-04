@@ -104,10 +104,22 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '轮播管理' },
       },
       {
+        path: 'system/banners/create',
+        name: 'BannerEdit',
+        component: () => import('@/views/system/banner-form.vue'),
+        meta: { title: '新增/编辑轮播' },
+      },
+      {
         path: 'system/announcements',
         name: 'AnnouncementManage',
         component: () => import('@/views/system/announcement.vue'),
         meta: { title: '公告管理' },
+      },
+      {
+        path: 'system/announcements/edit',
+        name: 'AnnouncementEdit',
+        component: () => import('@/views/system/announcement-edit.vue'),
+        meta: { title: '编辑公告' },
       },
       {
         path: 'seckill',
@@ -126,6 +138,18 @@ const routes: RouteRecordRaw[] = [
         name: 'SeckillEdit',
         component: () => import('@/views/seckill/form.vue'),
         meta: { title: '编辑秒杀活动' },
+      },
+      {
+        path: 'refunds',
+        name: 'RefundManage',
+        component: () => import('@/views/refund/index.vue'),
+        meta: { title: '退款管理' },
+      },
+      {
+        path: 'system/feedbacks',
+        name: 'FeedbackManage',
+        component: () => import('@/views/system/feedback.vue'),
+        meta: { title: '用户反馈' },
       },
     ],
   },

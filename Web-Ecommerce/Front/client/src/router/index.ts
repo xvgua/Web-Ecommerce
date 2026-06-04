@@ -62,6 +62,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '修改地址', requiresAuth: true },
       },
       {
+        path: 'orders/:id/refund/apply',
+        name: 'RefundApply',
+        component: () => import('@/views/order/refund-apply.vue'),
+        meta: { title: '申请退款', requiresAuth: true },
+      },
+      {
+        path: 'orders/:id/refund',
+        name: 'RefundDetail',
+        component: () => import('@/views/order/refund-detail.vue'),
+        meta: { title: '退款详情', requiresAuth: true },
+      },
+      {
         path: 'orders/:orderId/review/:productId',
         name: 'OrderReview',
         component: () => import('@/views/order/review.vue'),
@@ -90,6 +102,12 @@ const routes: RouteRecordRaw[] = [
         name: 'CouponCenter',
         component: () => import('@/views/coupon/center.vue'),
         meta: { title: '领券中心' },
+      },
+      {
+        path: 'announcements',
+        name: 'AnnouncementList',
+        component: () => import('@/views/announcement/list.vue'),
+        meta: { title: '平台公告' },
       },
       {
         path: 'seckill',

@@ -22,6 +22,10 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response) => {
+    // Skip JSON parsing for blob responses (e.g., file downloads)
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')

@@ -19,6 +19,13 @@
         <el-option label="下架" :value="0" />
       </el-select>
       <el-button type="primary" @click="handleSearch">搜索</el-button>
+      <el-button @click="handleExport">
+        <el-icon><Download /></el-icon> 导出Excel
+      </el-button>
+      <el-button @click="handleImportClick">
+        <el-icon><Upload /></el-icon> 导入Excel
+      </el-button>
+      <input ref="fileInput" type="file" accept=".xlsx,.xls" style="display:none" @change="handleFileChange" />
     </div>
 
     <div class="table-card">
@@ -142,15 +149,44 @@
         @size-change="loadProducts"
       />
     </div>
+
+    <!-- Import result dialog -->
+    <el-dialog v-model="importResultVisible" title="导入结果" width="520px">
+      <div v-if="importResult" class="import-result">
+        <div class="import-result__stats">
+          <div class="import-result__stat import-result__stat--success">
+            <span class="import-result__num">{{ importResult.successCount }}</span>
+            <span>成功</span>
+          </div>
+          <div class="import-result__stat import-result__stat--fail">
+            <span class="import-result__num">{{ importResult.failCount }}</span>
+            <span>失败</span>
+          </div>
+          <div class="import-result__stat">
+            <span class="import-result__num">{{ importResult.totalCount }}</span>
+            <span>总计</span>
+          </div>
+        </div>
+        <div v-if="importResult.errors?.length" class="import-result__errors">
+          <h4>错误详情</h4>
+          <div v-for="(e, i) in importResult.errors" :key="i" class="import-result__error">
+            第{{ e.row }}行：{{ e.reason }}
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="importResultVisible = false; loadProducts()">关闭并刷新</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search, Plus } from '@element-plus/icons-vue'
+import { Search, Plus, Download, Upload } from '@element-plus/icons-vue'
 import { useDebounceFn } from '@vueuse/core'
-import { getProductList, deleteProduct, updateProduct, getCategoryList, toggleSkuStatus, deleteSku } from '@/api/admin'
+import { getProductList, deleteProduct, updateProduct, getCategoryList, toggleSkuStatus, deleteSku, exportProducts, importProducts } from '@/api/admin'
 import { formatPrice } from '@/utils/format'
 import type { Product, ProductSku, Category, ProductForm } from '@shared/types/product'
 import ProductPlaceholder from '@/components/common/ProductPlaceholder.vue'
@@ -235,6 +271,50 @@ function skuTotalSales(row: Product) {
     return row.skus.reduce((sum, sku) => sum + sku.sales, 0)
   }
   return row.sales
+}
+
+const fileInput = ref<HTMLInputElement>()
+const importResultVisible = ref(false)
+const importResult = ref<{ successCount: number; failCount: number; totalCount: number; errors: { row: number; reason: string }[] } | null>(null)
+
+async function handleExport() {
+  try {
+    const blob = await exportProducts({
+      page: 1,
+      pageSize: 9999,
+      keyword: keyword.value.trim() || undefined,
+      categoryId: categoryId.value || undefined,
+      status: statusFilter.value !== '' ? (statusFilter.value as number) : undefined,
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '商品列表.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  }
+}
+
+function handleImportClick() {
+  fileInput.value?.click()
+}
+
+async function handleFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const res = await importProducts(file)
+    importResult.value = res.data
+    importResultVisible.value = true
+  } catch {
+    ElMessage.error('导入失败')
+  } finally {
+    input.value = ''
+  }
 }
 
 onMounted(async () => {
@@ -398,5 +478,46 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.import-result {
+  &__stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 16px;
+  }
+
+  &__stat {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+
+    &--success .import-result__num { color: #67c23a; }
+    &--fail .import-result__num { color: #f56c6c; }
+  }
+
+  &__num {
+    display: block;
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  &__errors {
+    h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+  }
+
+  &__error {
+    font-size: 13px;
+    color: #f56c6c;
+    padding: 4px 0;
+    border-bottom: 1px dashed #f0f0f0;
+
+    &:last-child { border-bottom: none; }
+  }
 }
 </style>

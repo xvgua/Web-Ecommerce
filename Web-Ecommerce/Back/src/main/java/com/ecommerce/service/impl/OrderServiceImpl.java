@@ -10,6 +10,10 @@ import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.dto.PayIntentResponse;
 import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
+import com.ecommerce.dto.RefundApplyRequest;
+import com.ecommerce.dto.RefundAuditRequest;
+import com.ecommerce.dto.RefundQuery;
+
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
 import com.ecommerce.service.CouponService;
@@ -25,6 +29,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -54,6 +61,8 @@ public class OrderServiceImpl implements OrderService {
     private CouponMapper couponMapper;
     @Autowired
     private UserCouponMapper userCouponMapper;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     @Transactional
@@ -211,7 +220,9 @@ public class OrderServiceImpl implements OrderService {
 
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getUserId, userId);
-        if (query.getStatus() != null) {
+        if (Boolean.TRUE.equals(query.getHasRefund())) {
+            wrapper.isNotNull(Order::getRefundStatus);
+        } else if (query.getStatus() != null) {
             wrapper.eq(Order::getStatus, query.getStatus());
         }
         wrapper.orderByDesc(Order::getCreateTime);
@@ -462,18 +473,167 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public void refundOrder(Long userId, Long id) {
+    public void refundOrder(Long userId, Long id, RefundApplyRequest req) {
         Order order = orderMapper.selectById(id);
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(404, "订单不存在");
         }
-        if (order.getStatus() != OrderStatus.PENDING_SHIP && order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.COMPLETED) {
+        if (order.getStatus() != OrderStatus.PENDING_SHIP
+                && order.getStatus() != OrderStatus.SHIPPED
+                && order.getStatus() != OrderStatus.COMPLETED) {
             throw new BusinessException("当前订单状态不支持退款");
         }
-        restoreStock(order);
-        order.setStatus(OrderStatus.REFUNDING);
+        // Check no existing refund in progress
+        if (order.getRefundStatus() != null
+                && order.getRefundStatus() != RefundStatus.REJECTED
+                && order.getRefundStatus() != RefundStatus.CANCELLED) {
+            throw new BusinessException("该订单已有退款申请在处理中");
+        }
+
+        // Validate refund type for order status
+        if (req.getRefundType() == 2 && order.getStatus() != OrderStatus.COMPLETED) {
+            throw new BusinessException("仅已收货订单支持退货退款");
+        }
+
+        // Validate and calculate refund items
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, id));
+        Set<Long> allItemIds = allItems.stream().map(OrderItem::getId).collect(Collectors.toSet());
+        for (Long itemId : req.getItemIds()) {
+            if (!allItemIds.contains(itemId)) {
+                throw new BusinessException("退款商品不属于该订单");
+            }
+        }
+
+        List<OrderItem> refundItems = allItems.stream()
+                .filter(it -> req.getItemIds().contains(it.getId()))
+                .toList();
+        BigDecimal refundAmount = refundItems.stream()
+                .map(it -> it.getPrice().multiply(BigDecimal.valueOf(it.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal maxRefund = order.getPayAmount() != null ? order.getPayAmount() : order.getTotalAmount();
+        if (refundAmount.compareTo(maxRefund) > 0) {
+            refundAmount = maxRefund;
+        }
+
+        order.setRefundType(req.getRefundType());
+        order.setRefundReason(req.getRefundReason());
+        order.setRefundDesc(req.getRefundDesc());
+        order.setRefundAmount(refundAmount);
+        order.setRefundApplyTime(LocalDateTime.now());
+
+        // Store refund item IDs as JSON
+        try {
+            order.setRefundItemIds(objectMapper.writeValueAsString(req.getItemIds()));
+        } catch (Exception e) {
+            order.setRefundItemIds(req.getItemIds().toString());
+        }
+
+        if (order.getStatus() == OrderStatus.PENDING_SHIP) {
+            // Auto-approve for unpaid-shipped orders
+            order.setRefundStatus(RefundStatus.COMPLETED);
+            order.setStatus(OrderStatus.REFUNDED);
+            restoreStockForItems(order, req.getItemIds());
+            log.info("Refund auto-approved: orderNo={}", order.getOrderNo());
+        } else {
+            // Needs admin review
+            order.setRefundStatus(RefundStatus.PENDING_REVIEW);
+            log.info("Refund application submitted: orderNo={}", order.getOrderNo());
+        }
+
         orderMapper.updateById(order);
-        log.info("Order refund requested: orderNo={}", order.getOrderNo());
+    }
+
+    @Override
+    public Order getRefundDetail(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getRefundStatus() == null) {
+            throw new BusinessException("该订单没有退款记录");
+        }
+        fillOrderDetail(order);
+        fillRefundDetail(order);
+        return order;
+    }
+
+    @Override
+    public void cancelRefundApplication(Long userId, Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(404, "订单不存在");
+        }
+        if (order.getRefundStatus() == null || order.getRefundStatus() != RefundStatus.PENDING_REVIEW) {
+            throw new BusinessException("当前退款状态不可撤销");
+        }
+        order.setRefundStatus(RefundStatus.CANCELLED);
+        orderMapper.updateById(order);
+        log.info("Refund application cancelled: orderNo={}", order.getOrderNo());
+    }
+
+    @Override
+    public PageResult<Order> adminGetRefundPage(RefundQuery query) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        wrapper.isNotNull(Order::getRefundStatus);
+        if (query.getRefundStatus() != null) {
+            wrapper.eq(Order::getRefundStatus, query.getRefundStatus());
+        }
+        if (query.getKeyword() != null && !query.getKeyword().isBlank()) {
+            wrapper.eq(Order::getOrderNo, query.getKeyword());
+        }
+        wrapper.orderByDesc(Order::getRefundApplyTime);
+
+        Page<Order> page = new Page<>(query.getPage(), query.getPageSize());
+        Page<Order> result = orderMapper.selectPage(page, wrapper);
+
+        for (Order order : result.getRecords()) {
+            fillOrderDetail(order);
+            fillRefundDetail(order);
+        }
+
+        return PageResult.of(result.getRecords(), result.getTotal(), query.getPage(), query.getPageSize());
+    }
+
+    @Override
+    public Order adminGetRefundDetail(Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) throw new BusinessException(404, "订单不存在");
+        if (order.getRefundStatus() == null) throw new BusinessException("该订单没有退款记录");
+        fillOrderDetail(order);
+        fillRefundDetail(order);
+        return order;
+    }
+
+    @Override
+    @Transactional
+    public void auditRefund(Long orderId, RefundAuditRequest req) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) throw new BusinessException(404, "订单不存在");
+        if (order.getRefundStatus() == null || order.getRefundStatus() != RefundStatus.PENDING_REVIEW) {
+            throw new BusinessException("当前退款状态不支持审核");
+        }
+
+        order.setRefundDealTime(LocalDateTime.now());
+
+        if (Boolean.TRUE.equals(req.getApproved())) {
+            order.setRefundStatus(RefundStatus.COMPLETED);
+            order.setStatus(OrderStatus.REFUNDED);
+            if (order.getRefundItemIds() != null && !order.getRefundItemIds().isBlank()) {
+                List<Long> itemIds = parseRefundItemIds(order.getRefundItemIds());
+                restoreStockForItems(order, itemIds);
+            }
+            log.info("Refund approved: orderNo={}, refundType={}", order.getOrderNo(), order.getRefundType());
+        } else {
+            if (req.getRejectReason() == null || req.getRejectReason().isBlank()) {
+                throw new BusinessException("拒绝退款需填写原因");
+            }
+            order.setRefundStatus(RefundStatus.REJECTED);
+            order.setRefundRejectReason(req.getRejectReason());
+            log.info("Refund rejected: orderNo={}, reason={}", order.getOrderNo(), req.getRejectReason());
+        }
+
+        orderMapper.updateById(order);
     }
 
     @Override
@@ -718,22 +878,42 @@ public class OrderServiceImpl implements OrderService {
         order.setAddress(address);
 
         order.setStatusText(getStatusText(order.getStatus()));
+
+        // Fill refund text fields if refund exists
+        if (order.getRefundStatus() != null) {
+            order.setRefundReasonText(RefundReason.getReasonText(order.getRefundReason()));
+            order.setRefundStatusText(RefundStatus.getStatusText(order.getRefundStatus()));
+        }
     }
 
     private void restoreStock(Order order) {
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
         for (OrderItem item : items) {
-            productMapper.update(null,
-                    new LambdaUpdateWrapper<Product>()
-                            .eq(Product::getId, item.getProductId())
-                            .setSql("stock = stock + " + item.getQuantity()));
-            if (item.getSkuId() != null && item.getSkuId() > 0) {
-                skuMapper.update(null,
-                        new LambdaUpdateWrapper<ProductSku>()
-                                .eq(ProductSku::getId, item.getSkuId())
-                                .setSql("stock = stock + " + item.getQuantity()));
+            restoreStockForItem(item);
+        }
+    }
+
+    private void restoreStockForItems(Order order, List<Long> itemIds) {
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
+        for (OrderItem item : allItems) {
+            if (itemIds.contains(item.getId())) {
+                restoreStockForItem(item);
             }
+        }
+    }
+
+    private void restoreStockForItem(OrderItem item) {
+        productMapper.update(null,
+                new LambdaUpdateWrapper<Product>()
+                        .eq(Product::getId, item.getProductId())
+                        .setSql("stock = stock + " + item.getQuantity()));
+        if (item.getSkuId() != null && item.getSkuId() > 0) {
+            skuMapper.update(null,
+                    new LambdaUpdateWrapper<ProductSku>()
+                            .eq(ProductSku::getId, item.getSkuId())
+                            .setSql("stock = stock + " + item.getQuantity()));
         }
     }
 
@@ -750,7 +930,41 @@ public class OrderServiceImpl implements OrderService {
             case 3 -> "已完成";
             case 4 -> "已取消";
             case 5 -> "退款中";
+            case 6 -> "已退款";
             default -> "未知";
         };
+    }
+
+    private void fillRefundDetail(Order order) {
+        order.setRefundReasonText(RefundReason.getReasonText(order.getRefundReason()));
+        order.setRefundStatusText(RefundStatus.getStatusText(order.getRefundStatus()));
+
+        // Populate refund items
+        if (order.getRefundItemIds() != null && !order.getRefundItemIds().isBlank()) {
+            List<Long> itemIds = parseRefundItemIds(order.getRefundItemIds());
+            List<OrderItem> allItems = orderItemMapper.selectList(
+                    new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
+            List<OrderItem> refundItems = allItems.stream()
+                    .filter(it -> itemIds.contains(it.getId()))
+                    .collect(Collectors.toList());
+            order.setRefundItems(refundItems);
+        }
+    }
+
+    private List<Long> parseRefundItemIds(String refundItemIds) {
+        try {
+            return objectMapper.readValue(refundItemIds, new TypeReference<List<Long>>() {});
+        } catch (Exception e) {
+            // Fallback: parse bracketed format like "[1, 2, 3]"
+            try {
+                String cleaned = refundItemIds.replaceAll("[\\[\\]\\s]", "");
+                if (cleaned.isEmpty()) return List.of();
+                return Arrays.stream(cleaned.split(","))
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+            } catch (Exception ex) {
+                return List.of();
+            }
+        }
     }
 }

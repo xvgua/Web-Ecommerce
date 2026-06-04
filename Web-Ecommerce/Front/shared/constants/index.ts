@@ -1,4 +1,4 @@
-import { OrderStatus } from '../types'
+import { OrderStatus, RefundStatus } from '../types'
 
 export const ORDER_STATUS_MAP: Record<number, string> = {
   [OrderStatus.PENDING_PAY]: '待支付',
@@ -7,6 +7,7 @@ export const ORDER_STATUS_MAP: Record<number, string> = {
   [OrderStatus.COMPLETED]: '已完成',
   [OrderStatus.CANCELLED]: '已取消',
   [OrderStatus.REFUNDING]: '退款中',
+  [OrderStatus.REFUNDED]: '已退款',
 }
 
 export const ORDER_STATUS_COLOR: Record<number, string> = {
@@ -16,6 +17,49 @@ export const ORDER_STATUS_COLOR: Record<number, string> = {
   [OrderStatus.COMPLETED]: 'info',
   [OrderStatus.CANCELLED]: 'danger',
   [OrderStatus.REFUNDING]: 'warning',
+  [OrderStatus.REFUNDED]: 'info',
+}
+
+export const REFUND_STATUS_MAP: Record<number, string> = {
+  [RefundStatus.PENDING_REVIEW]: '待审核',
+  [RefundStatus.REJECTED]: '已拒绝',
+  [RefundStatus.COMPLETED]: '已完成',
+  [RefundStatus.CANCELLED]: '已撤销',
+}
+
+export const REFUND_STATUS_COLOR: Record<number, string> = {
+  [RefundStatus.PENDING_REVIEW]: 'warning',
+  [RefundStatus.REJECTED]: 'danger',
+  [RefundStatus.COMPLETED]: 'info',
+  [RefundStatus.CANCELLED]: 'info',
+}
+
+export const REFUND_REASON_MAP: Record<string, string> = {
+  dont_want: '不想要了',
+  wrong_item: '买错了',
+  not_as_described: '商品与描述不符',
+  damaged: '商品破损',
+  late_delivery: '未按约定时间发货',
+  other: '其他',
+}
+
+export const FEEDBACK_TYPE_MAP: Record<number, string> = {
+  1: '问题反馈',
+  2: '功能建议',
+}
+
+export const FEEDBACK_STATUS_MAP: Record<number, string> = {
+  0: '待处理',
+  1: '处理中',
+  2: '已解决',
+  3: '已关闭',
+}
+
+export const FEEDBACK_STATUS_COLOR: Record<number, string> = {
+  0: 'warning',
+  1: 'primary',
+  2: 'success',
+  3: 'info',
 }
 
 export const DEFAULT_PAGE_SIZE = 20

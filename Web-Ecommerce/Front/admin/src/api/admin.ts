@@ -5,6 +5,8 @@ import type { Order, OrderQuery } from '@shared/types/order'
 import type { User } from '@shared/types/user'
 import type { Coupon, CouponForm } from '@shared/types/coupon'
 import type { SeckillActivity, SeckillActivityForm } from '@shared/types/seckill'
+import type { Feedback } from '@shared/types/feedback'
+import type { Announcement, Banner } from '@shared/types'
 
 // ===== Auth =====
 export function adminLogin(data: { username: string; password: string }): Promise<ApiResponse<{ token: string }>> {
@@ -147,6 +149,22 @@ export function toggleHotKeywordStatus(id: number): Promise<ApiResponse<null>> {
   return request.put(`/admin/hot-keywords/${id}/status`)
 }
 
+// ===== Product Import/Export =====
+export function exportProducts(params: ProductQuery): Promise<Blob> {
+  return request.get('/admin/products/export', {
+    params,
+    responseType: 'blob',
+  })
+}
+
+export function importProducts(file: File): Promise<ApiResponse<{ successCount: number; failCount: number; totalCount: number; errors: { row: number; reason: string }[] }>> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/admin/products/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 // ===== Seckill Management =====
 export function getSeckillActivityList(params: { page: number; pageSize: number; keyword?: string; status?: number }): Promise<ApiResponse<PageResponse<SeckillActivity>>> {
   return request.get('/admin/seckill', { params })
@@ -166,4 +184,67 @@ export function updateSeckillActivity(id: number, data: SeckillActivityForm): Pr
 
 export function deleteSeckillActivity(id: number): Promise<ApiResponse<null>> {
   return request.delete(`/admin/seckill/${id}`)
+}
+
+// ===== Feedback Management =====
+export function getFeedbackList(params: { page: number; pageSize: number; type?: number; status?: number; keyword?: string }): Promise<ApiResponse<PageResponse<Feedback>>> {
+  return request.get('/admin/feedbacks', { params })
+}
+
+export function getFeedbackDetail(id: number): Promise<ApiResponse<Feedback>> {
+  return request.get(`/admin/feedbacks/${id}`)
+}
+
+export function replyFeedback(id: number, data: { status: number; adminReply: string }): Promise<ApiResponse<null>> {
+  return request.put(`/admin/feedbacks/${id}/reply`, data)
+}
+
+export function deleteFeedback(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/feedbacks/${id}`)
+}
+
+// ===== Announcement Management =====
+export function getAnnouncementList(params: PageQuery): Promise<ApiResponse<PageResponse<Announcement>>> {
+  return request.get('/admin/announcements', { params })
+}
+
+export function getAnnouncementById(id: number): Promise<ApiResponse<Announcement>> {
+  return request.get(`/admin/announcements/${id}`)
+}
+
+export function createAnnouncement(data: { title: string; content: string; status: number; sortOrder: number; level: string }): Promise<ApiResponse<Announcement>> {
+  return request.post('/admin/announcements', data)
+}
+
+export function updateAnnouncement(id: number, data: { title: string; content: string; status: number; sortOrder: number; level: string }): Promise<ApiResponse<null>> {
+  return request.put(`/admin/announcements/${id}`, data)
+}
+
+export function deleteAnnouncement(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/announcements/${id}`)
+}
+
+// ===== Banner Management =====
+export function getBannerList(params: PageQuery): Promise<ApiResponse<PageResponse<Banner>>> {
+  return request.get('/admin/banners', { params })
+}
+
+export function getBannerById(id: number): Promise<ApiResponse<Banner>> {
+  return request.get(`/admin/banners/${id}`)
+}
+
+export function createBanner(data: { title: string; imageUrl: string; linkUrl: string; sortOrder: number; status: number }): Promise<ApiResponse<Banner>> {
+  return request.post('/admin/banners', data)
+}
+
+export function updateBanner(id: number, data: { title: string; imageUrl: string; linkUrl: string; sortOrder: number; status: number }): Promise<ApiResponse<null>> {
+  return request.put(`/admin/banners/${id}`, data)
+}
+
+export function deleteBanner(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/banners/${id}`)
+}
+
+export function toggleBannerStatus(id: number, status: number): Promise<ApiResponse<null>> {
+  return request.put(`/admin/banners/${id}/status`, { status })
 }

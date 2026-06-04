@@ -22,6 +22,9 @@ public class BannerServiceImpl implements BannerService {
     @Override
     public PageResult<Banner> getBannerPage(PageQuery query) {
         LambdaQueryWrapper<Banner> wrapper = new LambdaQueryWrapper<>();
+        if (query.getKeyword() != null && !query.getKeyword().isBlank()) {
+            wrapper.like(Banner::getTitle, query.getKeyword());
+        }
         wrapper.orderByAsc(Banner::getSortOrder);
         Page<Banner> page = new Page<>(query.getPage(), query.getPageSize());
         Page<Banner> result = bannerMapper.selectPage(page, wrapper);
@@ -47,10 +50,29 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    public Banner getById(Long id) {
+        Banner banner = bannerMapper.selectById(id);
+        if (banner == null) {
+            throw new BusinessException(404, "轮播图不存在");
+        }
+        return banner;
+    }
+
+    @Override
     public void delete(Long id) {
         if (bannerMapper.selectById(id) == null) {
             throw new BusinessException(404, "轮播图不存在");
         }
         bannerMapper.deleteById(id);
+    }
+
+    @Override
+    public void toggleStatus(Long id, Integer status) {
+        Banner banner = bannerMapper.selectById(id);
+        if (banner == null) {
+            throw new BusinessException(404, "轮播图不存在");
+        }
+        banner.setStatus(status);
+        bannerMapper.updateById(banner);
     }
 }

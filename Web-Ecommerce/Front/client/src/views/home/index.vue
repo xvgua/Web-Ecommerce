@@ -1,5 +1,8 @@
 <template>
   <div class="home">
+    <!-- Announcement Bar -->
+    <AnnouncementBar />
+
     <!-- Three-column Hero: Categories | Carousel | Promo Cards -->
     <section class="hero-three-col">
       <!-- Left: Category Sidebar -->
@@ -166,6 +169,7 @@ import {
 import { getHotProducts, getNewProducts, getCategories } from '@/api/product'
 import type { Product, Category } from '@shared/types/product'
 import ProductCard from '@/components/business/ProductCard.vue'
+import AnnouncementBar from '@/components/business/AnnouncementBar.vue'
 
 const catIcons = [Goods, ShoppingBag, Star, Present]
 

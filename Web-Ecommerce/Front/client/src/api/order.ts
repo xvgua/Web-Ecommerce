@@ -46,8 +46,16 @@ export function remindShip(id: number): Promise<ApiResponse<null>> {
   return request.post(`/orders/${id}/remind`)
 }
 
-export function refundOrder(id: number): Promise<ApiResponse<null>> {
-  return request.put(`/orders/${id}/refund`)
+export function refundOrder(id: number, data: { refundType: number; refundReason: string; refundDesc?: string; itemIds: number[] }): Promise<ApiResponse<null>> {
+  return request.put(`/orders/${id}/refund`, data)
+}
+
+export function getRefundDetail(id: number): Promise<ApiResponse<Order>> {
+  return request.get(`/orders/${id}/refund`)
+}
+
+export function cancelRefund(id: number): Promise<ApiResponse<null>> {
+  return request.put(`/orders/${id}/refund/cancel`)
 }
 
 export function reorderOrder(id: number): Promise<ApiResponse<Order | null>> {

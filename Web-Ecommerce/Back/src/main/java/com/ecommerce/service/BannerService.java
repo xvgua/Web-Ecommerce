@@ -8,7 +8,9 @@ import java.util.List;
 public interface BannerService {
     PageResult<Banner> getBannerPage(PageQuery query);
     List<Banner> getAllBanners();
+    Banner getById(Long id);
     Banner create(Banner banner);
     void update(Long id, Banner banner);
     void delete(Long id);
+    void toggleStatus(Long id, Integer status);
 }

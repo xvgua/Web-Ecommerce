@@ -6,6 +6,10 @@ import com.ecommerce.dto.OrderQuery;
 import com.ecommerce.dto.PayIntentResponse;
 import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
+import com.ecommerce.dto.RefundApplyRequest;
+import com.ecommerce.dto.RefundAuditRequest;
+import com.ecommerce.dto.RefundQuery;
+
 import com.ecommerce.entity.Order;
 
 public interface OrderService {
@@ -16,7 +20,9 @@ public interface OrderService {
     void cancelOrder(Long userId, Long id);
     void confirmReceive(Long userId, Long id);
     void updateAddress(Long userId, Long id, Long addressId);
-    void refundOrder(Long userId, Long id);
+    void refundOrder(Long userId, Long id, RefundApplyRequest req);
+    Order getRefundDetail(Long userId, Long id);
+    void cancelRefundApplication(Long userId, Long id);
     Order reorder(Long userId, Long id);
 
     // Payment flow
@@ -30,4 +36,9 @@ public interface OrderService {
     Order adminGetOrderById(Long id);
     void shipOrder(Long id);
     void adminCancelOrder(Long id);
+
+    // Admin refund
+    PageResult<Order> adminGetRefundPage(RefundQuery query);
+    Order adminGetRefundDetail(Long orderId);
+    void auditRefund(Long orderId, RefundAuditRequest req);
 }

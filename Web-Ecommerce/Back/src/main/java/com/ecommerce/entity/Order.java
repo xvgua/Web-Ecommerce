@@ -21,6 +21,15 @@ public class Order {
     private BigDecimal payAmount;
     private Integer status;
     private String remark;
+    private Integer refundType;
+    private String refundReason;
+    private String refundDesc;
+    private java.math.BigDecimal refundAmount;
+    private String refundItemIds;
+    private Integer refundStatus;
+    private String refundRejectReason;
+    private LocalDateTime refundApplyTime;
+    private LocalDateTime refundDealTime;
     private LocalDateTime payTime;
     private LocalDateTime dealTime;
     private Integer addressModified;
@@ -39,4 +48,10 @@ public class Order {
     private Long reviewCount;
     @TableField(exist = false)
     private String couponName;
+    @TableField(exist = false)
+    private String refundReasonText;
+    @TableField(exist = false)
+    private String refundStatusText;
+    @TableField(exist = false)
+    private java.util.List<OrderItem> refundItems;
 }

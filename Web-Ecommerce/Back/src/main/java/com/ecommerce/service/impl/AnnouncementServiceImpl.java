@@ -11,6 +11,8 @@ import com.ecommerce.service.AnnouncementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AnnouncementServiceImpl implements AnnouncementService {
 
@@ -20,10 +22,41 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     @Override
     public PageResult<Announcement> getAnnouncementPage(PageQuery query) {
         LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(Announcement::getCreateTime);
+        wrapper.orderByDesc(Announcement::getSortOrder)
+               .orderByDesc(Announcement::getCreateTime);
         Page<Announcement> page = new Page<>(query.getPage(), query.getPageSize());
         Page<Announcement> result = announcementMapper.selectPage(page, wrapper);
         return PageResult.of(result.getRecords(), result.getTotal(), query.getPage(), query.getPageSize());
+    }
+
+    @Override
+    public List<Announcement> getLatest(int limit) {
+        LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Announcement::getStatus, 1)
+               .orderByDesc(Announcement::getSortOrder)
+               .orderByDesc(Announcement::getCreateTime);
+        Page<Announcement> page = new Page<>(1, limit);
+        return announcementMapper.selectPage(page, wrapper).getRecords();
+    }
+
+    @Override
+    public PageResult<Announcement> getPublishedPage(PageQuery query) {
+        LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Announcement::getStatus, 1)
+               .orderByDesc(Announcement::getSortOrder)
+               .orderByDesc(Announcement::getCreateTime);
+        Page<Announcement> page = new Page<>(query.getPage(), query.getPageSize());
+        Page<Announcement> result = announcementMapper.selectPage(page, wrapper);
+        return PageResult.of(result.getRecords(), result.getTotal(), query.getPage(), query.getPageSize());
+    }
+
+    @Override
+    public Announcement getById(Long id) {
+        Announcement a = announcementMapper.selectById(id);
+        if (a == null) {
+            throw new BusinessException(404, "公告不存在");
+        }
+        return a;
     }
 
     @Override

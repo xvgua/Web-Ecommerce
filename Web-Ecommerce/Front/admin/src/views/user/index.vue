@@ -22,10 +22,10 @@
           <template #default="{ row }">
             <div class="user-cell">
               <el-avatar :size="36">
-                <span style="font-size:15px">{{ (row.nickname || row.username)?.[0]?.toUpperCase() }}</span>
+                <span style="font-size:15px">{{ row.username?.[0]?.toUpperCase() }}</span>
               </el-avatar>
               <div>
-                <div class="user-cell__name">{{ row.nickname || row.username }}</div>
+                <div class="user-cell__name">{{ row.username }}</div>
                 <div class="user-cell__id">{{ row.accountId }}</div>
               </div>
             </div>

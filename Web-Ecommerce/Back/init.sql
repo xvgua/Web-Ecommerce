@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS `user` (
   username    VARCHAR(50)  NOT NULL UNIQUE,
   password    VARCHAR(255) NOT NULL,
   email       VARCHAR(100) NOT NULL,
-  nickname    VARCHAR(50)  DEFAULT '',
   avatar      VARCHAR(500) DEFAULT '',
   phone       VARCHAR(20)  DEFAULT '',
   status      TINYINT      DEFAULT 1 COMMENT '1=启用 0=禁用',
@@ -240,7 +239,9 @@ CREATE TABLE IF NOT EXISTS `banner` (
   image_url   VARCHAR(500) NOT NULL,
   link_url    VARCHAR(500) DEFAULT '',
   sort_order  INT          DEFAULT 0,
-  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP
+  status      INT          DEFAULT 1,
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
@@ -250,6 +251,9 @@ CREATE TABLE IF NOT EXISTS `announcement` (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   title       VARCHAR(200) NOT NULL,
   content     TEXT         NOT NULL,
+  status      TINYINT      DEFAULT 1 COMMENT '0=draft, 1=published, 2=archived',
+  sort_order  INT          DEFAULT 0 COMMENT 'sort order, higher = first',
+  level       VARCHAR(20)  DEFAULT 'info' COMMENT 'info / warning / important',
   create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -367,9 +371,10 @@ INSERT INTO `product` (name, category_id, price, stock, description, detail, mai
  '', '', 1, 432);
 
 -- 示例公告
-INSERT INTO `announcement` (title, content) VALUES
-('欢迎来到电商平台', '欢迎使用我们的电商平台！新用户注册即享 9 折优惠。'),
-('五一促销活动即将开始', '五一劳动节期间，全场商品低至 5 折，更有满减优惠券等你来领！');
+INSERT INTO `announcement` (title, content, status, sort_order, level) VALUES
+('欢迎来到电商平台', '欢迎使用我们的电商平台！新用户注册即享 9 折优惠。', 1, 10, 'info'),
+('五一促销活动即将开始', '五一劳动节期间，全场商品低至 5 折，更有满减优惠券等你来领！', 1, 8, 'important'),
+('系统维护通知', '平台将于每周日凌晨 2:00-4:00 进行系统维护，届时部分功能可能不可用。', 1, 5, 'warning');
 
 -- 示例轮播图
 INSERT INTO `banner` (title, image_url, link_url, sort_order) VALUES
@@ -379,8 +384,8 @@ INSERT INTO `banner` (title, image_url, link_url, sort_order) VALUES
 
 -- 示例评价（需先有已完成的订单，此处为演示数据）
 -- 用户 user_demo / 密码 123456
-INSERT INTO `user` (account_id, username, password, email, nickname, status) VALUES
-(26010101, 'user_demo', '$2b$12$Ep/yDhIzfHNsC2Bt0GiJNOul.Gi1O6tkimFmmcE9PLUMHp9ek9w0C', 'demo@example.com', 'Demo用户', 1);
+INSERT INTO `user` (account_id, username, password, email, status) VALUES
+(26010101, 'user_demo', '$2b$12$Ep/yDhIzfHNsC2Bt0GiJNOul.Gi1O6tkimFmmcE9PLUMHp9ek9w0C', 'demo@example.com', 1);
 
 INSERT INTO `review` (user_id, username, avatar, product_id, order_id, rating, rating_desc, rating_logistics, rating_service, content, images, create_time) VALUES
 (1, 'Demo用户', '', 1, 1, 5, 5, 5, 5, '手机非常好用，拍照效果一流，续航也很给力！', '', NOW() - INTERVAL 3 DAY),
