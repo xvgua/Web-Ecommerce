@@ -36,7 +36,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/upload", "/api/reviews/**",
                         "/api/cart/**", "/api/user/**", "/api/orders/**",
                         "/api/favorites/**", "/api/coupons/*/receive", "/api/user/coupons/**",
-                        "/api/conversations/**");
+                        "/api/conversations/**", "/api/seckill/order");
 
         registry.addInterceptor(new AdminInterceptor(jwtUtils))
                 .addPathPatterns("/api/admin/**")

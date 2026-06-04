@@ -1,9 +1,10 @@
 import request from './request'
 import type { ApiResponse, PageResponse } from '@shared/types'
-import type { Product, ProductQuery, Category, ProductForm } from '@shared/types/product'
+import type { Product, ProductQuery, Category, ProductForm, HotKeyword } from '@shared/types/product'
 import type { Order, OrderQuery } from '@shared/types/order'
 import type { User } from '@shared/types/user'
 import type { Coupon, CouponForm } from '@shared/types/coupon'
+import type { SeckillActivity, SeckillActivityForm } from '@shared/types/seckill'
 
 // ===== Auth =====
 export function adminLogin(data: { username: string; password: string }): Promise<ApiResponse<{ token: string }>> {
@@ -119,4 +120,50 @@ export function deleteCoupon(id: number): Promise<ApiResponse<null>> {
 
 export function toggleCouponStatus(id: number, status: number): Promise<ApiResponse<null>> {
   return request.put(`/admin/coupons/${id}/status`, { status })
+}
+
+// ===== Hot Keyword Management =====
+export function getHotKeywordList(params: { page: number; pageSize: number; keyword?: string }): Promise<ApiResponse<PageResponse<HotKeyword>>> {
+  return request.get('/admin/hot-keywords', { params })
+}
+
+export function createHotKeyword(data: { keyword: string; isPinned?: number; sortOrder?: number }): Promise<ApiResponse<HotKeyword>> {
+  return request.post('/admin/hot-keywords', data)
+}
+
+export function updateHotKeyword(id: number, data: { keyword: string; isPinned?: number; sortOrder?: number }): Promise<ApiResponse<null>> {
+  return request.put(`/admin/hot-keywords/${id}`, data)
+}
+
+export function deleteHotKeyword(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/hot-keywords/${id}`)
+}
+
+export function toggleHotKeywordPin(id: number): Promise<ApiResponse<null>> {
+  return request.put(`/admin/hot-keywords/${id}/pin`)
+}
+
+export function toggleHotKeywordStatus(id: number): Promise<ApiResponse<null>> {
+  return request.put(`/admin/hot-keywords/${id}/status`)
+}
+
+// ===== Seckill Management =====
+export function getSeckillActivityList(params: { page: number; pageSize: number; keyword?: string; status?: number }): Promise<ApiResponse<PageResponse<SeckillActivity>>> {
+  return request.get('/admin/seckill', { params })
+}
+
+export function getSeckillActivityById(id: number): Promise<ApiResponse<SeckillActivity>> {
+  return request.get(`/admin/seckill/${id}`)
+}
+
+export function createSeckillActivity(data: SeckillActivityForm): Promise<ApiResponse<SeckillActivity>> {
+  return request.post('/admin/seckill', data)
+}
+
+export function updateSeckillActivity(id: number, data: SeckillActivityForm): Promise<ApiResponse<null>> {
+  return request.put(`/admin/seckill/${id}`, data)
+}
+
+export function deleteSeckillActivity(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/seckill/${id}`)
 }

@@ -78,69 +78,156 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResult<Product> getProductPage(ProductQuery query) {
         if (StringUtils.hasText(query.getKeyword())) {
-            if ("exact".equals(query.getSearchMode())) {
-                return exactSearch(query);
-            }
             return keywordSearch(query);
         }
         return filterSearch(query);
     }
 
-    /**
-     * Keyword search: FULLTEXT (ngram) + LIKE + Levenshtein.
-     * Always ordered by relevance (MATCH score, then LIKE match, then sales);
-     * user-selected sort only applies to filterSearch (browsing without keyword).
-     */
-    private PageResult<Product> keywordSearch(ProductQuery query) {
+    private String beginSearch(ProductQuery query) {
         String keyword = query.getKeyword().trim();
-        searchLogService.record(keyword, UserContext.getUserId());
-        String escapedKeyword = escapeBooleanMode(keyword);
-        String likeKeyword = escapeLikeWildcards(keyword);
-        Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
-        List<Long> categoryIds = query.getCategoryId() != null && query.getCategoryId() > 0
-                ? new ArrayList<>(collectDescendantCategoryIds(query.getCategoryId())) : null;
+        try {
+            searchLogService.record(keyword, UserContext.getUserId());
+        } catch (Exception e) {
+            log.warn("Failed to record search log for keyword '{}': {}", keyword, e.getMessage());
+        }
+        return keyword;
+    }
 
-        // Skip Levenshtein for very short keywords (≤2 chars):
-        // edit distance ≤2 would match almost everything, making it noise
-        String fuzzyKeyword = keyword.length() > 2 ? keyword.toLowerCase() : null;
-
-        int page = query.getPage() != null ? query.getPage() : 1;
-        int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
-        int offset = (page - 1) * pageSize;
-
-        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryIds);
-        List<Product> records = productMapper.searchByKeyword(
-                escapedKeyword, likeKeyword, fuzzyKeyword, status, categoryIds, offset, pageSize);
-
+    private PageResult<Product> finishSearch(List<Product> records, long total, int page, int pageSize) {
         fillCategoryNames(records);
         fillSkus(records);
         return PageResult.of(records, total, page, pageSize);
     }
 
     /**
-     * Exact match search: product name equals keyword exactly.
+     * Keyword search: FULLTEXT (ngram) + LIKE, with Java-side Levenshtein
+     * fuzzy matching for typo tolerance (keywords > 2 chars).
+     * Ordered by relevance (MATCH score, then LIKE match, then sales).
      */
-    private PageResult<Product> exactSearch(ProductQuery query) {
-        String keyword = query.getKeyword().trim();
-        searchLogService.record(keyword, UserContext.getUserId());
+    private PageResult<Product> keywordSearch(ProductQuery query) {
+        String keyword = beginSearch(query);
+        String escapedKeyword = escapeBooleanMode(keyword);
+        String likeKeyword = escapeLikeWildcards(keyword);
         Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
+        List<Long> categoryIds = query.getCategoryId() != null && query.getCategoryId() > 0
+                ? new ArrayList<>(collectDescendantCategoryIds(query.getCategoryId())) : null;
 
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Product::getName, keyword)
-                .eq(Product::getStatus, status);
-        if (query.getCategoryId() != null && query.getCategoryId() > 0) {
-            Set<Long> categoryIds = collectDescendantCategoryIds(query.getCategoryId());
-            wrapper.in(Product::getCategoryId, categoryIds);
-        }
+        boolean doFuzzy = keyword.length() > 2;
 
         int page = query.getPage() != null ? query.getPage() : 1;
         int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
+        int offset = (page - 1) * pageSize;
 
-        Page<Product> result = productMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        long total = productMapper.countByKeyword(escapedKeyword, likeKeyword, status, categoryIds);
+        List<Product> records = productMapper.searchByKeyword(
+                escapedKeyword, likeKeyword, status, categoryIds, offset, pageSize);
 
-        fillCategoryNames(result.getRecords());
-        fillSkus(result.getRecords());
-        return PageResult.of(result.getRecords(), result.getTotal(), page, pageSize);
+        // Typo-tolerant fuzzy matching in Java (no MySQL UDF needed)
+        if (doFuzzy) {
+            List<Product> fuzzyMatches = fuzzyMatch(keyword, records, status, categoryIds);
+            if (!fuzzyMatches.isEmpty()) {
+                records = mergeAndSort(records, fuzzyMatches, likeKeyword);
+                total += fuzzyMatches.size();
+            }
+        }
+
+        return finishSearch(records, total, page, pageSize);
+    }
+
+    /**
+     * Levenshtein edit distance — standard dynamic programming.
+     */
+    private int levenshtein(String a, String b) {
+        int n = a.length(), m = b.length();
+        int[] prev = new int[m + 1];
+        int[] curr = new int[m + 1];
+        for (int j = 0; j <= m; j++) prev[j] = j;
+        for (int i = 1; i <= n; i++) {
+            curr[0] = i;
+            for (int j = 1; j <= m; j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(prev[j] + 1, curr[j - 1] + 1), prev[j - 1] + cost);
+            }
+            int[] tmp = prev;
+            prev = curr;
+            curr = tmp;
+        }
+        return prev[m];
+    }
+
+    /**
+     * Minimum edit distance between keyword and any substring of text.
+     * Uses a sliding window: for each start position in text, tries
+     * substrings of length keywordLen ± maxDist and keeps the minimum.
+     */
+    private int minSubstringDistance(String keyword, String text, int maxDist) {
+        int kwLen = keyword.length();
+        int txtLen = text.length();
+        int best = kwLen; // worst case: delete all keyword chars
+
+        for (int start = 0; start < txtLen; start++) {
+            int minLen = Math.max(1, kwLen - maxDist);
+            int maxLen = Math.min(txtLen - start, kwLen + maxDist);
+            for (int len = minLen; len <= maxLen; len++) {
+                int d = levenshtein(keyword, text.substring(start, start + len));
+                if (d < best) best = d;
+                if (best == 0) return 0; // exact match found, can't get better
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Find active products whose name fuzzily contains the keyword.
+     * Uses sliding-window Levenshtein: for each product, slides a window
+     * across its name and finds the substring with minimum edit distance
+     * to the keyword. This correctly handles cases like:
+     *   "iphane" → "iPhone 15 Pro Max 256GB"  (matches "iPhone")
+     *   "Dell"   → "Dell XPS 15"              (matches "Dell")
+     */
+    private List<Product> fuzzyMatch(String keyword, List<Product> exactResults,
+                                      Integer status, List<Long> categoryIds) {
+        Set<Long> existingIds = new HashSet<>();
+        for (Product p : exactResults) existingIds.add(p.getId());
+
+        List<Product> allActive = productMapper.selectList(
+                new LambdaQueryWrapper<Product>()
+                        .eq(Product::getStatus, status)
+                        .in(categoryIds != null && !categoryIds.isEmpty(), Product::getCategoryId, categoryIds));
+
+        String lowerKw = keyword.toLowerCase();
+        int kwLen = keyword.length();
+        int maxDist = kwLen <= 4 ? 1 : 2; // ≤4 字符收紧，避免短子串碰巧命中
+        List<Product> fuzzy = new ArrayList<>();
+        for (Product p : allActive) {
+            if (existingIds.contains(p.getId())) continue;
+            if (p.getName() == null) continue;
+            String name = p.getName().toLowerCase();
+            if (minSubstringDistance(lowerKw, name, maxDist) <= maxDist) {
+                fuzzy.add(p);
+            }
+        }
+        return fuzzy;
+    }
+
+    /**
+     * Merge exact matches + fuzzy matches, preserving relevance order.
+     * Substring-LIKE matches rank first, then fuzzy matches; within each
+     * group, sorted by sales descending.
+     */
+    private List<Product> mergeAndSort(List<Product> exact, List<Product> fuzzy, String likeKeyword) {
+        List<Product> result = new ArrayList<>(exact);
+        result.addAll(fuzzy);
+        String likeKw = likeKeyword.toLowerCase();
+        result.sort((a, b) -> {
+            boolean aLike = a.getName() != null && a.getName().toLowerCase().contains(likeKw);
+            boolean bLike = b.getName() != null && b.getName().toLowerCase().contains(likeKw);
+            if (aLike && !bLike) return -1;
+            if (!aLike && bLike) return 1;
+            return Integer.compare(b.getSales() != null ? b.getSales() : 0,
+                                   a.getSales() != null ? a.getSales() : 0);
+        });
+        return result;
     }
 
     /**
@@ -167,13 +254,10 @@ public class ProductServiceImpl implements ProductService {
 
         applySort(wrapper, query.getSort());
 
-        Page<Product> page = new Page<>(query.getPage(), query.getPageSize());
-        Page<Product> result = productMapper.selectPage(page, wrapper);
-
-        fillCategoryNames(result.getRecords());
-        fillSkus(result.getRecords());
-        return PageResult.of(result.getRecords(), result.getTotal(),
-                query.getPage(), query.getPageSize());
+        int page = query.getPage() != null ? query.getPage() : 1;
+        int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
+        Page<Product> result = productMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        return finishSearch(result.getRecords(), result.getTotal(), page, pageSize);
     }
 
     /**

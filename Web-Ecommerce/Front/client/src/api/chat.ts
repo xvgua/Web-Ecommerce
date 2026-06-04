@@ -19,8 +19,8 @@ export function getMessages(conversationId: number): Promise<ApiResponse<ChatMes
   return request.get(`/conversations/${conversationId}/messages`)
 }
 
-export function sendMessage(conversationId: number, content: string): Promise<ApiResponse<ChatMessage>> {
-  return request.post(`/conversations/${conversationId}/messages`, { content })
+export function sendMessage(conversationId: number, content: string, contentType?: number, extraData?: string): Promise<ApiResponse<ChatMessage>> {
+  return request.post(`/conversations/${conversationId}/messages`, { content, contentType: contentType || 1, extraData })
 }
 
 export function closeConversation(conversationId: number): Promise<ApiResponse<null>> {

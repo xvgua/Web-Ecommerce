@@ -109,3 +109,13 @@ export interface ReviewRatingStats {
   reviewCount: number
   distribution: Record<number, number>
 }
+
+export interface HotKeyword {
+  id: number
+  keyword: string
+  searchCount: number
+  isManual: number
+  isPinned: number
+  sortOrder: number
+  status: number
+}

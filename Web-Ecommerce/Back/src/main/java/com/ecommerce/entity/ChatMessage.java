@@ -16,6 +16,7 @@ public class ChatMessage {
     private String senderAvatar;
     private String content;
     private Integer contentType;
+    private String extraData;
     private Integer isRead;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

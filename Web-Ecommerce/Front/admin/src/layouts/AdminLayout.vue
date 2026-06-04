@@ -49,6 +49,16 @@
           <span>优惠券管理</span>
         </el-menu-item>
 
+        <el-menu-item index="/seckill">
+          <el-icon><AlarmClock /></el-icon>
+          <span>秒杀活动</span>
+        </el-menu-item>
+
+        <el-menu-item index="/hot-keywords">
+          <el-icon><TrendCharts /></el-icon>
+          <span>热门搜索词</span>
+        </el-menu-item>
+
         <el-sub-menu index="cs-group">
           <template #title>
             <el-icon><ChatDotSquare /></el-icon>
@@ -108,7 +118,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   DataAnalysis, Goods, Document, User, Ticket, ChatDotSquare,
-  Setting, Bell, ArrowDown,
+  Setting, Bell, ArrowDown, TrendCharts, AlarmClock,
 } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 

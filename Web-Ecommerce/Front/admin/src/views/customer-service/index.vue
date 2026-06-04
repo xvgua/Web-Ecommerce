@@ -70,7 +70,11 @@
               :key="msg.id"
               :class="['cs-msg', msg.senderType === 1 ? 'cs-msg--user' : 'cs-msg--cs']"
             >
-              <div class="cs-msg__bubble">{{ msg.content }}</div>
+              <div v-if="msg.contentType === 2 && msg.extraData" class="cs-msg__product-card">
+                <div class="cs-msg__pc-name">{{ getCardName(msg.extraData) }}</div>
+                <div class="cs-msg__pc-price">&yen;{{ getCardPrice(msg.extraData) }}</div>
+              </div>
+              <div v-else class="cs-msg__bubble">{{ msg.content }}</div>
               <div class="cs-msg__time">{{ formatTime(msg.createTime) }}</div>
             </div>
             <el-empty v-if="!msgLoading && !messages.length" description="暂无消息" :image-size="40" />
@@ -146,8 +150,20 @@ function formatTime(dateStr: string) {
   return `${h}:${m}`
 }
 
-async function loadConversations() {
-  convLoading.value = true
+function parseCardData(extraData: string) {
+  try { return JSON.parse(extraData) } catch { return {} }
+}
+
+function getCardName(extraData: string) {
+  return parseCardData(extraData).productName || ''
+}
+
+function getCardPrice(extraData: string) {
+  return parseCardData(extraData).price || 0
+}
+
+async function loadConversations(silent = false) {
+  if (!silent) convLoading.value = true
   try {
     const res = await getConversations({
       page: convPage.value,
@@ -157,7 +173,7 @@ async function loadConversations() {
     conversations.value = res.data.records
     convTotal.value = res.data.total
   } finally {
-    convLoading.value = false
+    if (!silent) convLoading.value = false
   }
 }
 
@@ -170,7 +186,7 @@ async function selectConversation(conv: Conversation) {
     const res = await getConversationMessages(conv.id)
     messages.value = res.data
     // Reload conversations to update unread counts
-    loadConversations()
+    loadConversations(true)
     startPolling()
   } finally {
     msgLoading.value = false
@@ -222,7 +238,7 @@ function startPolling() {
       const res = await getConversationMessages(activeConvId.value)
       messages.value = res.data
     } catch { /* ignore */ }
-    loadConversations()
+    loadConversations(true)
   }, 3000)
 }
 
@@ -373,5 +389,28 @@ onUnmounted(() => stopPolling())
   }
 
   &__time { font-size: 11px; color: #bbb; margin-top: 4px; padding: 0 4px; }
+
+  &__product-card {
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    min-width: 160px;
+  }
+
+  &__pc-name {
+    font-size: 13px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+  }
+
+  &__pc-price {
+    font-size: 14px;
+    color: #e6423a;
+    font-weight: 600;
+  }
 }
 </style>

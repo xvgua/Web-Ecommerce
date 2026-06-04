@@ -90,14 +90,14 @@
               </el-form-item>
               <el-form-item>
                 <el-button type="primary" :loading="saving" @click="handleSave">保存修改</el-button>
-                <el-button @click="showPwdDialog = true">修改密码</el-button>
+                <el-button @click="switchToPassword">修改密码</el-button>
               </el-form-item>
             </el-form>
           </el-card>
         </template>
 
         <!-- 收货地址 -->
-        <template v-else>
+        <template v-else-if="currentSection === 'address'">
           <div class="address-header">
             <span style="font-weight:600;font-size:16px">收货地址</span>
             <el-button type="primary" @click="handleAdd">新增地址</el-button>
@@ -124,27 +124,32 @@
             <el-empty v-if="!addrLoading && !addresses.length" description="暂无收货地址" />
           </div>
         </template>
+
+        <!-- 修改密码 -->
+        <template v-else>
+          <el-card shadow="never">
+            <template #header>
+              <span style="font-weight:600;font-size:16px">修改密码</span>
+            </template>
+            <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="100px" class="profile-form" @submit.prevent="handleChangePassword">
+              <el-form-item label="旧密码" prop="oldPassword">
+                <el-input v-model="pwdForm.oldPassword" type="password" placeholder="请输入旧密码" show-password />
+              </el-form-item>
+              <el-form-item label="新密码" prop="newPassword">
+                <el-input v-model="pwdForm.newPassword" type="password" placeholder="请输入新密码（6-20位）" show-password />
+              </el-form-item>
+              <el-form-item label="确认密码" prop="confirmPassword">
+                <el-input v-model="pwdForm.confirmPassword" type="password" placeholder="请再次输入新密码" show-password />
+              </el-form-item>
+              <el-form-item>
+                <el-button @click="backToProfile">返回</el-button>
+                <el-button type="primary" :loading="changingPwd" native-type="submit">确认修改</el-button>
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </template>
       </div>
     </div>
-
-    <!-- 修改密码弹窗 -->
-    <el-dialog v-model="showPwdDialog" title="修改密码" width="420px" :close-on-click-modal="false">
-      <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="80px" @submit.prevent="handleChangePassword">
-        <el-form-item label="旧密码" prop="oldPassword">
-          <el-input v-model="pwdForm.oldPassword" type="password" placeholder="请输入旧密码" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="pwdForm.newPassword" type="password" placeholder="请输入新密码（6-20位）" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="pwdForm.confirmPassword" type="password" placeholder="请再次输入新密码" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showPwdDialog = false">取消</el-button>
-        <el-button type="primary" :loading="changingPwd" @click="handleChangePassword">确认修改</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 地址编辑弹窗 -->
     <el-dialog v-model="addrDialogVisible" :title="isEdit ? '编辑地址' : '新增地址'" width="500px">
@@ -183,7 +188,7 @@
 import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { Picture, ArrowLeft } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { updateUserInfo, changePassword, getAddressList, createAddress, updateAddress, deleteAddress } from '@/api/user'
 import { TOKEN_KEY } from '@shared/constants'
@@ -194,11 +199,23 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 // ---- Section switching ----
-const currentSection = ref<'profile' | 'address'>('profile')
+const currentSection = ref<'profile' | 'address' | 'password'>('profile')
 
 function switchToAddress() {
   currentSection.value = 'address'
   loadAddresses()
+}
+
+function switchToPassword() {
+  currentSection.value = 'password'
+  pwdForm.oldPassword = ''
+  pwdForm.newPassword = ''
+  pwdForm.confirmPassword = ''
+  pwdFormRef.value?.resetFields()
+}
+
+function backToProfile() {
+  currentSection.value = 'profile'
 }
 
 const userStore = useUserStore()
@@ -281,7 +298,6 @@ async function handleSave() {
 }
 
 // ---- Change Password ----
-const showPwdDialog = ref(false)
 const changingPwd = ref(false)
 const pwdFormRef = ref<FormInstance>()
 
@@ -317,12 +333,8 @@ async function handleChangePassword() {
       oldPassword: pwdForm.oldPassword,
       newPassword: pwdForm.newPassword,
     })
-    ElMessage.success('密码修改成功，请重新登录')
-    showPwdDialog.value = false
-    pwdForm.oldPassword = ''
-    pwdForm.newPassword = ''
-    pwdForm.confirmPassword = ''
-    userStore.logout()
+    ElMessage.success('密码修改成功')
+    backToProfile()
   } finally {
     changingPwd.value = false
   }
@@ -549,6 +561,12 @@ onMounted(async () => {
 .profile-main {
   flex: 1;
   min-width: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .profile-form {

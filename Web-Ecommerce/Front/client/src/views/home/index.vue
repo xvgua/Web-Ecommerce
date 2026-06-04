@@ -211,7 +211,7 @@ const rightCards = [
     title: '限时秒杀',
     desc: '每日10点开抢',
     bg: 'linear-gradient(160deg, #5b7cfa 0%, #7c5cf0 100%)',
-    link: '/products?promo=flash',
+    link: '/seckill',
   },
   {
     icon: '🎁',

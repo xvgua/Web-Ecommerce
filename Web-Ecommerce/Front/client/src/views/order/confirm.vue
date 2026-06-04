@@ -55,7 +55,7 @@
 
     <div class="confirm-section">
       <h2>商品清单</h2>
-      <el-table :data="isDirectBuy ? [directBuyItem] : cartStore.checkedItems">
+      <el-table :data="isDirectBuy || isSeckillBuy ? [directBuyItem] : cartStore.checkedItems">
         <el-table-column label="商品" min-width="300">
           <template #default="{ row }">
             <div class="order-product">
@@ -69,19 +69,31 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="单价" width="120">
-          <template #default="{ row }">{{ formatPrice(row.price) }}</template>
+        <el-table-column label="单价" width="160">
+          <template #default="{ row }">
+            <div v-if="isSeckillBuy && row.originalPrice > row.price">
+              <span class="original-price">{{ formatPrice(row.originalPrice) }}</span>
+              <span class="seckill-price">{{ formatPrice(row.price) }}</span>
+            </div>
+            <span v-else>{{ formatPrice(row.price) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="数量" width="80">
           <template #default="{ row }">{{ row.quantity }}</template>
         </el-table-column>
         <el-table-column label="小计" width="120">
-          <template #default="{ row }">{{ formatPrice(row.price * row.quantity) }}</template>
+          <template #default="{ row }">
+            <div v-if="isSeckillBuy && row.originalPrice > row.price">
+              <span class="original-price">{{ formatPrice(row.originalPrice * row.quantity) }}</span>
+              <span class="seckill-price">{{ formatPrice(row.price * row.quantity) }}</span>
+            </div>
+            <span v-else>{{ formatPrice(row.price * row.quantity) }}</span>
+          </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="confirm-section" v-if="availableCoupons.length > 0 || !isDirectBuy">
+    <div class="confirm-section" v-if="!isSeckillBuy && (availableCoupons.length > 0 || !isDirectBuy)">
       <h2>优惠券</h2>
       <div class="coupon-select" v-if="availableCoupons.length">
         <div
@@ -146,6 +158,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { getAddressList, createAddress } from '@/api/user'
 import { createOrder } from '@/api/order'
+import { createSeckillOrder, getSeckillProductById } from '@/api/seckill'
 import { getProductById } from '@/api/product'
 import { getAvailableForOrder } from '@/api/coupon'
 import { formatPrice } from '@/utils/format'
@@ -159,6 +172,8 @@ const route = useRoute()
 const cartStore = useCartStore()
 
 const isDirectBuy = computed(() => !!route.query.productId)
+const isSeckillBuy = computed(() => !!route.query.seckillProductId)
+const seckillProductId = computed(() => Number(route.query.seckillProductId) || 0)
 
 const directBuyItem = ref<any>({
   productId: 0,
@@ -186,7 +201,7 @@ const hasNonStackableSelected = computed(() => {
 })
 
 const orderTotal = computed(() => {
-  if (isDirectBuy.value) {
+  if (isSeckillBuy.value || isDirectBuy.value) {
     return directBuyItem.value.price * directBuyItem.value.quantity
   }
   return cartStore.checkedTotal
@@ -309,6 +324,26 @@ async function loadDirectBuyProduct() {
   } catch { /* ignore */ }
 }
 
+async function loadSeckillProduct() {
+  const id = seckillProductId.value
+  try {
+    const res = await getSeckillProductById(id)
+    const sp = res.data
+    directBuyItem.value = {
+      productId: sp.productId,
+      productImage: sp.productImage || '',
+      productName: sp.productName || '',
+      name: sp.productName || '',
+      specDesc: sp.specDesc || '',
+      specName: sp.specDesc || '',
+      price: sp.seckillPrice,
+      originalPrice: sp.originalPrice || 0,
+      quantity: 1,
+      id: sp.productId,
+    }
+  } catch { /* ignore */ }
+}
+
 async function loadAvailableCoupons() {
   try {
     const res = await getAvailableForOrder(orderTotal.value)
@@ -342,21 +377,30 @@ async function handleSubmit() {
   }
   submitting.value = true
   try {
-    const orderData: any = {
-      addressId: selectedAddressId.value,
-      remark: '',
-      userCouponIds: selectedCouponIds.value.length > 0 ? selectedCouponIds.value : undefined,
-    }
-    if (isDirectBuy.value) {
-      orderData.productId = directBuyItem.value.productId
-      orderData.skuId = Number(route.query.skuId) || 0
-      orderData.quantity = directBuyItem.value.quantity
+    let res
+    if (isSeckillBuy.value) {
+      res = await createSeckillOrder({
+        seckillProductId: seckillProductId.value,
+        addressId: selectedAddressId.value,
+        userCouponIds: selectedCouponIds.value.length > 0 ? selectedCouponIds.value : undefined,
+      })
     } else {
-      orderData.cartItemIds = cartStore.checkedItems.map((item) => item.id)
+      const orderData: any = {
+        addressId: selectedAddressId.value,
+        remark: '',
+        userCouponIds: selectedCouponIds.value.length > 0 ? selectedCouponIds.value : undefined,
+      }
+      if (isDirectBuy.value) {
+        orderData.productId = directBuyItem.value.productId
+        orderData.skuId = Number(route.query.skuId) || 0
+        orderData.quantity = directBuyItem.value.quantity
+      } else {
+        orderData.cartItemIds = cartStore.checkedItems.map((item) => item.id)
+      }
+      res = await createOrder(orderData)
     }
-    const res = await createOrder(orderData)
     ElMessage.success('订单已提交')
-    if (!isDirectBuy.value) {
+    if (!isDirectBuy.value && !isSeckillBuy.value) {
       cartStore.fetchCart()
     }
     router.push(`/orders/${res.data.id}/pay`)
@@ -366,7 +410,9 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
-  if (isDirectBuy.value) {
+  if (isSeckillBuy.value) {
+    await loadSeckillProduct()
+  } else if (isDirectBuy.value) {
     await loadDirectBuyProduct()
   }
   loadAddresses()
@@ -536,6 +582,18 @@ onMounted(async () => {
       font-weight: 700;
       color: #e6423a;
     }
+  }
+
+  .original-price {
+    color: #999;
+    font-size: 12px;
+    text-decoration: line-through;
+    display: block;
+  }
+
+  .seckill-price {
+    color: #ff4d4f;
+    font-weight: 600;
   }
 
   .confirm-footer {

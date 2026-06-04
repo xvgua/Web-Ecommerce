@@ -92,6 +92,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '快捷回复管理' },
       },
       {
+        path: 'hot-keywords',
+        name: 'HotKeywordManage',
+        component: () => import('@/views/hot-keyword/index.vue'),
+        meta: { title: '热门搜索词' },
+      },
+      {
         path: 'system/banners',
         name: 'BannerManage',
         component: () => import('@/views/system/banner.vue'),
@@ -102,6 +108,24 @@ const routes: RouteRecordRaw[] = [
         name: 'AnnouncementManage',
         component: () => import('@/views/system/announcement.vue'),
         meta: { title: '公告管理' },
+      },
+      {
+        path: 'seckill',
+        name: 'SeckillManage',
+        component: () => import('@/views/seckill/index.vue'),
+        meta: { title: '秒杀活动管理' },
+      },
+      {
+        path: 'seckill/create',
+        name: 'SeckillCreate',
+        component: () => import('@/views/seckill/form.vue'),
+        meta: { title: '新增秒杀活动' },
+      },
+      {
+        path: 'seckill/:id/edit',
+        name: 'SeckillEdit',
+        component: () => import('@/views/seckill/form.vue'),
+        meta: { title: '编辑秒杀活动' },
       },
     ],
   },

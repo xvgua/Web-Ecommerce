@@ -12,7 +12,6 @@ public interface ProductMapper extends BaseMapper<Product> {
 
     List<Product> searchByKeyword(@Param("escapedKeyword") String escapedKeyword,
                                   @Param("likeKeyword") String likeKeyword,
-                                  @Param("fuzzyKeyword") String fuzzyKeyword,
                                   @Param("status") Integer status,
                                   @Param("categoryIds") List<Long> categoryIds,
                                   @Param("offset") int offset,
@@ -20,7 +19,6 @@ public interface ProductMapper extends BaseMapper<Product> {
 
     long countByKeyword(@Param("escapedKeyword") String escapedKeyword,
                         @Param("likeKeyword") String likeKeyword,
-                        @Param("fuzzyKeyword") String fuzzyKeyword,
                         @Param("status") Integer status,
                         @Param("categoryIds") List<Long> categoryIds);
 }

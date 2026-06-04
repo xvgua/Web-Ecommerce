@@ -1,6 +1,7 @@
 package com.ecommerce.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.ChangePasswordRequest;
@@ -169,8 +170,14 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("旧密码错误");
         }
 
-        user.setPassword(encoder.encode(req.getNewPassword()));
-        userMapper.updateById(user);
+        String encoded = encoder.encode(req.getNewPassword());
+        int rows = userMapper.update(null,
+                new LambdaUpdateWrapper<User>()
+                        .eq(User::getId, userId)
+                        .set(User::getPassword, encoded));
+        if (rows == 0) {
+            throw new BusinessException("密码修改失败");
+        }
 
         log.info("Password changed for userId={}", userId);
         return Result.success();

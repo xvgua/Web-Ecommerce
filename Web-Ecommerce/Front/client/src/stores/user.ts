@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '@shared/types/user'
-import { TOKEN_KEY, USER_KEY } from '@shared/constants'
+import { TOKEN_KEY } from '@shared/constants'
 import { login as loginApi, getUserInfo } from '@/api/user'
 
 export const useUserStore = defineStore('user', () => {
@@ -17,7 +17,6 @@ export const useUserStore = defineStore('user', () => {
 
   function setUser(val: User) {
     user.value = val
-    localStorage.setItem(USER_KEY, JSON.stringify(val))
   }
 
   async function login(credentials: { username: string; password: string }) {
@@ -35,7 +34,6 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     user.value = null
     localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
   }
 
   return { token, user, isLoggedIn, login, fetchUser, logout, setToken, setUser }

@@ -91,6 +91,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/coupon/center.vue'),
         meta: { title: '领券中心' },
       },
+      {
+        path: 'seckill',
+        name: 'Seckill',
+        component: () => import('@/views/seckill/index.vue'),
+        meta: { title: '限时秒杀' },
+      },
     ],
   },
   {

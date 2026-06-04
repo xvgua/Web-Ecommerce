@@ -291,6 +291,21 @@ CREATE TABLE IF NOT EXISTS `user_coupon` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
+-- 16. 热门关键词表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `hot_keyword` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  keyword     VARCHAR(100) NOT NULL COMMENT '关键词',
+  search_count INT         DEFAULT 0 COMMENT '搜索次数',
+  is_manual   TINYINT     DEFAULT 0 COMMENT '是否人工添加: 0=自动 1=人工',
+  is_pinned   TINYINT     DEFAULT 0 COMMENT '是否置顶: 0=否 1=是',
+  sort_order  INT         DEFAULT 0 COMMENT '排序',
+  status      TINYINT     DEFAULT 1 COMMENT '状态: 1=启用 0=停用',
+  create_time DATETIME    DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='热门关键词表';
+
+-- ============================================
 -- 种子数据
 -- ============================================
 
@@ -553,3 +568,14 @@ BEGIN
 END //
 
 DELIMITER ;
+
+-- 热门关键词种子数据
+INSERT INTO `hot_keyword` (keyword, search_count, is_manual, is_pinned, sort_order, status) VALUES
+('笔记本电脑', 156, 1, 1, 1, 1),
+('手机', 132, 1, 1, 2, 1),
+('耳机', 98, 0, 0, 3, 1),
+('平板电脑', 87, 0, 0, 4, 1),
+('机械键盘', 65, 0, 0, 5, 1),
+('显示器', 54, 0, 0, 6, 1),
+('运动鞋', 48, 0, 0, 7, 1),
+('固态硬盘', 42, 1, 0, 8, 1);

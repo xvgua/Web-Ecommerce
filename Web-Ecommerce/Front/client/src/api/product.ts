@@ -1,6 +1,6 @@
 import request from './request'
 import type { ApiResponse, PageResponse } from '@shared/types'
-import type { Product, ProductQuery, Category, ProductForm, Review, ReviewComment } from '@shared/types/product'
+import type { Product, ProductQuery, Category, ProductForm, Review, ReviewComment, HotKeyword } from '@shared/types/product'
 
 export function getProductList(params: ProductQuery): Promise<ApiResponse<PageResponse<Product>>> {
   return request.get('/products', { params })
@@ -71,4 +71,8 @@ export function getReviewComments(reviewId: number): Promise<ApiResponse<ReviewC
 
 export function addReviewComment(reviewId: number, content: string): Promise<ApiResponse<ReviewComment>> {
   return request.post(`/reviews/${reviewId}/comments`, { content })
+}
+
+export function getHotKeywords(limit = 10): Promise<ApiResponse<HotKeyword[]>> {
+  return request.get('/hot-keywords', { params: { limit } })
 }

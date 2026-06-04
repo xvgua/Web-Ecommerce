@@ -23,9 +23,6 @@
           AND (
               MATCH(p.name) AGAINST(CONCAT('+', #{escapedKeyword}) IN BOOLEAN MODE)
               OR p.name LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
-              <if test="fuzzyKeyword != null">
-              OR levenshtein(LOWER(p.name), LOWER(#{fuzzyKeyword})) <![CDATA[ <= ]]> 2
-              </if>
           )
         ORDER BY
           MATCH(p.name) AGAINST(CONCAT('+', #{escapedKeyword}) IN BOOLEAN MODE) DESC,
@@ -47,9 +44,6 @@
           AND (
               MATCH(p.name) AGAINST(CONCAT('+', #{escapedKeyword}) IN BOOLEAN MODE)
               OR p.name LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
-              <if test="fuzzyKeyword != null">
-              OR levenshtein(LOWER(p.name), LOWER(#{fuzzyKeyword})) <![CDATA[ <= ]]> 2
-              </if>
           )
     </select>
 

@@ -12,7 +12,7 @@ public interface ConversationService {
     Conversation createConversation(Long userId, Integer sourceType, Long sourceId, String sourceName, String firstMessage);
     List<Conversation> getUserConversations(Long userId);
     List<ChatMessage> getMessages(Long conversationId, Long userId, boolean isAdmin);
-    ChatMessage sendMessage(Long conversationId, Long senderId, Integer senderType, String senderName, String senderAvatar, String content);
+    ChatMessage sendMessage(Long conversationId, Long senderId, Integer senderType, String senderName, String senderAvatar, String content, Integer contentType, String extraData);
     void closeConversation(Long conversationId, Long operatorId, boolean isAdmin);
 
     // Admin-facing

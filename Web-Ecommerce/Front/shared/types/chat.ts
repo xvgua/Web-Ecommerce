@@ -25,9 +25,18 @@ export interface ChatMessage {
   senderName: string
   senderAvatar: string
   content: string
-  contentType: number
+  contentType: number     // 1=文本 2=商品卡片
+  extraData?: string      // JSON for product card: { productId, productName, productImage, price, specDesc }
   isRead: number
   createTime: string
+}
+
+export interface ProductCardData {
+  productId: number
+  productName: string
+  productImage: string
+  price: number
+  specDesc?: string
 }
 
 export interface QuickReply {

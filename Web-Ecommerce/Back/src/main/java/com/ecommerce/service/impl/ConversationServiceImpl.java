@@ -13,6 +13,7 @@ import com.ecommerce.mapper.QuickReplyMapper;
 import com.ecommerce.service.ConversationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -115,7 +116,8 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional
     public ChatMessage sendMessage(Long conversationId, Long senderId, Integer senderType,
-                                    String senderName, String senderAvatar, String content) {
+                                    String senderName, String senderAvatar, String content,
+                                    Integer contentType, String extraData) {
         if (content == null || content.isBlank()) {
             throw new BusinessException("消息内容不能为空");
         }
@@ -135,11 +137,19 @@ public class ConversationServiceImpl implements ConversationService {
         msg.setSenderName(senderName != null ? senderName : "");
         msg.setSenderAvatar(senderAvatar != null ? senderAvatar : "");
         msg.setContent(content.trim());
-        msg.setContentType(1);
+        msg.setContentType(contentType != null ? contentType : 1);
+        msg.setExtraData(extraData);
         msg.setIsRead(0);
         chatMessageMapper.insert(msg);
 
-        conv.setLastMessage(content.trim().length() > 50 ? content.trim().substring(0, 50) + "..." : content.trim());
+        // For product card, show friendly last message
+        String lastMsg;
+        if (contentType != null && contentType == 2 && extraData != null) {
+            lastMsg = "[商品卡片] " + content.trim();
+        } else {
+            lastMsg = content.trim();
+        }
+        conv.setLastMessage(lastMsg.length() > 50 ? lastMsg.substring(0, 50) + "..." : lastMsg);
         conv.setLastActive(LocalDateTime.now());
         if (senderType == 1) {
             conv.setUnreadCount(conv.getUnreadCount() != null ? conv.getUnreadCount() + 1 : 1);
@@ -238,5 +248,23 @@ public class ConversationServiceImpl implements ConversationService {
         }
         reply.setStatus(status);
         quickReplyMapper.updateById(reply);
+    }
+
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void autoCloseIdleConversations() {
+        LocalDateTime threeHoursAgo = LocalDateTime.now().minusHours(3);
+        LambdaQueryWrapper<Conversation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Conversation::getStatus, 1)
+                .lt(Conversation::getLastActive, threeHoursAgo);
+        List<Conversation> idleList = conversationMapper.selectList(wrapper);
+        for (Conversation conv : idleList) {
+            conv.setStatus(2);
+            conv.setCloseTime(LocalDateTime.now());
+            conversationMapper.updateById(conv);
+        }
+        if (!idleList.isEmpty()) {
+            log.info("Auto-closed {} idle conversations", idleList.size());
+        }
     }
 }

@@ -219,6 +219,8 @@
     <el-empty v-if="!loading && !product" description="商品不存在">
       <el-button type="primary" @click="$router.push('/products')">浏览其他商品</el-button>
     </el-empty>
+
+    <ChatDialog />
   </div>
 </template>
 
@@ -231,12 +233,13 @@ import { getProductById, getProductReviews } from '@/api/product'
 import { checkFavorite, addFavorite, removeFavorite } from '@/api/favorite'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
+import { useChatStore } from '@/stores/chat'
 import { formatPrice } from '@/utils/format'
 import type { Product, Review, ReviewRatingStats } from '@shared/types/product'
 import ProductImage from '@/components/common/ProductImage.vue'
-import { useChat } from '@/composables/useChat'
+import ChatDialog from '@/components/business/ChatDialog.vue'
 
-const { openChat } = useChat()
+const chatStore = useChatStore()
 const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
@@ -408,10 +411,14 @@ function openProductChat() {
     router.push('/login')
     return
   }
-  openChat({
-    sourceType: 1,
-    sourceId: product.value?.id,
-    sourceName: product.value?.name || '',
+  if (!product.value) return
+  const selected = selectedSku.value
+  chatStore.openChat({
+    productId: product.value.id,
+    productName: product.value.name,
+    productImage: product.value.mainImage || '',
+    price: displayPrice.value,
+    specDesc: selected ? `${selected.specName}:${selected.specValue}` : undefined,
   })
 }
 

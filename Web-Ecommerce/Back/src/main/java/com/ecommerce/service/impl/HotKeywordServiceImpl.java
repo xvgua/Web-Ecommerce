@@ -70,12 +70,17 @@ public class HotKeywordServiceImpl implements HotKeywordService {
         return kw;
     }
 
-    @Override
-    public void adminUpdate(Long id, HotKeywordForm form) {
+    private HotKeyword getKeyword(Long id) {
         HotKeyword kw = hotKeywordMapper.selectById(id);
         if (kw == null) {
             throw new BusinessException(404, "关键词不存在");
         }
+        return kw;
+    }
+
+    @Override
+    public void adminUpdate(Long id, HotKeywordForm form) {
+        HotKeyword kw = getKeyword(id);
         kw.setKeyword(form.getKeyword());
         if (form.getIsPinned() != null) {
             kw.setIsPinned(form.getIsPinned());
@@ -93,19 +98,15 @@ public class HotKeywordServiceImpl implements HotKeywordService {
 
     @Override
     public void adminTogglePin(Long id) {
-        HotKeyword kw = hotKeywordMapper.selectById(id);
-        if (kw != null) {
-            kw.setIsPinned(kw.getIsPinned() == 1 ? 0 : 1);
-            hotKeywordMapper.updateById(kw);
-        }
+        HotKeyword kw = getKeyword(id);
+        kw.setIsPinned(kw.getIsPinned() == 1 ? 0 : 1);
+        hotKeywordMapper.updateById(kw);
     }
 
     @Override
     public void adminToggleStatus(Long id) {
-        HotKeyword kw = hotKeywordMapper.selectById(id);
-        if (kw != null) {
-            kw.setStatus(kw.getStatus() == 1 ? 0 : 1);
-            hotKeywordMapper.updateById(kw);
-        }
+        HotKeyword kw = getKeyword(id);
+        kw.setStatus(kw.getStatus() == 1 ? 0 : 1);
+        hotKeywordMapper.updateById(kw);
     }
 }

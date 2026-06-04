@@ -35,7 +35,7 @@ public class AdminConversationController {
     @PostMapping("/conversations/{id}/messages")
     public Result<ChatMessage> reply(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String content = body.get("content");
-        ChatMessage msg = conversationService.sendMessage(id, 0L, 2, "客服小二", "", content);
+        ChatMessage msg = conversationService.sendMessage(id, 0L, 2, "客服小二", "", content, 1, null);
         return Result.success(msg);
     }
 

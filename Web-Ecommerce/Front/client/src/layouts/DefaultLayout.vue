@@ -44,6 +44,14 @@
                 <div v-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
                   清除全部历史
                 </div>
+                <div v-else-if="item.type === 'hot-separator'" class="hot-separator">
+                  <span class="hot-separator__text">热门搜索</span>
+                </div>
+                <div v-else-if="item.type === 'hot'" class="history-item hot-item" @click="handleSelect(item)">
+                  <span class="hot-item__fire">🔥</span>
+                  <span class="history-item__text">{{ item.keyword }}</span>
+                  <span class="hot-item__count">{{ item.count }}</span>
+                </div>
                 <div v-else class="history-item">
                   <el-icon class="history-item__clock"><Clock /></el-icon>
                   <span class="history-item__text">{{ item.keyword }}</span>
@@ -115,7 +123,7 @@
           <h4>售后服务</h4>
           <a href="#">退换货政策</a>
           <a href="#">退款说明</a>
-          <a href="#" @click.prevent="openChat">联系客服</a>
+          <a href="#">帮助中心</a>
         </div>
         <div class="footer__col">
           <h4>关于我们</h4>
@@ -129,13 +137,11 @@
         </div>
       </div>
     </footer>
-    <ChatFloatButton />
-    <ChatPanel />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Search, ShoppingCart, Clock, Close,
@@ -145,20 +151,15 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { useSearchHistory } from '@/composables/useSearchHistory'
-import { getCategories } from '@/api/product'
+import { getCategories, getHotKeywords } from '@/api/product'
 import type { SearchHistoryItem } from '@/composables/useSearchHistory'
-import type { Category } from '@shared/types/product'
-import ChatFloatButton from '@/components/business/ChatFloatButton.vue'
-import ChatPanel from '@/components/business/ChatPanel.vue'
-import { useChat } from '@/composables/useChat'
-
-const { openChat } = useChat()
-
+import type { Category, HotKeyword } from '@shared/types/product'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
+const hotKeywords = ref<HotKeyword[]>([])
 const { getAll: getHistory, add: addHistory, remove: removeHistory, clear: clearHistory } = useSearchHistory()
 
 function findCategoryName(tree: Category[], id: number): string | null {
@@ -179,11 +180,18 @@ function fetchSuggestions(queryString: string, callback: (data: any[]) => void) 
     return
   }
   const history = getHistory()
-  callback([...history, { type: 'clear' }])
+  const items: any[] = [...history]
+  if (hotKeywords.value.length > 0) {
+    items.push({ type: 'hot-separator' })
+    hotKeywords.value.forEach(k => items.push({ type: 'hot', keyword: k.keyword, count: k.searchCount }))
+  }
+  items.push({ type: 'clear' })
+  callback(items)
 }
 
 function handleSelect(item: any) {
-  if (item.type === 'clear') return
+  if (item.type === 'clear' || item.type === 'hot-separator') return
+  keyword.value = item.keyword
   router.push({ path: '/products', query: { keyword: item.keyword } })
 }
 
@@ -217,6 +225,15 @@ watch(() => route.query.categoryId, async (catId) => {
     if (name) keyword.value = name
   } catch { /* ignore */ }
 }, { immediate: false })
+
+onMounted(async () => {
+  const tasks: Promise<unknown>[] = []
+  if (userStore.isLoggedIn) {
+    tasks.push(userStore.fetchUser())
+  }
+  tasks.push(getHotKeywords(10).then(res => hotKeywords.value = res.data))
+  await Promise.allSettled(tasks)
+})
 
 function handleLogout() {
   userStore.logout()
@@ -611,6 +628,32 @@ function handleLogout() {
 
     &:hover {
       color: #f56c6c;
+    }
+  }
+
+  .hot-separator {
+    padding: 8px 16px 4px;
+    font-size: 12px;
+    color: #c0c4cc;
+    pointer-events: none;
+
+    &__text {
+      letter-spacing: 1px;
+    }
+  }
+
+  .hot-item {
+    cursor: pointer;
+
+    &__fire {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    &__count {
+      font-size: 12px;
+      color: #c0c4cc;
+      flex-shrink: 0;
     }
   }
 }
