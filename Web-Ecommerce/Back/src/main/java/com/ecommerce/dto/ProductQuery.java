@@ -13,4 +13,5 @@ public class ProductQuery {
     private Double maxPrice;
     private Integer status;
     private Long userId;
+    private String searchMode;
 }

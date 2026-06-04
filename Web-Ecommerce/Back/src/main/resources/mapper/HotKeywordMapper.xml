@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ecommerce.mapper.HotKeywordMapper">
+
+    <select id="selectTopKeywords" resultType="com.ecommerce.entity.HotKeyword">
+        SELECT keyword, COUNT(*) AS search_count
+        FROM search_log
+        WHERE create_time >= DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        GROUP BY keyword
+        ORDER BY search_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="disableOldComputed">
+        UPDATE hot_keyword
+        SET status = 0, update_time = NOW()
+        WHERE is_manual = 0 AND status = 1
+    </update>
+
+    <insert id="upsertComputed">
+        INSERT INTO hot_keyword (keyword, search_count, is_manual, is_pinned, status, create_time, update_time)
+        VALUES (#{keyword}, #{searchCount}, 0, 0, 1, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            search_count = VALUES(search_count),
+            status = 1,
+            update_time = NOW()
+    </insert>
+
+</mapper>

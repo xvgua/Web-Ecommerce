@@ -12,6 +12,8 @@ import com.ecommerce.mapper.CategoryMapper;
 import com.ecommerce.mapper.ProductMapper;
 import com.ecommerce.mapper.ProductSkuMapper;
 import com.ecommerce.service.ProductService;
+import com.ecommerce.service.SearchLogService;
+import com.ecommerce.security.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,8 @@ public class ProductServiceImpl implements ProductService {
     private ProductSkuMapper skuMapper;
     @Autowired
     private CategoryMapper categoryMapper;
+    @Autowired
+    private SearchLogService searchLogService;
 
     /**
      * Collect the given category ID plus all its descendant IDs.
@@ -74,6 +78,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResult<Product> getProductPage(ProductQuery query) {
         if (StringUtils.hasText(query.getKeyword())) {
+            if ("exact".equals(query.getSearchMode())) {
+                return exactSearch(query);
+            }
             return keywordSearch(query);
         }
         return filterSearch(query);
@@ -86,6 +93,7 @@ public class ProductServiceImpl implements ProductService {
      */
     private PageResult<Product> keywordSearch(ProductQuery query) {
         String keyword = query.getKeyword().trim();
+        searchLogService.record(keyword, UserContext.getUserId());
         String escapedKeyword = escapeBooleanMode(keyword);
         String likeKeyword = escapeLikeWildcards(keyword);
         Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
@@ -107,6 +115,32 @@ public class ProductServiceImpl implements ProductService {
         fillCategoryNames(records);
         fillSkus(records);
         return PageResult.of(records, total, page, pageSize);
+    }
+
+    /**
+     * Exact match search: product name equals keyword exactly.
+     */
+    private PageResult<Product> exactSearch(ProductQuery query) {
+        String keyword = query.getKeyword().trim();
+        searchLogService.record(keyword, UserContext.getUserId());
+        Integer status = query.getStatus() != null ? query.getStatus() : ProductStatus.ON_SALE;
+
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Product::getName, keyword)
+                .eq(Product::getStatus, status);
+        if (query.getCategoryId() != null && query.getCategoryId() > 0) {
+            Set<Long> categoryIds = collectDescendantCategoryIds(query.getCategoryId());
+            wrapper.in(Product::getCategoryId, categoryIds);
+        }
+
+        int page = query.getPage() != null ? query.getPage() : 1;
+        int pageSize = query.getPageSize() != null ? query.getPageSize() : 20;
+
+        Page<Product> result = productMapper.selectPage(new Page<>(page, pageSize), wrapper);
+
+        fillCategoryNames(result.getRecords());
+        fillSkus(result.getRecords());
+        return PageResult.of(result.getRecords(), result.getTotal(), page, pageSize);
     }
 
     /**
