@@ -85,7 +85,7 @@
                 </el-radio-group>
               </el-form-item>
               <el-form-item label="邮箱">
-                <el-input v-model="form.email" disabled />
+                <el-input v-model="form.email" placeholder="请输入邮箱地址" />
               </el-form-item>
               <el-form-item label="手机号">
                 <el-input v-model="form.phone" placeholder="完善手机号以便接收物流通知" />
@@ -298,6 +298,7 @@ async function handleSave() {
       avatar: form.avatar,
       gender: form.gender,
       intro: form.intro,
+      email: form.email,
       username: canEditUsername.value ? form.username : undefined,
     })
     ElMessage.success('个人信息已更新')

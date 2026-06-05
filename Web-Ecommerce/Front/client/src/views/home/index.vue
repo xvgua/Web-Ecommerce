@@ -62,27 +62,37 @@
 
       <!-- Center: Carousel -->
       <div class="hero-carousel">
-        <el-carousel height="400px" :interval="5000" arrow="always">
-          <el-carousel-item v-for="(b, i) in banners" :key="i">
-            <div class="hero-carousel__slide" :style="{ background: b.bg }">
-              <div class="hero-carousel__text">
-                <span class="hero-carousel__tag">{{ b.tag }}</span>
-                <h2>{{ b.title }}</h2>
-                <p>{{ b.subtitle }}</p>
-                <el-button size="large" round class="hero-carousel__btn" @click="$router.push('/products')">
-                  立即选购
-                </el-button>
-              </div>
-              <div class="hero-carousel__art" aria-hidden="true">
-                <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="80" cy="80" r="75" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-                  <circle cx="80" cy="80" r="55" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-dasharray="8 4"/>
-                  <circle cx="80" cy="80" r="32" fill="rgba(255,255,255,0.12)"/>
-                </svg>
-              </div>
-            </div>
-          </el-carousel-item>
-        </el-carousel>
+        <template v-if="banners.length > 1">
+          <el-carousel height="400px" :interval="5000" arrow="always">
+            <el-carousel-item v-for="b in banners" :key="b.id">
+              <a v-if="b.linkUrl" :href="b.linkUrl" class="hero-carousel__link">
+                <el-image :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
+                  <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
+                </el-image>
+              </a>
+              <el-image v-else :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
+                <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
+              </el-image>
+            </el-carousel-item>
+          </el-carousel>
+        </template>
+        <template v-else-if="banners.length === 1">
+          <el-carousel height="400px" :interval="5000" arrow="never" indicator-position="none">
+            <el-carousel-item>
+              <a v-if="banners[0].linkUrl" :href="banners[0].linkUrl" class="hero-carousel__link">
+                <el-image :src="banners[0].imageUrl" :alt="banners[0].title" fit="cover" class="hero-carousel__img">
+                  <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
+                </el-image>
+              </a>
+              <el-image v-else :src="banners[0].imageUrl" :alt="banners[0].title" fit="cover" class="hero-carousel__img">
+                <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
+              </el-image>
+            </el-carousel-item>
+          </el-carousel>
+        </template>
+        <div v-else class="hero-carousel__placeholder hero-carousel__placeholder--full">
+          <span>暂无轮播</span>
+        </div>
       </div>
 
       <!-- Right: Promo Cards -->
@@ -146,29 +156,78 @@
       <el-empty v-if="!newLoading && !newProducts.length" description="暂无新品" />
     </section>
 
-    <!-- Bottom Promo -->
-    <section class="promo-bottom" @click="$router.push('/products')">
-      <div class="promo-bottom__inner">
-        <div class="promo-bottom__text">
-          <span class="promo-bottom__label">每日精选</span>
-          <h2>限时特惠 · 低至5折</h2>
-          <p>精选好物限时抢购，数量有限先到先得</p>
+    <!-- Seckill Section -->
+    <section class="home-seckill" v-if="currentSeckill">
+      <div class="home-seckill__header">
+        <div class="home-seckill__header-info">
+          <h2 class="home-seckill__title">
+            <el-icon :size="22"><Timer /></el-icon>
+            {{ currentSeckill.name }} 限时促销
+          </h2>
+          <div class="home-seckill__countdown">
+            <span class="countdown-label">{{ countdownLabel }}</span>
+            <span class="countdown-timer">{{ countdownText }}</span>
+          </div>
         </div>
-        <el-button size="large" round class="promo-bottom__btn">去抢购</el-button>
+        <el-button round class="home-seckill__more" @click="$router.push('/seckill')">
+          查看更多秒杀 <el-icon><ArrowRight /></el-icon>
+        </el-button>
+      </div>
+      <div class="home-seckill__products">
+        <div
+          v-for="sp in currentSeckill.products?.slice(0, 4)"
+          :key="sp.id"
+          class="seckill-product-card"
+        >
+          <div class="seckill-product-card__image" @click="goProduct(sp.productId)">
+            <ProductImage :src="sp.productImage" :seed="sp.productName + sp.productId" fit="cover" />
+            <div class="seckill-tag" v-if="sp.remainStock === 0">已售罄</div>
+          </div>
+          <div class="seckill-product-card__info">
+            <h4 class="product-name" @click="goProduct(sp.productId)">{{ sp.productName }}</h4>
+            <p class="spec-desc" v-if="sp.specDesc">{{ sp.specDesc }}</p>
+            <div class="price-row">
+              <span class="seckill-price">&yen;{{ sp.seckillPrice }}</span>
+              <span class="original-price" v-if="sp.originalPrice">&yen;{{ sp.originalPrice }}</span>
+            </div>
+            <div class="stock-bar">
+              <div class="stock-bar__inner" :style="{ width: stockPercent(sp) + '%' }"></div>
+            </div>
+            <div class="stock-info">
+              <span>已抢{{ sp.seckillStock - sp.remainStock }}件</span>
+              <span>剩余{{ sp.remainStock }}件</span>
+            </div>
+            <el-button
+              type="danger"
+              :disabled="sp.remainStock === 0 || hasPurchased(sp)"
+              @click="goSeckill(sp)"
+              class="seckill-btn"
+              :loading="seckillingId === sp.id"
+            >
+              {{ sp.remainStock === 0 ? '已售罄' : hasPurchased(sp) ? '已抢购' : '立即秒杀' }}
+            </el-button>
+          </div>
+        </div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   ArrowRight,
-  Goods, ShoppingBag, Star, Present, Grid,
+  Goods, ShoppingBag, Star, Present, Grid, Timer,
 } from '@element-plus/icons-vue'
 import { getHotProducts, getNewProducts, getCategories } from '@/api/product'
+import { getActiveActivities, getMyPurchasedSeckill } from '@/api/seckill'
+import { getBanners } from '@/api/banner'
 import type { Product, Category } from '@shared/types/product'
+import type { SeckillActivity, SeckillProduct } from '@shared/types/seckill'
+import type { Banner } from '@shared/types'
 import ProductCard from '@/components/business/ProductCard.vue'
+import ProductImage from '@/components/common/ProductImage.vue'
 import AnnouncementBar from '@/components/business/AnnouncementBar.vue'
 
 const catIcons = [Goods, ShoppingBag, Star, Present]
@@ -179,6 +238,53 @@ const newProducts = ref<Product[]>([])
 const hotLoading = ref(false)
 const newLoading = ref(false)
 const activeCatId = ref(0)
+const router = useRouter()
+const currentSeckill = ref<SeckillActivity | null>(null)
+const now = ref(Date.now())
+const purchasedIds = ref<Set<number>>(new Set())
+const seckillingId = ref<number | null>(null)
+let seckillTimer: number | null = null
+
+const hasPurchased = (sp: SeckillProduct) => purchasedIds.value.has(sp.id)
+
+const countdownLabel = computed(() => {
+  if (!currentSeckill.value) return ''
+  const start = new Date(currentSeckill.value.startTime).getTime()
+  const end = new Date(currentSeckill.value.endTime).getTime()
+  if (now.value < start) return '距离开始'
+  if (now.value < end) return '距离结束'
+  return '已结束'
+})
+
+const countdownText = computed(() => {
+  if (!currentSeckill.value) return '--:--:--'
+  const start = new Date(currentSeckill.value.startTime).getTime()
+  const end = new Date(currentSeckill.value.endTime).getTime()
+  let diff: number
+  if (now.value < start) diff = start - now.value
+  else if (now.value < end) diff = end - now.value
+  else return '00:00:00'
+
+  const h = Math.floor(diff / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+  const s = Math.floor((diff % 60000) / 1000)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+})
+
+function stockPercent(sp: SeckillProduct) {
+  if (sp.seckillStock === 0) return 0
+  return Math.round((sp.remainStock / sp.seckillStock) * 100)
+}
+
+function goProduct(productId: number) {
+  router.push(`/products/${productId}`)
+}
+
+function goSeckill(sp: SeckillProduct) {
+  seckillingId.value = sp.id
+  router.push(`/order/confirm?seckillProductId=${sp.id}`)
+  seckillingId.value = null
+}
 
 const topCategories = computed(() =>
   categories.value.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
@@ -188,26 +294,7 @@ const activePanelCat = computed(() =>
   topCategories.value.find(c => c.id === activeCatId.value) || null
 )
 
-const banners = [
-  {
-    tag: '新品首发',
-    title: '春季上新',
-    subtitle: '全场低至5折，限时特惠中',
-    bg: 'linear-gradient(135deg, #5b7cfa 0%, #7c5cf0 100%)',
-  },
-  {
-    tag: '品质生活',
-    title: '精选好物',
-    subtitle: '用心甄选 品质保障',
-    bg: 'linear-gradient(135deg, #0ea5c0 0%, #06b6b0 100%)',
-  },
-  {
-    tag: '限时秒杀',
-    title: '每日10点',
-    subtitle: '超值好货不容错过',
-    bg: 'linear-gradient(135deg, #f0628b 0%, #e8556e 100%)',
-  },
-]
+const banners = ref<Banner[]>([])
 
 const rightCards = [
   {
@@ -249,6 +336,11 @@ const featureList = [
 
 onMounted(async () => {
   try {
+    const res = await getBanners()
+    banners.value = res.data
+  } catch { /* handled by interceptor */ }
+
+  try {
     const cats = await getCategories()
     categories.value = cats.data
   } catch { /* handled by interceptor */ }
@@ -267,6 +359,25 @@ onMounted(async () => {
     hotLoading.value = false
     newLoading.value = false
   }
+
+  try {
+    const [seckillRes, purchasedRes] = await Promise.all([
+      getActiveActivities(),
+      getMyPurchasedSeckill().catch(() => ({ data: [] as number[] })),
+    ])
+    purchasedIds.value = new Set(purchasedRes.data || [])
+    if (seckillRes.data?.length) {
+      currentSeckill.value = seckillRes.data[0]
+    }
+  } catch { /* handled by interceptor */ }
+
+  seckillTimer = window.setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (seckillTimer) clearInterval(seckillTimer)
 })
 </script>
 
@@ -457,65 +568,34 @@ $cat-subtle: #7b8bb4;
     height: 100% !important;
   }
 
-  &__slide {
+  &__link {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+
+    :deep(img) {
+      object-fit: cover;
+    }
+  }
+
+  &__placeholder {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    width: 100%;
     height: 100%;
-    padding: 0 64px;
-    color: #fff;
-  }
+    background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+    color: #999;
+    font-size: 14px;
 
-  &__text {
-    position: relative;
-    z-index: 1;
-
-    h2 {
-      font-size: 34px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      letter-spacing: 1px;
+    &--full {
+      height: 400px;
     }
-    p {
-      font-size: 15px;
-      opacity: .85;
-      margin-bottom: 24px;
-      font-weight: 400;
-    }
-  }
-
-  &__tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 4px 14px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, .22);
-    backdrop-filter: blur(4px);
-    margin-bottom: 12px;
-    letter-spacing: .5px;
-  }
-
-  &__btn {
-    background: rgba(255, 255, 255, .95) !important;
-    color: #4c6aee !important;
-    border: none !important;
-    font-weight: 600 !important;
-    padding: 10px 28px !important;
-    font-size: 14px !important;
-    transition: all .2s;
-
-    &:hover {
-      background: #fff !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .1);
-      transform: translateY(-1px);
-    }
-  }
-
-  &__art {
-    width: 160px;
-    flex-shrink: 0;
-    opacity: .7;
   }
 }
 
@@ -665,56 +745,181 @@ $cat-subtle: #7b8bb4;
   gap: 16px;
 }
 
-/* ── Bottom Promo ── */
-.promo-bottom {
-  margin-bottom: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
+/* ── Home Seckill Section ── */
+.home-seckill {
+  margin-bottom: 44px;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(80, 50, 30, .06);
-  }
-
-  &__inner {
-    background: linear-gradient(135deg, #5b7cfa 0%, #7c5cf0 100%);
-    padding: 42px 52px;
+  &__header {
+    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+    border-radius: 12px;
+    padding: 20px 28px;
+    margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     color: #fff;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
-  &__label {
-    display: inline-block;
-    font-size: 12px;
-    padding: 3px 12px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, .22);
-    margin-bottom: 10px;
+  &__header-info {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
   }
 
-  &__text {
-    h2 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-    p  { font-size: 14px; opacity: .85; margin: 0; }
+  &__title {
+    margin: 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  &__btn {
+  &__countdown {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__more {
     background: rgba(255, 255, 255, .95) !important;
-    color: #4c6aee !important;
+    color: #ff4d4f !important;
     border: none !important;
     font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 12px 32px !important;
-    transition: all .2s;
 
     &:hover {
       background: #fff !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
     }
   }
+
+  &__products {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+}
+
+.countdown-label {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.countdown-timer {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+/* Seckill Product Card (reused from seckill page) */
+.seckill-product-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ebeef5;
+  transition: box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  &__image {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    cursor: pointer;
+    overflow: hidden;
+    background: #f5f5f5;
+
+    :deep(.product-image),
+    :deep(.el-image),
+    :deep(img) {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__info {
+    padding: 12px;
+  }
+}
+
+.seckill-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.product-name {
+  margin: 0 0 4px;
+  font-size: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    color: #ff4d4f;
+  }
+}
+
+.spec-desc {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.seckill-price {
+  color: #ff4d4f;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.original-price {
+  color: #999;
+  font-size: 13px;
+  text-decoration: line-through;
+}
+
+.stock-bar {
+  height: 6px;
+  background: #ffe0e0;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  overflow: hidden;
+
+  &__inner {
+    height: 100%;
+    background: #ff4d4f;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+}
+
+.stock-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.seckill-btn {
+  width: 100%;
 }
 
 /* ══════════════════════════════════════════
@@ -743,16 +948,11 @@ $cat-subtle: #7b8bb4;
   .hero-promo {
     display: none;
   }
-  .hero-carousel__slide {
-    padding: 0 36px;
-  }
-  .hero-carousel__text h2 {
-    font-size: 26px;
-  }
-  .hero-carousel__art {
-    width: 120px;
-  }
+
   .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .home-seckill__products {
     grid-template-columns: repeat(3, 1fr);
   }
   .features {
@@ -809,22 +1009,6 @@ $cat-subtle: #7b8bb4;
   .hero-carousel {
     height: auto;
     border-radius: 8px;
-
-    &__slide {
-      padding: 0 24px;
-    }
-
-    &__text h2 {
-      font-size: 20px;
-    }
-
-    &__tag {
-      font-size: 10px;
-    }
-
-    &__art {
-      display: none;
-    }
   }
 
   .product-grid {
@@ -832,15 +1016,22 @@ $cat-subtle: #7b8bb4;
     gap: 10px;
   }
 
-  .features {
-    grid-template-columns: 1fr;
+  .home-seckill__products {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .promo-bottom__inner {
+  .home-seckill__header {
     flex-direction: column;
     text-align: center;
-    gap: 18px;
-    padding: 32px 24px;
+  }
+
+  .home-seckill__header-info {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .features {
+    grid-template-columns: 1fr;
   }
 }
 </style>

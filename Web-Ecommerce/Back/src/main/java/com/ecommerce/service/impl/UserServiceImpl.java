@@ -116,7 +116,17 @@ public class UserServiceImpl implements UserService {
         }
         if (user.getAvatar() != null) dbUser.setAvatar(user.getAvatar());
         if (user.getPhone() != null) dbUser.setPhone(user.getPhone());
-        if (user.getEmail() != null) dbUser.setEmail(user.getEmail());
+        if (user.getEmail() != null && !user.getEmail().equals(dbUser.getEmail())) {
+            if (!user.getEmail().matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
+                throw new BusinessException("邮箱格式不正确");
+            }
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getEmail, user.getEmail());
+            if (userMapper.selectCount(wrapper) > 0) {
+                throw new BusinessException("邮箱已被其他账号使用");
+            }
+            dbUser.setEmail(user.getEmail());
+        }
         if (user.getGender() != null) dbUser.setGender(user.getGender());
         if (user.getIntro() != null) dbUser.setIntro(user.getIntro());
 
