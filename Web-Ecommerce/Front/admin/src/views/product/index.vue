@@ -348,12 +348,12 @@ onMounted(async () => {
 }
 
 .price-cell {
-  color: #e6423a;
-  font-weight: 600;
+  color: var(--org-accent-deep);
+  font-weight: 700;
 }
 
 .price-empty {
-  color: #c0c4cc;
+  color: var(--org-text-faint);
 }
 
 .sku-expand {
@@ -368,8 +368,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f2f3f6;
-  transition: background var(--admin-transition);
+  border-bottom: 1px solid var(--org-border-soft);
+  transition: background var(--org-duration) var(--org-ease-soft);
 
   &:last-child {
     border-bottom: none;
@@ -397,18 +397,18 @@ onMounted(async () => {
     width: 32px;
     flex-shrink: 0;
     font-size: 12px;
-    color: #909399;
+    color: var(--org-text-muted);
     text-align: center;
   }
 
   &__img {
     width: 40px;
     height: 40px;
-    border-radius: 4px;
+    border-radius: var(--org-radius-xs);
     overflow: hidden;
     flex-shrink: 0;
-    background: #f0f0f0;
-    margin-right: 10px;
+    background: var(--org-surface-hover);
+    margin-right: 12px;
 
     :deep(.el-image) {
       width: 100%;
@@ -419,8 +419,8 @@ onMounted(async () => {
   &__name {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
-    color: #303133;
+    font-size: 14px;
+    color: var(--org-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -437,19 +437,19 @@ onMounted(async () => {
   &__cell {
     flex-shrink: 0;
     text-align: center;
-    font-size: 13px;
-    color: #606266;
+    font-size: 14px;
+    color: var(--org-text-secondary);
 
     &--price {
       width: 110px;
-      color: #e6423a;
-      font-weight: 600;
+      color: var(--org-accent-deep);
+      font-weight: 700;
       text-align: right;
       padding-right: 8px;
     }
 
-    &--stock { width: 80px; }
-    &--sales { width: 80px; }
+    &--stock { width: 80px; text-align: right; }
+    &--sales { width: 80px; text-align: right; }
     &--status {
       width: 80px;
       display: flex;
@@ -460,8 +460,8 @@ onMounted(async () => {
 }
 
 .sku-none {
-  font-size: 13px;
-  color: #c0c4cc;
+  font-size: 14px;
+  color: var(--org-text-faint);
   padding: 8px 0;
 }
 
@@ -475,38 +475,39 @@ onMounted(async () => {
   &__stats {
     display: flex;
     justify-content: center;
-    gap: 40px;
+    gap: 48px;
     margin-bottom: 16px;
   }
 
   &__stat {
     text-align: center;
     font-size: 14px;
-    color: #666;
+    color: var(--org-text-secondary);
 
-    &--success .import-result__num { color: #67c23a; }
-    &--fail .import-result__num { color: #f56c6c; }
+    &--success .import-result__num { color: var(--org-accent-deep); }
+    &--fail .import-result__num { color: #e08880; }
   }
 
   &__num {
     display: block;
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 700;
   }
 
   &__errors {
     h4 {
-      font-size: 14px;
+      font-size: 16px;
       margin-bottom: 8px;
-      color: #333;
+      color: var(--org-text);
+      font-weight: 600;
     }
   }
 
   &__error {
-    font-size: 13px;
-    color: #f56c6c;
+    font-size: 14px;
+    color: #e08880;
     padding: 4px 0;
-    border-bottom: 1px dashed #f0f0f0;
+    border-bottom: 1px solid var(--org-border-soft);
 
     &:last-child { border-bottom: none; }
   }

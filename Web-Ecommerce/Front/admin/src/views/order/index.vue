@@ -16,7 +16,7 @@
     </div>
 
     <div class="toolbar-actions">
-      <el-button type="success" :loading="exporting" @click="handleExport">
+      <el-button :loading="exporting" @click="handleExport">
         <el-icon><Download /></el-icon> 导出Excel
       </el-button>
     </div>
@@ -32,7 +32,7 @@
       <el-table :data="orders" v-loading="loading" stripe>
         <el-table-column prop="orderNo" label="订单号" width="170" />
         <el-table-column prop="userId" label="用户ID" width="80" align="center" />
-        <el-table-column label="金额" width="120">
+        <el-table-column label="金额" width="120" align="right">
           <template #default="{ row }">
             <span class="price-cell">{{ formatPrice(row.totalAmount) }}</span>
           </template>

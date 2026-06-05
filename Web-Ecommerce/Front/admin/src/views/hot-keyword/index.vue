@@ -3,7 +3,7 @@
     <div class="page-header">
       <h1>热门搜索词</h1>
       <div class="page-header__actions">
-        <el-button type="success" :loading="computing" @click="handleCompute">刷新统计</el-button>
+        <el-button :loading="computing" @click="handleCompute">刷新统计</el-button>
         <el-button type="primary" @click="handleCreate">新增关键词</el-button>
       </div>
     </div>
