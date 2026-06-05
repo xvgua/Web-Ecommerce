@@ -40,8 +40,8 @@
             :page-sizes="[10, 20]"
             layout="total, prev, pager, next"
             small
-            background
             @current-change="loadConversations"
+            @size-change="loadConversations"
           />
         </div>
       </div>
@@ -52,308 +52,372 @@
           <div class="cs-right__header">
             <div class="cs-right__header-info">
               <span class="cs-right__user">{{ activeConv?.username || '匿名用户' }}</span>
-              <span class="cs-right__source">来源: {{ activeConv?.sourceName || '在线咨询' }}</span>
+              <span class="cs-right__source">{{ activeConv?.sourceName || '在线咨询' }}</span>
             </div>
             <el-button
-              v-if="activeConv?.status === 1"
-              size="small"
+              v-if="activeConv?.status !== 2"
               type="warning"
-              @click="handleCloseConv"
+              size="small"
+              @click="closeConversation"
             >
               关闭会话
             </el-button>
           </div>
 
-          <div class="cs-right__body" ref="msgBody" v-loading="msgLoading">
+          <div class="cs-right__body" ref="msgListRef">
             <div
               v-for="msg in messages"
               :key="msg.id"
               :class="['cs-msg', msg.senderType === 1 ? 'cs-msg--user' : 'cs-msg--cs']"
             >
-              <div v-if="msg.contentType === 2 && msg.extraData" class="cs-msg__product-card">
-                <div class="cs-msg__pc-name">{{ getCardName(msg.extraData) }}</div>
-                <div class="cs-msg__pc-price">&yen;{{ getCardPrice(msg.extraData) }}</div>
-              </div>
-              <div v-else class="cs-msg__bubble">{{ msg.content }}</div>
-              <div class="cs-msg__time">{{ formatTime(msg.createTime) }}</div>
+              <div class="cs-msg__bubble">{{ msg.content }}</div>
+              <div class="cs-msg__time">{{ formatDate(msg.createTime) }}</div>
             </div>
-            <el-empty v-if="!msgLoading && !messages.length" description="暂无消息" :image-size="40" />
+            <div v-if="!messages.length" class="cs-right__empty">
+              <el-empty description="暂无消息" :image-size="40" />
+            </div>
           </div>
 
-          <div class="cs-right__quick" v-if="activeConv?.status === 1">
-            <el-dropdown @command="insertQuickReply" placement="top-start">
-              <el-button size="small">快捷回复</el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="qr in quickReplies"
-                    :key="qr.id"
-                    :command="qr.content"
-                  >
-                    {{ qr.title }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+          <div class="cs-right__quick">
+            <el-select
+              v-model="selectedQuickReply"
+              placeholder="选择快捷回复..."
+              clearable
+              size="small"
+              @change="insertQuickReply"
+            >
+              <el-option
+                v-for="qr in quickReplies"
+                :key="qr.id"
+                :label="qr.title"
+                :value="qr.content"
+              />
+            </el-select>
           </div>
 
-          <div class="cs-right__footer" v-if="activeConv?.status === 1">
+          <div class="cs-right__footer">
             <el-input
-              v-model="replyText"
-              placeholder="输入回复..."
-              maxlength="500"
-              show-word-limit
-              @keyup.enter="handleReply"
+              v-model="inputMsg"
+              placeholder="输入消息..."
+              @keyup.enter="sendMessage"
             />
-            <el-button type="primary" :loading="replying" @click="handleReply">发送</el-button>
+            <el-button type="primary" :disabled="!inputMsg.trim()" @click="sendMessage">
+              发送
+            </el-button>
           </div>
         </template>
-        <el-empty v-else description="请选择一个会话" :image-size="80" class="cs-right__empty" />
+        <div v-else class="cs-right__empty">
+          <el-empty description="选择一个会话开始" :image-size="80" />
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  getConversations, getConversationMessages, replyConversation,
-  adminCloseConversation, getQuickReplies
+  getConversationList,
+  getMessages,
+  sendMessage as apiSendMessage,
+  closeConversation as apiCloseConversation,
+  getQuickReplies,
 } from '@/api/chat'
 import { formatDate } from '@/utils/format'
-import type { Conversation, ChatMessage, QuickReply } from '@shared/types/chat'
+
+interface Conversation {
+  id: number
+  username: string
+  sourceName: string
+  status: number
+  lastMessage: string
+  lastActive: string
+  unreadCount: number
+}
+
+interface Message {
+  id: number
+  content: string
+  senderType: number
+  createTime: string
+}
 
 const conversations = ref<Conversation[]>([])
+const convLoading = ref(false)
 const convPage = ref(1)
 const convPageSize = ref(20)
 const convTotal = ref(0)
-const convLoading = ref(false)
-const statusFilter = ref<number | undefined>(1)
+const statusFilter = ref<number | undefined>(undefined)
 
 const activeConvId = ref<number | null>(null)
 const activeConv = ref<Conversation | null>(null)
-const messages = ref<ChatMessage[]>([])
-const msgLoading = ref(false)
-const replyText = ref('')
-const replying = ref(false)
-const quickReplies = ref<QuickReply[]>([])
-const msgBody = ref<HTMLElement | null>(null)
+const messages = ref<Message[]>([])
+const inputMsg = ref('')
+const msgListRef = ref<HTMLElement>()
+const selectedQuickReply = ref('')
+const quickReplies = ref<{ id: number; title: string; content: string }[]>([])
 
-let pollTimer: ReturnType<typeof setInterval> | null = null
-
-function formatTime(dateStr: string) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const h = String(d.getHours()).padStart(2, '0')
-  const m = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
-}
-
-function parseCardData(extraData: string) {
-  try { return JSON.parse(extraData) } catch { return {} }
-}
-
-function getCardName(extraData: string) {
-  return parseCardData(extraData).productName || ''
-}
-
-function getCardPrice(extraData: string) {
-  return parseCardData(extraData).price || 0
-}
-
-async function loadConversations(silent = false) {
-  if (!silent) convLoading.value = true
+async function loadConversations() {
+  convLoading.value = true
   try {
-    const res = await getConversations({
+    const res = await getConversationList({
       page: convPage.value,
       pageSize: convPageSize.value,
       status: statusFilter.value,
     })
-    conversations.value = res.data.records
-    convTotal.value = res.data.total
+    conversations.value = res.data.records || []
+    convTotal.value = res.data.total || 0
   } finally {
-    if (!silent) convLoading.value = false
+    convLoading.value = false
   }
 }
 
 async function selectConversation(conv: Conversation) {
-  stopPolling()
   activeConvId.value = conv.id
   activeConv.value = conv
-  msgLoading.value = true
   try {
-    const res = await getConversationMessages(conv.id)
-    messages.value = res.data
-    // Reload conversations to update unread counts
-    loadConversations(true)
-    startPolling()
-  } finally {
-    msgLoading.value = false
+    const res = await getMessages(conv.id)
+    messages.value = res.data || []
+    await nextTick()
+    scrollToBottom()
+  } catch {
+    messages.value = []
   }
 }
 
-async function handleReply() {
-  const text = replyText.value.trim()
-  if (!text || !activeConvId.value) return
-  replying.value = true
+async function sendMessage() {
+  const content = inputMsg.value.trim()
+  if (!content || !activeConvId.value) return
+  inputMsg.value = ''
   try {
-    const res = await replyConversation(activeConvId.value, text)
+    const res = await apiSendMessage({ conversationId: activeConvId.value, content, senderType: 2 })
     messages.value.push(res.data)
-    replyText.value = ''
     await nextTick()
     scrollToBottom()
-  } catch { /* handled by interceptor */ }
-  finally { replying.value = false }
+  } catch {
+    ElMessage.error('发送失败')
+  }
 }
 
-async function handleCloseConv() {
+function scrollToBottom() {
+  if (msgListRef.value) {
+    msgListRef.value.scrollTop = msgListRef.value.scrollHeight
+  }
+}
+
+async function closeConversation() {
+  await ElMessageBox.confirm('确定关闭此会话？', '提示', { type: 'warning' })
   if (!activeConvId.value) return
-  await ElMessageBox.confirm('确定要关闭该会话吗？', '提示', { type: 'warning' })
-  await adminCloseConversation(activeConvId.value)
-  if (activeConv.value) activeConv.value.status = 2
+  await apiCloseConversation(activeConvId.value)
   ElMessage.success('会话已关闭')
   loadConversations()
 }
 
-function insertQuickReply(content: string) {
-  replyText.value = content
+function insertQuickReply(content: string | undefined) {
+  if (!content) return
+  inputMsg.value = content
+  selectedQuickReply.value = ''
 }
 
-function scrollToBottom() {
-  if (msgBody.value) {
-    msgBody.value.scrollTop = msgBody.value.scrollHeight
-  }
-}
-
-watch(messages, () => {
-  nextTick(() => scrollToBottom())
-}, { deep: true })
-
-function startPolling() {
-  stopPolling()
-  pollTimer = setInterval(async () => {
-    if (!activeConvId.value) return
-    try {
-      const res = await getConversationMessages(activeConvId.value)
-      messages.value = res.data
-    } catch { /* ignore */ }
-    loadConversations(true)
-  }, 3000)
-}
-
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-}
-
-onMounted(async () => {
-  await loadConversations()
+async function loadQuickReplies() {
   try {
-    const res = await getQuickReplies()
-    quickReplies.value = res.data
-  } catch { /* ignore */ }
-})
+    const res = await getQuickReplies({ page: 1, pageSize: 100, enabled: true })
+    quickReplies.value = (res.data || []) as any
+  } catch {
+    // silent
+  }
+}
 
-onUnmounted(() => stopPolling())
+onMounted(() => {
+  loadConversations()
+  loadQuickReplies()
+})
 </script>
 
 <style lang="scss" scoped>
-.cs-page { height: calc(100vh - 80px); display: flex; flex-direction: column; }
-.page-title { font-size: 20px; font-weight: 600; margin: 0 0 16px; }
+.cs-page {
+  height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+}
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: var(--org-text);
+  letter-spacing: -.4px;
+}
 
 .cs-layout {
   flex: 1;
   display: flex;
-  gap: 0;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--org-surface);
+  border-radius: var(--org-radius-xl);
+  border: 1px solid var(--org-border);
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  box-shadow: var(--org-shadow-sm);
 }
 
+/* ── Left panel ── */
 .cs-left {
   width: 340px;
-  border-right: 1px solid #ebeef5;
+  border-right: 1px solid var(--org-border-soft);
   display: flex;
   flex-direction: column;
 
-  &__toolbar { padding: 12px; border-bottom: 1px solid #ebeef5; }
-  &__list { flex: 1; overflow-y: auto; }
-  &__pager { padding: 10px 12px; border-top: 1px solid #ebeef5; display: flex; justify-content: center; }
+  &__toolbar {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--org-border-soft);
+  }
+
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  &__pager {
+    padding: 12px 16px;
+    border-top: 1px solid var(--org-border-soft);
+    display: flex;
+    justify-content: center;
+  }
 }
 
+/* ── Conversation item ── */
 .cs-conv {
-  padding: 14px 16px;
+  padding: 16px 18px;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background .15s;
+  border-bottom: 1px solid var(--org-border-soft);
+  transition: all var(--org-duration-fast);
 
-  &:hover { background: #f5f7fa; }
-  &.is-active { background: #ecf5ff; border-left: 3px solid #409eff; padding-left: 13px; }
+  &:hover {
+    background: var(--org-surface-hover);
+  }
 
-  &__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  &__user { font-size: 14px; font-weight: 500; }
+  &.is-active {
+    background: var(--org-accent-soft);
+    border-left: 3px solid var(--org-accent);
+    padding-left: 15px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  &__user {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--org-text);
+  }
+
   &__badge {
-    background: #f56c6c;
+    background: #e08880;
     color: #fff;
     font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    line-height: 1.5;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--org-radius-full);
   }
-  &__closed-tag { font-size: 11px; color: #999; background: #f0f0f0; padding: 1px 6px; border-radius: 4px; }
-  &__source { font-size: 12px; color: #909399; margin-bottom: 4px; }
+
+  &__closed-tag {
+    font-size: 11px;
+    color: var(--org-text-muted);
+    background: var(--org-surface-hover);
+    padding: 2px 8px;
+    border-radius: var(--org-radius-full);
+    font-weight: 500;
+  }
+
+  &__source {
+    font-size: 12px;
+    color: var(--org-text-muted);
+    margin-bottom: 4px;
+  }
+
   &__last {
-    font-size: 13px; color: #606266;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13px;
+    color: var(--org-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  &__time { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
+
+  &__time {
+    font-size: 11px;
+    color: var(--org-text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
 }
 
+/* ── Right panel ── */
 .cs-right {
   flex: 1;
   display: flex;
   flex-direction: column;
 
-  &__empty { margin: auto; }
+  &__empty {
+    margin: auto;
+  }
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid #ebeef5;
-    background: #fafafa;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--org-border-soft);
+    background: #f9f7f4;
   }
 
-  &__header-info { display: flex; flex-direction: column; gap: 2px; }
-  &__user { font-size: 15px; font-weight: 600; }
-  &__source { font-size: 12px; color: #909399; }
+  &__header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__user {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--org-text);
+  }
+
+  &__source {
+    font-size: 12px;
+    color: var(--org-text-muted);
+    font-weight: 500;
+  }
 
   &__body {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 20px;
-    background: #f5f7fa;
+    padding: 20px 24px;
+    background: var(--org-bg);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
   }
 
-  &__quick { padding: 8px 20px; border-top: 1px solid #ebeef5; background: #fafafa; }
+  &__quick {
+    padding: 10px 24px;
+    border-top: 1px solid var(--org-border-soft);
+    background: #f9f7f4;
+  }
 
   &__footer {
     display: flex;
-    gap: 10px;
-    padding: 12px 20px;
-    border-top: 1px solid #ebeef5;
-    background: #fff;
+    gap: 12px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--org-border-soft);
+    background: var(--org-surface);
+    align-items: center;
   }
 }
 
+/* ── Message bubbles ── */
 .cs-msg {
   display: flex;
   flex-direction: column;
@@ -364,9 +428,10 @@ onUnmounted(() => stopPolling())
     align-items: flex-end;
 
     .cs-msg__bubble {
-      background: #409eff;
+      background: linear-gradient(135deg, #6eb89a, #5aad8a);
       color: #fff;
-      border-radius: 16px 4px 16px 16px;
+      border-radius: 20px 4px 20px 20px;
+      box-shadow: 0 2px 8px rgba(110, 184, 154, .25);
     }
   }
 
@@ -375,42 +440,27 @@ onUnmounted(() => stopPolling())
     align-items: flex-start;
 
     .cs-msg__bubble {
-      background: #fff;
-      color: #333;
-      border-radius: 4px 16px 16px 16px;
+      background: var(--org-surface);
+      color: var(--org-text);
+      border-radius: 4px 20px 20px 20px;
+      border: 1px solid var(--org-border-soft);
+      box-shadow: var(--org-shadow-xs);
     }
   }
 
   &__bubble {
-    padding: 10px 14px;
+    padding: 12px 16px;
     font-size: 14px;
     line-height: 1.6;
     word-break: break-word;
   }
 
-  &__time { font-size: 11px; color: #bbb; margin-top: 4px; padding: 0 4px; }
-
-  &__product-card {
-    padding: 8px 12px;
-    background: #fff;
-    border: 1px solid #ebeef5;
-    border-radius: 8px;
-    min-width: 160px;
-  }
-
-  &__pc-name {
-    font-size: 13px;
-    color: #333;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-bottom: 4px;
-  }
-
-  &__pc-price {
-    font-size: 14px;
-    color: #e6423a;
-    font-weight: 600;
+  &__time {
+    font-size: 11px;
+    color: var(--org-text-muted);
+    margin-top: 4px;
+    padding: 0 6px;
+    font-weight: 500;
   }
 }
 </style>

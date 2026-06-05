@@ -278,46 +278,55 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+.seckill-form-page { max-width: 1200px; }
+
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--org-text);
+    letter-spacing: -.3px;
+  }
 }
 
-.page-header h3 {
-  margin: 0;
-}
-
-/* ---- Column header ---- */
+/* Column header */
 .product-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #606266;
+  padding: 10px 16px;
+  background: #f9f7f4;
+  border-radius: var(--org-radius-sm);
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--org-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
 }
 
-.product-header span {
-  flex-shrink: 0;
-}
-
-/* ---- Product row ---- */
+/* Product row */
 .product-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  background: #fafafa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: var(--org-surface-warm);
+  border-radius: var(--org-radius-md);
+  border: 1px solid var(--org-border-soft);
+  transition: all var(--org-duration) var(--org-ease-soft);
+
+  &:hover {
+    border-color: var(--org-accent-light);
+  }
 }
 
-/* ---- Column widths ---- */
+/* Column widths */
 .col-product { width: 260px; flex-shrink: 0; }
 .col-sku     { width: 130px; flex-shrink: 0; }
 .col-price   { width: 110px; flex-shrink: 0; }

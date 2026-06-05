@@ -50,31 +50,14 @@
           </div>
         </div>
 
-        <div v-if="primary.children?.length" class="primary-card__body">
-          <el-table :data="primary.children" size="small" border>
-            <el-table-column prop="name" label="子分类名称" min-width="150" />
-            <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-            <el-table-column label="操作" width="220" align="center">
-              <template #default="{ row, $index }">
-                <el-button
-                  text
-                  size="small"
-                  :loading="movingId === row.id"
-                  :disabled="$index === 0"
-                  @click="handleMove(row.id, 'up')"
-                >
-                  <el-icon><Top /></el-icon>
-                </el-button>
-                <el-button
-                  text
-                  size="small"
-                  :loading="movingId === row.id"
-                  :disabled="$index === (primary.children?.length || 0) - 1"
-                  @click="handleMove(row.id, 'down')"
-                >
-                  <el-icon><Bottom /></el-icon>
-                </el-button>
-                <el-button text size="small" type="primary" @click="handleEdit(row)">
+        <div class="primary-card__body">
+          <el-table :data="primary.children" size="small" v-if="primary.children?.length">
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="sortOrder" label="排序" width="80" />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button text size="small" type="primary" @click="handleEdit(row, primary.id)">
                   编辑
                 </el-button>
                 <el-button text size="small" type="danger" @click="handleDelete(row.id)">
@@ -83,32 +66,32 @@
               </template>
             </el-table-column>
           </el-table>
-        </div>
-        <div v-else class="primary-card__empty">
-          暂无子分类，点击「+ 子分类」添加
+          <div v-else class="primary-card__empty">暂无子分类</div>
         </div>
       </div>
     </div>
 
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑分类' : '新增分类'"
-      width="460px"
-      @closed="resetForm"
+      :title="editingCategory ? '编辑分类' : '新增分类'"
+      width="480px"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="上级分类" prop="parentId">
-          <el-select v-model="form.parentId" placeholder="无（作为一级分类）" clearable style="width:100%">
+        <el-form-item label="分类名称" prop="name">
+          <el-input v-model="form.name" maxlength="30" show-word-limit placeholder="分类名" />
+        </el-form-item>
+        <el-form-item label="上级分类" v-if="!editingCategory">
+          <el-select v-model="form.parentId" placeholder="留空为一级分类" clearable>
             <el-option
-              v-for="p in primaryOptions"
-              :key="p.id"
-              :label="p.name"
-              :value="p.id"
+              v-for="cat in primaryCategories"
+              :key="cat.id"
+              :label="cat.name"
+              :value="cat.id"
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="分类名称" prop="name">
-          <el-input v-model="form.name" maxlength="50" show-word-limit />
+        <el-form-item label="排序">
+          <el-input-number v-model="form.sortOrder" :min="0" :max="999" controls-position="right" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -120,111 +103,96 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Top, Bottom } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { getCategoryList, createCategory, updateCategory, deleteCategory, moveCategorySort } from '@/api/admin'
-import { requiredRule } from '@shared/validators'
+import {
+  getCategoryList,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  moveCategory,
+} from '@/api/admin'
 import type { Category } from '@shared/types/product'
 
-const categories = ref<Category[]>([])
+const primaryCategories = ref<(Category & { children?: Category[] })[]>([])
 const loading = ref(false)
+const movingId = ref<number | null>(null)
+
 const dialogVisible = ref(false)
-const isEdit = ref(false)
-const editId = ref(0)
+const editingCategory = ref<Category | null>(null)
+const defaultParentId = ref<number | undefined>(undefined)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
 
 const form = reactive({
   name: '',
   parentId: undefined as number | undefined,
+  sortOrder: 0,
 })
 
 const rules: FormRules = {
-  name: [requiredRule('分类名称')],
+  name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }],
 }
-
-const primaryCategories = computed(() => {
-  const map = new Map<number, Category[]>()
-  for (const c of categories.value) {
-    if (c.parentId) {
-      const list = map.get(c.parentId) || []
-      list.push(c)
-      map.set(c.parentId, list)
-    }
-  }
-  return categories.value
-    .filter(c => !c.parentId)
-    .map(c => ({ ...c, children: map.get(c.id) || [] }))
-})
-
-const primaryOptions = computed(() =>
-  categories.value.filter(c => !c.parentId)
-)
 
 async function loadCategories() {
   loading.value = true
   try {
     const res = await getCategoryList()
-    categories.value = res.data
+    primaryCategories.value = res.data || []
   } finally {
     loading.value = false
   }
 }
 
-function resetForm() {
+function handleAddPrimary() {
+  editingCategory.value = null
+  defaultParentId.value = undefined
   form.name = ''
   form.parentId = undefined
-  editId.value = 0
-  formRef.value?.resetFields()
-}
-
-function handleAddPrimary() {
-  isEdit.value = false
-  resetForm()
+  form.sortOrder = 0
   dialogVisible.value = true
 }
 
 function handleAddChild(parentId: number) {
-  isEdit.value = false
-  resetForm()
+  editingCategory.value = null
+  defaultParentId.value = parentId
+  form.name = ''
   form.parentId = parentId
+  form.sortOrder = 0
   dialogVisible.value = true
 }
 
-function handleEdit(row: Category) {
-  isEdit.value = true
-  editId.value = row.id
-  form.name = row.name
-  form.parentId = row.parentId || undefined
+function handleEdit(cat: Category, parentId?: number) {
+  editingCategory.value = cat
+  defaultParentId.value = parentId
+  form.name = cat.name
+  form.parentId = parentId
+  form.sortOrder = cat.sortOrder
   dialogVisible.value = true
-}
-
-async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定要删除该分类吗？', '提示', { type: 'warning' })
-  try {
-    await deleteCategory(id)
-    ElMessage.success('已删除')
-    loadCategories()
-  } catch { /* handled by interceptor */ }
 }
 
 async function handleSubmit() {
-  const valid = await formRef.value?.validate()
+  const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
   submitting.value = true
   try {
-    const payload = {
-      name: form.name,
-      parentId: form.parentId || 0,
-    }
-    if (isEdit.value) {
-      await updateCategory(editId.value, payload)
+    if (editingCategory.value) {
+      await updateCategory(editingCategory.value.id, {
+        ...editingCategory.value,
+        name: form.name,
+        sortOrder: form.sortOrder,
+        parentId: form.parentId,
+      })
       ElMessage.success('已更新')
     } else {
-      await createCategory(payload)
+      await createCategory({
+        name: form.name,
+        parentId: form.parentId,
+        sortOrder: form.sortOrder,
+      })
       ElMessage.success('已创建')
     }
     dialogVisible.value = false
@@ -234,17 +202,22 @@ async function handleSubmit() {
   }
 }
 
-const movingId = ref(0)
+async function handleDelete(id: number) {
+  await ElMessageBox.confirm('确定删除该分类？删除后子分类也会移除。', '提示', { type: 'warning' })
+  await deleteCategory(id)
+  ElMessage.success('已删除')
+  loadCategories()
+}
 
 async function handleMove(id: number, direction: 'up' | 'down') {
   movingId.value = id
   try {
-    await moveCategorySort(id, direction)
-    ElMessage.success(direction === 'up' ? '已上移' : '已下移')
+    await moveCategory(id, direction)
     loadCategories()
-  } catch { /* handled by interceptor */ }
-  finally {
-    movingId.value = 0
+  } catch {
+    // handled
+  } finally {
+    movingId.value = null
   }
 }
 
@@ -262,34 +235,42 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 22px;
+  margin-bottom: 28px;
 
   .page-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     margin: 0;
+    color: var(--org-text);
+    letter-spacing: -.4px;
   }
 }
 
 .primary-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .primary-card {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+  background: var(--org-surface);
+  border-radius: var(--org-radius-lg);
+  border: 1px solid var(--org-border);
+  box-shadow: var(--org-shadow-sm);
   overflow: hidden;
+  transition: all var(--org-duration) var(--org-ease-soft);
+
+  &:hover {
+    box-shadow: var(--org-shadow-md);
+  }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 20px;
-    background: #f8f9ff;
-    border-bottom: 1px solid #eef1f8;
+    padding: 16px 24px;
+    background: #f9f7f4;
+    border-bottom: 1px solid var(--org-border-soft);
   }
 
   &__info {
@@ -300,8 +281,8 @@ onMounted(() => {
 
   &__name {
     font-size: 15px;
-    font-weight: 600;
-    color: #2c3a5e;
+    font-weight: 700;
+    color: var(--org-text);
   }
 
   &__actions {
@@ -311,15 +292,15 @@ onMounted(() => {
   }
 
   &__body {
-    padding: 12px 20px 16px;
+    padding: 16px 24px 20px;
   }
 
   &__empty {
-    padding: 28px 20px;
+    padding: 32px 20px;
     text-align: center;
-    color: #b0b8cc;
+    color: var(--org-text-muted);
     font-size: 13px;
+    font-weight: 500;
   }
 }
-
 </style>

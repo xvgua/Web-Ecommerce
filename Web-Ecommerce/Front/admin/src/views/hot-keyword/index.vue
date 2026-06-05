@@ -245,28 +245,29 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 
   h1 {
     margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: #303133;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--org-text);
+    letter-spacing: -.4px;
   }
 
   &__actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
   }
 }
 
 .toolbar {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 </style>

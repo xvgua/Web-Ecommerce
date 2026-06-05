@@ -294,14 +294,16 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .feedback-manage {
+  max-width: 1400px;
+
   .page-header {
-    margin-bottom: 16px;
-    h2 { font-size: 20px; font-weight: 600; }
+    margin-bottom: 20px;
+    h2 { font-size: 24px; font-weight: 700; color: var(--org-text); letter-spacing: -.4px; }
   }
 }
 
 .filter-card {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .filter-row {
@@ -312,7 +314,7 @@ onMounted(() => {
 }
 
 .batch-row {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   gap: 10px;
 }
@@ -321,26 +323,27 @@ onMounted(() => {
   .table-pagination {
     display: flex;
     justify-content: flex-end;
-    margin-top: 16px;
+    margin-top: 20px;
   }
 }
 
 .reply-feedback-info {
   .info-item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-size: 14px;
     display: flex;
     align-items: flex-start;
   }
 
   .info-label {
-    color: #999;
+    color: var(--org-text-muted);
     flex-shrink: 0;
     min-width: 80px;
+    font-weight: 500;
   }
 
   .info-content {
-    color: #333;
+    color: var(--org-text);
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
@@ -354,8 +357,8 @@ onMounted(() => {
   .info-img {
     width: 60px;
     height: 60px;
-    border-radius: 4px;
-    border: 1px solid #eee;
+    border-radius: var(--org-radius-sm);
+    border: 1px solid var(--org-border);
   }
 }
 </style>

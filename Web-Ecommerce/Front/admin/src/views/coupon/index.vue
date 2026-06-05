@@ -186,57 +186,28 @@ onMounted(() => { loadCoupons() })
 <style lang="scss" scoped>
 .coupon-manage { max-width: 1400px; }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
 .toolbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-
   &-search { width: 240px; }
   &-select { width: 140px; }
   &-select-sm { width: 110px; }
 }
 
-.table-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
-}
-
 .price-cell {
-  color: #e6423a;
-  font-weight: 600;
+  color: #e08880;
+  font-weight: 700;
 }
 
 .date-text {
   font-size: 12px;
-  color: #666;
+  color: var(--org-text-secondary);
+  font-weight: 500;
 }
 
 .stock-info {
   font-size: 12px;
-  color: #666;
+  color: var(--org-text-secondary);
+  font-weight: 500;
 }
 
-.ml-8 {
-  margin-left: 8px;
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
+.ml-8 { margin-left: 8px; }
 </style>

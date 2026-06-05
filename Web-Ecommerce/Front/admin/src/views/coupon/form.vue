@@ -234,17 +234,19 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .coupon-form-page {
-  max-width: 800px;
+  max-width: 840px;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   margin: 0;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 
 .coupon-form {
@@ -254,6 +256,7 @@ onMounted(async () => {
 .unit-text {
   margin-left: 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--org-text-muted);
+  font-weight: 500;
 }
 </style>

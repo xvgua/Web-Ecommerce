@@ -121,16 +121,17 @@ async function handleSubmit() {
 
 <style lang="scss" scoped>
 .announcement-edit {
-  max-width: 800px;
+  max-width: 840px;
 }
 
 .page-header {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 </style>

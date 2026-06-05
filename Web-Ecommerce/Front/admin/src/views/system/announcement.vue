@@ -83,19 +83,20 @@ onMounted(fetchList)
 
 <style lang="scss" scoped>
 .announcement-manage {
-  padding: 0;
+  max-width: 1400px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 </style>

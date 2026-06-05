@@ -437,16 +437,18 @@ onMounted(() => {
 .review-manage { max-width: 1400px; }
 
 .page-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 
   &-search { width: 200px; }
   &-select { width: 130px; }
@@ -454,14 +456,15 @@ onMounted(() => {
 }
 
 .action-bar {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .table-card {
-  background: #fff;
-  border-radius: 10px;
+  background: var(--org-surface);
+  border-radius: var(--org-radius-lg);
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+  border: 1px solid var(--org-border);
+  box-shadow: var(--org-shadow-sm);
 }
 
 .product-cell {
@@ -473,19 +476,19 @@ onMounted(() => {
 .product-thumb {
   width: 48px;
   height: 48px;
-  border-radius: 6px;
+  border-radius: var(--org-radius-sm);
   flex-shrink: 0;
 }
 
 .product-thumb-placeholder {
   width: 48px;
   height: 48px;
-  border-radius: 6px;
-  background: #f5f5f5;
+  border-radius: var(--org-radius-sm);
+  background: var(--org-surface-hover);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ccc;
+  color: var(--org-text-muted);
 }
 
 .product-name {
@@ -562,7 +565,7 @@ onMounted(() => {
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: 24px;
 }
 
 /* ── Detail Dialog ── */
@@ -583,30 +586,31 @@ onMounted(() => {
   .detail-product-img {
     width: 64px;
     height: 64px;
-    border-radius: 8px;
+    border-radius: var(--org-radius-sm);
     flex-shrink: 0;
   }
 
   .detail-product-img-placeholder {
     width: 64px;
     height: 64px;
-    border-radius: 8px;
-    background: #f5f5f5;
+    border-radius: var(--org-radius-sm);
+    background: var(--org-surface-hover);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ccc;
+    color: var(--org-text-muted);
   }
 
   .detail-product-name {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--org-text);
   }
 
   .detail-product-price {
     font-size: 14px;
-    color: #e6423a;
-    font-weight: 500;
+    color: #e08880;
+    font-weight: 600;
     margin-top: 4px;
   }
 
@@ -619,12 +623,13 @@ onMounted(() => {
 
   .detail-username {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--org-text);
   }
 
   .detail-order {
     font-size: 12px;
-    color: #999;
+    color: var(--org-text-muted);
     margin-top: 2px;
   }
 
@@ -645,13 +650,14 @@ onMounted(() => {
     display: flex;
     gap: 20px;
     font-size: 13px;
-    color: #666;
+    color: var(--org-text-secondary);
   }
 
   .detail-label {
     font-size: 13px;
-    color: #999;
+    color: var(--org-text-muted);
     margin-right: 4px;
+    font-weight: 500;
   }
 
   .detail-content {
@@ -660,14 +666,14 @@ onMounted(() => {
     .detail-label {
       display: block;
       margin-bottom: 8px;
-      font-weight: 500;
-      color: #333;
+      font-weight: 600;
+      color: var(--org-text);
     }
 
     p {
       font-size: 14px;
       line-height: 1.6;
-      color: #444;
+      color: var(--org-text-secondary);
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -683,33 +689,35 @@ onMounted(() => {
   .detail-image-item {
     width: 90px;
     height: 90px;
-    border-radius: 6px;
+    border-radius: var(--org-radius-sm);
     cursor: pointer;
   }
 
   .detail-meta {
     font-size: 12px;
-    color: #aaa;
+    color: var(--org-text-muted);
+    font-weight: 500;
   }
 
   .followup-section, .comments-section {
     h4 {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 12px;
+      color: var(--org-text);
     }
   }
 
   .followup-item {
-    padding: 12px;
-    background: #f9f9f9;
-    border-radius: 8px;
+    padding: 14px;
+    background: var(--org-surface-hover);
+    border-radius: var(--org-radius-md);
     margin-bottom: 10px;
 
     p {
       font-size: 14px;
       line-height: 1.5;
-      color: #444;
+      color: var(--org-text-secondary);
       white-space: pre-wrap;
       word-break: break-word;
       margin: 0;
@@ -722,12 +730,13 @@ onMounted(() => {
 
   .followup-time {
     font-size: 12px;
-    color: #aaa;
+    color: var(--org-text-muted);
+    font-weight: 500;
   }
 
   .comment-item {
     padding: 10px 0;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--org-border-soft);
 
     &:last-child { border-bottom: none; }
   }
@@ -741,18 +750,19 @@ onMounted(() => {
 
   .comment-username {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--org-text);
   }
 
   .comment-time {
     font-size: 12px;
-    color: #aaa;
+    color: var(--org-text-muted);
     margin-left: auto;
   }
 
   .comment-content {
     font-size: 13px;
-    color: #555;
+    color: var(--org-text-secondary);
     line-height: 1.5;
     margin: 0 0 0 28px;
     white-space: pre-wrap;
@@ -762,7 +772,7 @@ onMounted(() => {
 
 .delete-warn {
   font-size: 13px;
-  color: #999;
+  color: var(--org-text-muted);
   margin-top: 8px;
 }
 </style>

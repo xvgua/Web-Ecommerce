@@ -136,13 +136,20 @@ onMounted(() => { loadReplies() })
 </script>
 
 <style lang="scss" scoped>
-.qr-page { padding: 0; }
+.qr-page { max-width: 1400px; }
+
 .page-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
-.page-title { font-size: 20px; font-weight: 600; margin: 0; }
-.table-card { background: #fff; border-radius: 8px; padding: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--org-text);
+  letter-spacing: -.4px;
+}
 </style>

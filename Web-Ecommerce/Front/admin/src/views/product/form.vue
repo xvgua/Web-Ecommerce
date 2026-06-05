@@ -235,17 +235,19 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .product-form-page {
-  max-width: 800px;
+  max-width: 840px;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   margin: 0;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 
 .product-form {
@@ -254,9 +256,10 @@ onMounted(async () => {
 
 .field-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--org-text-muted);
   line-height: 1.4;
   margin-top: 2px;
+  font-weight: 500;
 }
 
 .upload-area {
@@ -268,9 +271,9 @@ onMounted(async () => {
 .upload-preview {
   width: 120px;
   height: 120px;
-  border-radius: 8px;
+  border-radius: var(--org-radius-md);
   overflow: hidden;
-  border: 1px solid #eee;
+  border: 1px solid var(--org-border);
 }
 
 .main-image-preview {
@@ -285,12 +288,13 @@ onMounted(async () => {
   &__header {
     display: flex;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
 
   &__label {
     font-size: 12px;
-    color: #999;
+    color: var(--org-text-muted);
+    font-weight: 600;
     &:nth-child(1) { flex: 1; }
     &:nth-child(2) { width: 80px; }
     &:nth-child(3) { width: 130px; }
@@ -302,7 +306,11 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: var(--org-surface-hover);
+  border-radius: var(--org-radius-md);
+  border: 1px solid var(--org-border-soft);
 
   .el-input { flex: 1; }
   .el-input-number { width: 130px; }
@@ -319,9 +327,9 @@ onMounted(async () => {
   &__thumb {
     width: 40px;
     height: 40px;
-    border-radius: 4px;
+    border-radius: var(--org-radius-sm);
     object-fit: cover;
-    border: 1px solid #eee;
+    border: 1px solid var(--org-border);
   }
 }
 </style>

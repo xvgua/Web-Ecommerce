@@ -184,20 +184,9 @@ onMounted(() => { loadOrders() })
 <style lang="scss" scoped>
 .order-manage { max-width: 1400px; }
 
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-
 .toolbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-
   &-search { width: 260px; }
   &-select { width: 160px; }
-  &-select-sm { width: 120px; }
 }
 
 .toolbar-actions {
@@ -206,21 +195,9 @@ onMounted(() => { loadOrders() })
   margin-bottom: 16px;
 }
 
-.table-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
-}
-
 .price-cell {
-  color: #e6423a;
-  font-weight: 600;
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  color: #e08880;
+  font-weight: 700;
+  font-size: 14px;
 }
 </style>

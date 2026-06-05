@@ -1,8 +1,11 @@
 <template>
   <div class="product-manage">
     <div class="page-header">
-      <h1 class="page-title">商品管理</h1>
-      <el-button type="primary" @click="$router.push('/products/create')">
+      <div>
+        <h1 class="page-title">商品管理</h1>
+        <p class="page-subtitle">共 {{ total }} 件商品</p>
+      </div>
+      <el-button type="primary" size="large" @click="$router.push('/products/create')">
         <el-icon><Plus /></el-icon> 新增商品
       </el-button>
     </div>
@@ -332,33 +335,16 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .product-manage { max-width: 1400px; }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
+.page-subtitle {
+  font-size: 13px;
+  color: var(--admin-text-muted);
+  margin-top: 4px;
 }
 
 .toolbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-
   &-search { width: 260px; }
   &-select { width: 160px; }
   &-select-sm { width: 120px; }
-}
-
-.table-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
 }
 
 .price-cell {
@@ -381,16 +367,16 @@ onMounted(async () => {
 .sku-row {
   display: flex;
   align-items: center;
-  padding: 7px 0;
-  border-bottom: 1px dashed #ebeef5;
-  transition: background .15s;
+  padding: 8px 0;
+  border-bottom: 1px solid #f2f3f6;
+  transition: background var(--admin-transition);
 
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: #f8f9fb;
+    background: var(--admin-accent-soft);
   }
 
   &--off {
@@ -482,7 +468,7 @@ onMounted(async () => {
 .pagination-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 .import-result {

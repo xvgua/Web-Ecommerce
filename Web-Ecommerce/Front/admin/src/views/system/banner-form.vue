@@ -154,17 +154,18 @@ async function handleSubmit() {
 
 <style lang="scss" scoped>
 .banner-form {
-  max-width: 700px;
+  max-width: 740px;
 }
 
 .page-header {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 
 .upload-area {
@@ -176,8 +177,8 @@ async function handleSubmit() {
 .upload-preview {
   width: 200px;
   height: 100px;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
+  border-radius: var(--org-radius-md);
+  border: 1px solid var(--org-border);
   object-fit: cover;
 }
 </style>

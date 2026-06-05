@@ -132,39 +132,20 @@ onMounted(() => { loadUsers() })
 <style lang="scss" scoped>
 .user-manage { max-width: 1400px; }
 
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-
 .tbar-input { width: 260px; }
-
-.table-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
-}
 
 .account-id {
   font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
   font-weight: 600;
-  color: #303133;
+  color: var(--org-text);
 }
 
 .user-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 
-  &__name { font-size: 14px; font-weight: 500; }
-  &__id   { font-size: 12px; color: #999; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  &__name { font-size: 14px; font-weight: 600; color: var(--org-text); }
+  &__id   { font-size: 12px; color: var(--org-text-muted); font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
 }
 </style>

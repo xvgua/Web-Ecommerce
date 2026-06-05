@@ -83,7 +83,26 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+.order-detail-page {
+  max-width: 1000px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--org-text);
+  letter-spacing: -.4px;
+  margin-bottom: 28px;
+}
+
 .detail-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+p {
+  font-size: 14px;
+  color: var(--org-text-secondary);
+  line-height: 1.8;
+  font-weight: 500;
 }
 </style>

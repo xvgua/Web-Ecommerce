@@ -122,24 +122,34 @@ async function handleDelete(row: any) {
 onMounted(loadData)
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+.seckill-manage { max-width: 1400px; }
+
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-}
+  margin-bottom: 20px;
 
-.page-header h3 {
-  margin: 0;
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--org-text);
+  }
 }
 
 .search-form {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+
+  :deep(.el-form-item__label) {
+    font-weight: 600;
+    color: var(--org-text-secondary);
+  }
 }
 
 .pagination {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
 }

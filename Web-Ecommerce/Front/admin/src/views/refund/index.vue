@@ -247,56 +247,36 @@ onMounted(() => { loadList() })
 <style lang="scss" scoped>
 .refund-manage { max-width: 1400px; }
 
-.page-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-
 .toolbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-
   &-search { width: 260px; }
   &-select { width: 160px; }
 }
 
-.table-card {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
-}
-
 .price-cell {
-  color: #e6423a;
-  font-weight: 600;
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  color: #e08880;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .detail-items {
-  margin-top: 16px;
+  margin-top: 20px;
 
   h4 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--org-text);
   }
 }
 
 .detail-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--org-border-soft);
   font-size: 13px;
-  color: #666;
+  color: var(--org-text-secondary);
+  font-weight: 500;
 
   &:last-child { border-bottom: none; }
 }

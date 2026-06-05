@@ -117,14 +117,14 @@ onMounted(fetchList)
 
 <style lang="scss" scoped>
 .banner-manage {
-  padding: 0;
+  max-width: 1400px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 
   &__right {
     display: flex;
@@ -134,14 +134,15 @@ onMounted(fetchList)
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #303133;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--org-text);
+  letter-spacing: -.4px;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 </style>

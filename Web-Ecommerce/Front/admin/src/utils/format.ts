@@ -1,6 +1,7 @@
 export function formatPrice(price: number | string): string {
   const num = typeof price === 'string' ? parseFloat(price) : price
-  return `¥${num.toFixed(2)}`
+  const cents = Math.round(num * 100)
+  return `¥${(cents / 100).toFixed(2)}`
 }
 
 export function formatDate(dateStr: string, format = 'YYYY-MM-DD HH:mm:ss'): string {
