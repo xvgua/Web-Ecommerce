@@ -1,0 +1,74 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        # ===== User Service =====
+        - id: user-auth-public
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/auth/**
+        - id: user-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/user/**,/api/feedback/**,/api/conversations/**
+        - id: announcement-public
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/announcements/**
+        - id: admin-auth-public
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/admin/auth/**
+        - id: admin-user
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/admin/users/**,/api/admin/feedback/**,/api/admin/conversations/**,/api/admin/announcements/**
+
+        # ===== Product Service =====
+        - id: product-public
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/products/**,/api/categories/**,/api/banners/**,/api/seckill/**,/api/upload/**
+        - id: product-auth
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/favorites/**,/api/hot-keywords/**
+        - id: admin-product
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/admin/products/**,/api/admin/categories/**,/api/admin/banners/**,/api/admin/seckill/**,/api/admin/upload/**,/api/admin/hot-keywords/**
+
+        # ===== Order Service =====
+        - id: coupon-public
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/coupons/**
+        - id: order-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/cart/**,/api/orders/**,/api/reviews/**,/api/user/coupons/**
+        - id: admin-order
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/admin/orders/**,/api/admin/reviews/**,/api/admin/coupons/**,/api/admin/dashboard/**
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+jwt:
+  secret: ${JWT_SECRET:ecommerce-jwt-secret-key-min-32-chars!!}
+  expiration: 604800000

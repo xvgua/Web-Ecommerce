@@ -1,0 +1,23 @@
+package com.ecommerce.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+import java.time.LocalDateTime;
+
+@Data
+@TableName("chat_message")
+public class ChatMessage {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    private Long conversationId;
+    private Integer senderType;
+    private Long senderId;
+    private String senderName;
+    private String senderAvatar;
+    private String content;
+    private Integer contentType;
+    private String extraData;
+    private Integer isRead;
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+}

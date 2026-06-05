@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ecommerce.mapper.ReviewMapper">
+
+    <select id="selectAdminList" resultType="com.ecommerce.entity.Review">
+        SELECT r.id, r.user_id, r.username, r.avatar, r.product_id, r.order_id,
+               r.rating, r.rating_desc, r.rating_logistics, r.rating_service,
+               r.content, r.images, r.is_followup, r.like_count, r.comment_count, r.create_time,
+               p.name AS product_name, p.main_image AS product_image
+        FROM review r LEFT JOIN product p ON r.product_id = p.id
+        WHERE r.is_followup = 0
+        <if test="keyword != null and keyword != ''">
+            AND p.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="username != null and username != ''">
+            AND r.username LIKE CONCAT('%', #{username}, '%')
+        </if>
+        <if test="rating != null">
+            AND r.rating = #{rating}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND r.create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND r.create_time &lt;= #{endDate}
+        </if>
+        <if test="hasImage != null and hasImage == true">
+            AND r.images IS NOT NULL AND r.images != '' AND r.images != '[]'
+        </if>
+        <if test="hasImage != null and hasImage == false">
+            AND (r.images IS NULL OR r.images = '' OR r.images = '[]')
+        </if>
+        <if test="hasFollowUp != null and hasFollowUp == true">
+            AND EXISTS (SELECT 1 FROM review f WHERE f.order_id = r.order_id AND f.product_id = r.product_id AND f.is_followup = 1)
+        </if>
+        <if test="hasFollowUp != null and hasFollowUp == false">
+            AND NOT EXISTS (SELECT 1 FROM review f WHERE f.order_id = r.order_id AND f.product_id = r.product_id AND f.is_followup = 1)
+        </if>
+        <choose>
+            <when test="sort == 'most_liked'">ORDER BY r.like_count DESC, r.create_time DESC</when>
+            <otherwise>ORDER BY r.create_time DESC</otherwise>
+        </choose>
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countAdminList" resultType="long">
+        SELECT COUNT(*)
+        FROM review r LEFT JOIN product p ON r.product_id = p.id
+        WHERE r.is_followup = 0
+        <if test="keyword != null and keyword != ''">
+            AND p.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="username != null and username != ''">
+            AND r.username LIKE CONCAT('%', #{username}, '%')
+        </if>
+        <if test="rating != null">
+            AND r.rating = #{rating}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND r.create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND r.create_time &lt;= #{endDate}
+        </if>
+        <if test="hasImage != null and hasImage == true">
+            AND r.images IS NOT NULL AND r.images != '' AND r.images != '[]'
+        </if>
+        <if test="hasImage != null and hasImage == false">
+            AND (r.images IS NULL OR r.images = '' OR r.images = '[]')
+        </if>
+        <if test="hasFollowUp != null and hasFollowUp == true">
+            AND EXISTS (SELECT 1 FROM review f WHERE f.order_id = r.order_id AND f.product_id = r.product_id AND f.is_followup = 1)
+        </if>
+        <if test="hasFollowUp != null and hasFollowUp == false">
+            AND NOT EXISTS (SELECT 1 FROM review f WHERE f.order_id = r.order_id AND f.product_id = r.product_id AND f.is_followup = 1)
+        </if>
+    </select>
+
+</mapper>

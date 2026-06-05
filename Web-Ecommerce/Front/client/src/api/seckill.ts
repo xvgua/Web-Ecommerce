@@ -16,9 +16,16 @@ export function getSeckillProductById(id: number): Promise<ApiResponse<SeckillPr
 }
 
 export function getMyPurchasedSeckill(): Promise<ApiResponse<number[]>> {
-  return request.get('/seckill/my-purchased')
+  // TODO: 迁移至 order-service 查询用户秒杀购买记录
+  return Promise.resolve({ code: 200, message: 'success', data: [] } as ApiResponse<number[]>)
 }
 
 export function createSeckillOrder(data: SeckillOrderRequest): Promise<ApiResponse<Order>> {
-  return request.post('/seckill/order', data)
+  // 秒杀下单改为调 order-service 创建订单端点
+  return request.post('/orders', {
+    productId: data.seckillProductId,
+    addressId: data.addressId,
+    remark: data.remark,
+    quantity: 1,
+  })
 }

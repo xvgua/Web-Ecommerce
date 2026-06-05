@@ -1,0 +1,37 @@
+server:
+  port: 8084
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/ecommerce_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    openfeign:
+      client:
+        config:
+          product-service:
+            connectTimeout: 5000
+            readTimeout: 10000
+          user-service:
+            connectTimeout: 5000
+            readTimeout: 10000
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
+
+feign:
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8083}
+  user-service:
+    url: ${USER_SERVICE_URL:http://localhost:8082}
