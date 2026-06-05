@@ -37,11 +37,11 @@
       <el-menu
         :default-active="activeMenu"
         :collapse="collapsed"
-        router
         background-color="transparent"
         text-color="rgba(255,255,255,.45)"
         active-text-color="#fff"
         class="admin-menu"
+        @select="handleMenuSelect"
       >
         <el-menu-item index="/dashboard">
           <template #title>
@@ -178,6 +178,10 @@ const adminStore = useAdminStore()
 const collapsed = ref(false)
 
 const activeMenu = computed(() => route.path)
+
+function handleMenuSelect(index: string) {
+  router.push(index)
+}
 
 function handleLogout() {
   adminStore.logout()
