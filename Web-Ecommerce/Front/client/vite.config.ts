@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
       '@shared': resolve(__dirname, '../shared'),
+      'element-plus': resolve(__dirname, 'node_modules/element-plus'),
     },
   },
   server: {
