@@ -95,21 +95,9 @@
         </div>
       </div>
 
-      <!-- Right: Promo Cards -->
-      <div class="hero-promo">
-        <div
-          v-for="card in rightCards"
-          :key="card.title"
-          class="hero-promo__card"
-          :style="{ background: card.bg }"
-          @click="$router.push(card.link)"
-        >
-          <span class="hero-promo__icon">{{ card.icon }}</span>
-          <div class="hero-promo__card-content">
-            <span class="hero-promo__card-title">{{ card.title }}</span>
-            <span class="hero-promo__card-desc">{{ card.desc }}</span>
-          </div>
-        </div>
+      <!-- Right: User Sidebar -->
+      <div class="hero-right">
+        <UserSidebar />
       </div>
     </section>
 
@@ -229,6 +217,7 @@ import type { Banner } from '@shared/types'
 import ProductCard from '@/components/business/ProductCard.vue'
 import ProductImage from '@/components/common/ProductImage.vue'
 import AnnouncementBar from '@/components/business/AnnouncementBar.vue'
+import UserSidebar from '@/components/business/UserSidebar.vue'
 
 const catIcons = [Goods, ShoppingBag, Star, Present]
 
@@ -297,37 +286,6 @@ const activePanelCat = computed(() =>
 
 const banners = ref<Banner[]>([])
 
-const rightCards = [
-  {
-    icon: '⚡',
-    title: '限时秒杀',
-    desc: '每日10点开抢',
-    bg: 'linear-gradient(160deg, #5b7cfa 0%, #7c5cf0 100%)',
-    link: '/seckill',
-  },
-  {
-    icon: '🎁',
-    title: '新人专区',
-    desc: '注册即享好礼',
-    bg: 'linear-gradient(160deg, #0ea5c0 0%, #06b6b0 100%)',
-    link: '/products?promo=new',
-  },
-  {
-    icon: '✨',
-    title: '精品推荐',
-    desc: '甄选品质好物',
-    bg: 'linear-gradient(160deg, #f0628b 0%, #e8556e 100%)',
-    link: '/products?sort=rating_desc',
-  },
-  {
-    icon: '🎫',
-    title: '领券中心',
-    desc: '大额优惠券',
-    bg: 'linear-gradient(160deg, #f49b3f 0%, #f0628b 100%)',
-    link: '/coupons',
-  },
-]
-
 const featureList = [
   { icon: '🛡', label: '品质保证', desc: '正品保障 假一赔十' },
   { icon: '🚚', label: '免费配送', desc: '满99元包邮' },
@@ -383,10 +341,17 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+$cat-accent: #4EAB8E;
+$cat-accent-hover: #5FC0A2;
+$cat-bg: #F0F8F5;
+$cat-hover-bg: #E6F3EE;
+$cat-text: #1A2C26;
+$cat-subtle: #6D9A8E;
+
 .home {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 0 48px;
+  padding: 0 0 64px;
 }
 
 /* ══════════════════════════════════════════
@@ -394,25 +359,19 @@ onUnmounted(() => {
    ══════════════════════════════════════════ */
 .hero-three-col {
   display: flex;
-  gap: 14px;
-  margin: 20px 0 36px;
+  gap: 16px;
+  margin: 20px 0 48px;
   height: 400px;
 }
 
 /* ── Left: Category Sidebar ── */
-$cat-accent: #5b7cfa;
-$cat-bg: #f8f9ff;
-$cat-hover-bg: #eef1ff;
-$cat-text: #2c3a5e;
-$cat-subtle: #7b8bb4;
-
 .hero-cat {
-  width: 234px;
+  width: 240px;
   flex-shrink: 0;
   height: 100%;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .05), 0 4px 14px rgba(0, 0, 0, .04);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: visible;
   display: flex;
@@ -422,22 +381,23 @@ $cat-subtle: #7b8bb4;
     font-size: 14px;
     font-weight: 600;
     color: #fff;
-    background: linear-gradient(135deg, #5b7cfa 0%, #4c6aee 100%);
-    padding: 13px 18px;
-    border-radius: 10px 10px 0 0;
+    background: linear-gradient(135deg, #3D8F76 0%, #4EAB8E 100%);
+    padding: 14px 20px;
+    border-radius: 12px 12px 0 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: 0.5px;
   }
 
   &__header-icon {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   &__list {
     list-style: none;
     margin: 0;
-    padding: 8px 0;
+    padding: 6px 0;
     flex: 1;
     overflow-y: auto;
   }
@@ -445,19 +405,19 @@ $cat-subtle: #7b8bb4;
   &__item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
+    gap: 12px;
+    padding: 11px 20px;
     cursor: pointer;
     color: $cat-text;
     font-size: 13px;
-    transition: background .18s, color .18s, padding-left .18s;
+    transition: background .2s, color .2s, padding-left .2s;
 
     &:hover,
     &.is-active {
       background: $cat-hover-bg;
       color: $cat-accent;
       font-weight: 600;
-      padding-left: 22px;
+      padding-left: 26px;
 
       .hero-cat__arrow {
         opacity: 1;
@@ -476,37 +436,34 @@ $cat-subtle: #7b8bb4;
     color: $cat-subtle;
   }
 
-  &__name {
-    flex: 1;
-  }
+  &__name { flex: 1; }
 
   &__arrow {
     font-size: 11px;
     opacity: 0;
-    transition: opacity .18s, color .18s;
+    transition: opacity .2s, color .2s;
     color: $cat-subtle;
   }
 
-  // Hover popup panel
   &__panel {
     position: absolute;
-    left: calc(100% + 2px);
+    left: calc(100% + 4px);
     top: 0;
-    width: 552px;
+    width: 556px;
     min-height: 400px;
     background: #fff;
-    border-radius: 0 10px 10px 10px;
-    box-shadow: 6px 12px 40px rgba(30, 40, 80, .1);
+    border-radius: 0 12px 12px 12px;
+    box-shadow: 6px 12px 40px rgba(40, 95, 75, 0.10);
     z-index: 100;
-    padding: 22px 26px;
+    padding: 24px 28px;
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    gap: 18px;
+    gap: 20px;
   }
 
   &__sub-group {
-    width: calc(50% - 9px);
+    width: calc(50% - 10px);
   }
 
   &__sub-title {
@@ -519,16 +476,12 @@ $cat-subtle: #7b8bb4;
     margin-bottom: 10px;
     transition: color .15s;
     padding-bottom: 6px;
-    border-bottom: 1px solid #eef1f8;
+    border-bottom: 1px solid $cat-bg;
     width: 100%;
 
-    &:hover {
-      color: $cat-accent;
-    }
+    &:hover { color: $cat-accent; }
 
-    .el-icon {
-      font-size: 11px;
-    }
+    .el-icon { font-size: 11px; }
   }
 
   &__sub-links {
@@ -539,7 +492,7 @@ $cat-subtle: #7b8bb4;
 
   &__sub-link {
     font-size: 12px;
-    color: #6b7a9e;
+    color: $cat-subtle;
     padding: 4px 12px;
     background: $cat-bg;
     border-radius: 14px;
@@ -557,14 +510,11 @@ $cat-subtle: #7b8bb4;
   flex: 1;
   min-width: 0;
   height: 100%;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .04), 0 4px 12px rgba(0, 0, 0, .03);
+  box-shadow: var(--shadow-sm);
 
-  :deep(.el-carousel) {
-    height: 100% !important;
-  }
-
+  :deep(.el-carousel),
   :deep(.el-carousel__container) {
     height: 100% !important;
   }
@@ -579,9 +529,7 @@ $cat-subtle: #7b8bb4;
     width: 100%;
     height: 100%;
 
-    :deep(img) {
-      object-fit: cover;
-    }
+    :deep(img) { object-fit: cover; }
   }
 
   &__placeholder {
@@ -590,76 +538,24 @@ $cat-subtle: #7b8bb4;
     justify-content: center;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
-    color: #999;
+    background: var(--bg3);
+    color: var(--text3);
     font-size: 14px;
 
-    &--full {
-      height: 400px;
-    }
+    &--full { height: 400px; }
   }
 }
 
-/* ── Right: Promo Cards ── */
-.hero-promo {
-  width: 240px;
+/* ── Right: User Sidebar ── */
+.hero-right {
+  width: 290px;
   flex-shrink: 0;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 
-  &__card {
-    flex: 1;
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform .25s, box-shadow .25s;
+  :deep(.user-sidebar) {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    position: relative;
-
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(80, 50, 30, .1);
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,.08) 100%);
-      pointer-events: none;
-    }
-  }
-
-  &__icon {
-    font-size: 26px;
-    position: relative;
-    z-index: 1;
-  }
-
-  &__card-content {
-    text-align: center;
-    color: #fff;
-    position: relative;
-    z-index: 1;
-  }
-
-  &__card-title {
-    display: block;
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 3px;
-    letter-spacing: .5px;
-  }
-
-  &__card-desc {
-    font-size: 12px;
-    opacity: .82;
   }
 }
 
@@ -667,59 +563,56 @@ $cat-subtle: #7b8bb4;
 .features {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 44px;
+  gap: 16px;
+  margin-bottom: 56px;
 
   .feature-item {
-    background: #fff;
-    border-radius: 10px;
-    padding: 22px 20px;
+    background: var(--bg1);
+    border-radius: var(--radius-lg);
+    padding: 24px 20px;
     display: flex;
     align-items: center;
     gap: 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
     transition: transform .2s, box-shadow .2s;
+    border: 1px solid var(--line-light);
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .06);
+      box-shadow: var(--shadow-lg);
     }
 
-    &__icon {
-      font-size: 28px;
-      flex-shrink: 0;
-    }
-
-    strong { font-size: 14px; display: block; margin-bottom: 3px; color: $cat-text; }
-    p     { font-size: 12px; color: #9b9fb0; margin: 0; }
+    &__icon { font-size: 28px; flex-shrink: 0; }
+    strong { font-size: 14px; display: block; margin-bottom: 4px; color: $cat-text; font-weight: 600; }
+    p     { font-size: 12px; color: $cat-subtle; margin: 0; }
   }
 }
 
 /* ── Section ── */
 .section {
-  margin-bottom: 44px;
+  margin-bottom: 56px;
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 22px;
+    margin-bottom: 28px;
   }
 
   &__title {
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       color: $cat-text;
       position: relative;
-      padding-left: 14px;
+      padding-left: 16px;
+      letter-spacing: -0.3px;
 
       &::before {
         content: '';
         position: absolute;
         left: 0;
-        top: 3px;
-        bottom: 3px;
+        top: 4px;
+        bottom: 4px;
         width: 3px;
         border-radius: 2px;
         background: $cat-accent;
@@ -731,8 +624,9 @@ $cat-subtle: #7b8bb4;
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #9b9fb0;
+    color: $cat-subtle;
     font-size: 13px;
+    font-weight: 500;
     transition: color .2s;
 
     &:hover { color: $cat-accent; }
@@ -742,19 +636,19 @@ $cat-subtle: #7b8bb4;
 /* ── Product Grid ── */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
 }
 
 /* ── Home Seckill Section ── */
 .home-seckill {
-  margin-bottom: 44px;
+  margin-bottom: 56px;
 
   &__header {
-    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-    border-radius: 12px;
-    padding: 20px 28px;
-    margin-bottom: 16px;
+    background: linear-gradient(135deg, #3D8F76 0%, #4EAB8E 100%);
+    border-radius: var(--radius-lg);
+    padding: 22px 28px;
+    margin-bottom: 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -773,9 +667,10 @@ $cat-subtle: #7b8bb4;
   &__title {
     margin: 0;
     font-size: 20px;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   &__countdown {
@@ -785,20 +680,22 @@ $cat-subtle: #7b8bb4;
   }
 
   &__more {
-    background: rgba(255, 255, 255, .95) !important;
-    color: #ff4d4f !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: $cat-accent !important;
     border: none !important;
     font-weight: 600 !important;
+    border-radius: var(--radius-full) !important;
 
     &:hover {
       background: #fff !important;
+      transform: scale(1.02);
     }
   }
 
   &__products {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: 18px;
   }
 }
 
@@ -808,22 +705,24 @@ $cat-subtle: #7b8bb4;
 }
 
 .countdown-timer {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  font-family: 'Courier New', monospace;
+  font-family: 'Outfit', 'Courier New', monospace;
   letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Seckill Product Card (reused from seckill page) */
 .seckill-product-card {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--bg1);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid #ebeef5;
-  transition: box-shadow 0.3s;
+  border: 1px solid var(--line-light);
+  transition: box-shadow .3s, transform .3s;
 
   &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
   }
 
   &__image {
@@ -832,7 +731,7 @@ $cat-subtle: #7b8bb4;
     height: 200px;
     cursor: pointer;
     overflow: hidden;
-    background: #f5f5f5;
+    background: var(--bg3);
 
     :deep(.product-image),
     :deep(.el-image),
@@ -842,9 +741,7 @@ $cat-subtle: #7b8bb4;
     }
   }
 
-  &__info {
-    padding: 12px;
-  }
+  &__info { padding: 14px; }
 }
 
 .seckill-tag {
@@ -856,25 +753,25 @@ $cat-subtle: #7b8bb4;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .product-name {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   font-size: 14px;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 
-  &:hover {
-    color: #ff4d4f;
-  }
+  &:hover { color: $cat-accent; }
 }
 
 .spec-desc {
   margin: 0 0 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--text3);
 }
 
 .price-row {
@@ -885,29 +782,30 @@ $cat-subtle: #7b8bb4;
 }
 
 .seckill-price {
-  color: #ff4d4f;
-  font-size: 18px;
+  color: $cat-accent;
+  font-size: 20px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .original-price {
-  color: #999;
+  color: var(--text4);
   font-size: 13px;
   text-decoration: line-through;
 }
 
 .stock-bar {
-  height: 6px;
-  background: #ffe0e0;
+  height: 5px;
+  background: $cat-hover-bg;
   border-radius: 3px;
   margin-bottom: 6px;
   overflow: hidden;
 
   &__inner {
     height: 100%;
-    background: #ff4d4f;
+    background: linear-gradient(90deg, $cat-accent 0%, $cat-accent-hover 100%);
     border-radius: 3px;
-    transition: width 0.3s;
+    transition: width .3s;
   }
 }
 
@@ -915,27 +813,20 @@ $cat-subtle: #7b8bb4;
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #999;
+  color: var(--text3);
   margin-bottom: 10px;
 }
 
-.seckill-btn {
-  width: 100%;
-}
+.seckill-btn { width: 100%; }
 
 /* ══════════════════════════════════════════
    Responsive
    ══════════════════════════════════════════ */
 @media (max-width: 1280px) {
-  .hero-cat {
-    width: 200px;
-  }
-  .hero-promo {
-    width: 200px;
-  }
-  .hero-cat__panel {
-    width: 480px;
-  }
+  .hero-cat { width: 210px; }
+  .hero-right { width: 250px; }
+  .hero-cat__panel { width: 480px; }
+  .product-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 1024px) {
@@ -946,7 +837,7 @@ $cat-subtle: #7b8bb4;
       display: none;
     }
   }
-  .hero-promo {
+  .hero-right {
     display: none;
   }
 

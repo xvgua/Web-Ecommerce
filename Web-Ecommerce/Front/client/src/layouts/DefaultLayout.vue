@@ -15,85 +15,91 @@
               <span>乐购电商平台</span>
             </router-link>
             <nav class="header__nav">
+              <router-link to="/" class="header__nav-link" exact-active-class="header__nav-link--active">首页</router-link>
+              <router-link to="/products" class="header__nav-link" active-class="header__nav-link--active">全部商品</router-link>
+              <router-link to="/seckill" class="header__nav-link" active-class="header__nav-link--active">限时秒杀</router-link>
+              <router-link to="/coupon/center" class="header__nav-link" active-class="header__nav-link--active">领券中心</router-link>
             </nav>
           </div>
 
           <div class="header__bar-search">
-            <el-autocomplete
-              v-model="keyword"
-              value-key="keyword"
-              :fetch-suggestions="fetchSuggestions"
-              :trigger-on-focus="true"
-              placeholder="搜索你想要的商品..."
-              size="large"
-              clearable
-              maxlength="100"
-              @select="handleSelect"
-              @keyup.enter="handleSearch"
-              @clear="handleSearch"
-              popper-class="search-history-popper"
-              class="header-search-input"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-              <template #default="{ item }">
-                <div v-if="item.type === 'hot-section'" class="hot-section">
-                  <div
-                    v-for="kw in item.keywords"
-                    :key="kw.keyword"
-                    class="history-item hot-item"
-                    @click="handleHotClick(kw)"
-                  >
-                    <span class="hot-item__fire">🔥</span>
-                    <span class="history-item__text">{{ kw.keyword }}</span>
-                    <span class="hot-item__count">{{ kw.count }}</span>
+            <div class="search-box">
+              <el-autocomplete
+                v-model="keyword"
+                value-key="keyword"
+                :fetch-suggestions="fetchSuggestions"
+                :trigger-on-focus="true"
+                placeholder="搜索你想要的商品..."
+                size="large"
+                clearable
+                maxlength="100"
+                @select="handleSelect"
+                @keyup.enter="handleSearch"
+                @clear="handleSearch"
+                popper-class="search-history-popper"
+                class="search-box__input"
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+                <template #default="{ item }">
+                  <div v-if="item.type === 'hot-section'" class="hot-section">
+                    <div
+                      v-for="kw in item.keywords"
+                      :key="kw.keyword"
+                      class="history-item hot-item"
+                      @click="handleHotClick(kw)"
+                    >
+                      <span class="hot-item__fire">🔥</span>
+                      <span class="history-item__text">{{ kw.keyword }}</span>
+                      <span class="hot-item__count">{{ kw.count }}</span>
+                    </div>
                   </div>
-                </div>
-                <div v-else-if="item.type === 'history-separator'" class="history-separator">
-                  <span class="history-separator__text">搜索记录</span>
-                </div>
-                <div v-else-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
-                  清除全部历史
-                </div>
-                <div v-else class="history-item">
-                  <el-icon class="history-item__clock"><Clock /></el-icon>
-                  <span class="history-item__text">{{ item.keyword }}</span>
-                  <el-icon class="history-item__del" @click.stop="handleRemoveHistory(item.keyword)"><Close /></el-icon>
-                </div>
-              </template>
-            </el-autocomplete>
+                  <div v-else-if="item.type === 'history-separator'" class="history-separator">
+                    <span class="history-separator__text">搜索记录</span>
+                  </div>
+                  <div v-else-if="item.type === 'clear'" class="history-clear" @click.stop="handleClearHistory">
+                    清除全部历史
+                  </div>
+                  <div v-else class="history-item">
+                    <el-icon class="history-item__clock"><Clock /></el-icon>
+                    <span class="history-item__text">{{ item.keyword }}</span>
+                    <el-icon class="history-item__del" @click.stop="handleRemoveHistory(item.keyword)"><Close /></el-icon>
+                  </div>
+                </template>
+              </el-autocomplete>
+              <button class="search-box__btn" @click="handleSearch" :disabled="!keyword.trim()">
+                <el-icon :size="20"><Search /></el-icon>
+              </button>
+            </div>
           </div>
 
           <div class="header__bar-right">
             <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
               <router-link to="/cart" class="header__quick-link">
-                <el-icon><ShoppingCart /></el-icon>
+                <el-icon :size="20"><ShoppingCart /></el-icon>
                 <span>购物车</span>
               </router-link>
             </el-badge>
-            <router-link to="/user/favorites" class="header__quick-link">
-              <el-icon><Star /></el-icon>
-              <span>我的收藏</span>
-            </router-link>
-            <router-link to="/orders" class="header__quick-link">
-              <el-icon><Document /></el-icon>
-              <span>我的订单</span>
-            </router-link>
             <template v-if="userStore.isLoggedIn">
-              <el-dropdown>
+              <el-dropdown trigger="hover">
                 <span class="header__user">
-                  <el-avatar :size="32" :src="userStore.user?.avatar">
+                  <el-avatar :size="30" :src="userStore.user?.avatar">
                     <span>{{ userStore.user?.username?.[0]?.toUpperCase() }}</span>
                   </el-avatar>
-                      <span class="header__user-name">
-                    {{ userStore.user?.username }}
-                  </span>
+                  <span class="header__user-name">{{ userStore.user?.username }}</span>
+                  <el-icon class="header__user-arrow"><ArrowDown /></el-icon>
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="$router.push('/user/profile')">
                       <el-icon><User /></el-icon> 个人中心
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/orders')">
+                      <el-icon><Document /></el-icon> 我的订单
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/user/favorites')">
+                      <el-icon><Star /></el-icon> 我的收藏
                     </el-dropdown-item>
                     <el-dropdown-item divided @click="handleLogout">
                       <el-icon><SwitchButton /></el-icon> 退出登录
@@ -103,7 +109,8 @@
               </el-dropdown>
             </template>
             <template v-else>
-              <el-button type="primary" size="small" @click="$router.push('/login')">登录</el-button>
+              <router-link to="/login" class="header__login-btn">登录</router-link>
+              <router-link to="/register" class="header__reg-btn">免费注册</router-link>
             </template>
           </div>
         </div>
@@ -150,7 +157,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Search, ShoppingCart, Clock, Close,
-  User, Document, SwitchButton, Star,
+  User, Document, SwitchButton, Star, ArrowDown,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -269,41 +276,57 @@ function handleLogout() {
    cascade to all components)
    ═══════════════════════════════════════════════════════════ */
 :root {
-  /* Brand */
-  --brand-primary: #409eff;
-  --brand-primary-rgb: 64, 158, 255;
-  --brand-primary-hover: #66b1ff;
-  --brand-primary-active: #337ecc;
+  /* ═══════════════════════════════════════════════════════════
+     Mint Sage — Design Tokens
+     Primary: #4EAB8E | A fresh, clean palette for ecommerce
+     ═══════════════════════════════════════════════════════════ */
 
-  /* Text */
-  --text1: #1d1d1f;
-  --text2: #555;
-  --text3: #909399;
-  --text4: #c0c4cc;
+  /* Brand — Mint Sage */
+  --brand-primary: #4EAB8E;
+  --brand-primary-rgb: 78, 171, 142;
+  --brand-primary-hover: #5FC0A2;
+  --brand-primary-active: #3D8F76;
+  --brand-primary-light: #E8F6F0;
+  --brand-primary-ghost: rgba(var(--brand-primary-rgb), 0.08);
 
-  /* Background */
+  /* Text — neutral charcoal-to-gray with cool undertone */
+  --text1: #1A1C1B;
+  --text2: #3D4A47;
+  --text3: #80948F;
+  --text4: #B0BDB9;
+
+  /* Background — cool-tinted whites with slight sage undertone */
   --bg1: #fff;
-  --bg2: #f5f7fa;
-  --bg3: #eef1f6;
+  --bg2: #F4F9F7;
+  --bg3: #EBF2EF;
 
-  /* Border */
-  --line-light: #e8e8e8;
-  --line-regular: #dcdfe6;
+  /* Border — cool gray matching the green family */
+  --line-light: #E0E8E5;
+  --line-regular: #C8D4D0;
 
   /* Radius */
   --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 24px;
 
   /* Transition */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Shadow */
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 1px 6px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
+  /* Shadow — tinted mint sage (matches brand hue) */
+  --shadow-sm: 0 1px 3px rgba(40, 95, 75, 0.04);
+  --shadow-md: 0 1px 6px rgba(40, 95, 75, 0.07);
+  --shadow-lg: 0 8px 24px rgba(40, 95, 75, 0.10);
+  --shadow-xl: 0 16px 40px rgba(40, 95, 75, 0.14);
+
+  /* Accent — semantic colors that harmonize with mint */
+  --color-success: #3DA06E;
+  --color-warning: #E6A23C;
+  --color-danger: #D94A4A;
+  --color-info: #5C9E8E;
 }
 </style>
 
@@ -320,10 +343,9 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #fff;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 var(--line-light), 0 2px 8px rgba(40, 95, 75, 0.05);
 }
 
 /* ── Row 1: Main bar (64px) ── */
@@ -338,49 +360,58 @@ function handleLogout() {
   }
 
   &-left {
-    flex: 1;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 24px;
     flex-wrap: nowrap;
     min-width: 0;
   }
 
   &-search {
-    flex: 0 0 460px;
+    flex: 1;
+    max-width: 600px;
+    margin: 0 16px;
   }
 
   &-right {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 0;
+    flex-shrink: 0;
   }
 }
 
 .header__logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
   white-space: nowrap;
+  padding: 4px 0;
 
   span {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    background: linear-gradient(135deg, #409eff, #667eea);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text1);
+    transition: color var(--transition-fast);
+  }
+
+  &:hover span {
+    color: var(--brand-primary);
   }
 
   &-icon {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     color: var(--brand-primary);
     flex-shrink: 0;
+    transition: transform var(--transition-normal);
+
+    .header__logo:hover & {
+      transform: scale(1.05);
+    }
   }
 }
 
@@ -390,21 +421,24 @@ function handleLogout() {
   gap: 2px;
 
   &-link {
-    padding: 5px 10px;
-    font-size: 13px;
+    padding: 6px 14px;
+    font-size: 14px;
     color: var(--text2);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     white-space: nowrap;
+    font-weight: 500;
     transition: all var(--transition-fast);
 
     &:hover {
       color: var(--brand-primary);
-      background: rgba(var(--brand-primary-rgb), 0.06);
+      background: var(--brand-primary-ghost);
+      text-decoration: none;
     }
 
-    &.router-link-exact-active {
-      color: var(--brand-primary);
+    &--active {
+      color: var(--brand-primary) !important;
       font-weight: 600;
+      background: var(--brand-primary-ghost);
     }
   }
 }
@@ -412,20 +446,21 @@ function handleLogout() {
 .header__quick-link {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 7px 12px;
   font-size: 13px;
   color: var(--text2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  font-weight: 500;
   transition: all var(--transition-fast);
 
   &:hover {
     color: var(--brand-primary);
-    background: rgba(var(--brand-primary-rgb), 0.06);
+    background: var(--brand-primary-ghost);
   }
 
   .el-icon {
-    font-size: 16px;
+    font-size: 17px;
   }
 }
 
@@ -434,6 +469,13 @@ function handleLogout() {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--brand-primary-ghost);
+  }
 
   &-name {
     font-size: 14px;
@@ -442,33 +484,150 @@ function handleLogout() {
   }
 }
 
-/* ── Search input ── */
+/* ── Login / Register ── */
+.header__login-btn {
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--brand-primary-ghost);
+    text-decoration: none;
+  }
+}
+
+.header__reg-btn {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--text1);
+    text-decoration: none;
+  }
+}
+
+/* ── Cart badge ── */
+.header__bar-right :deep(.el-badge__content.is-fixed) {
+  top: 6px;
+  right: 8px;
+}
+
+/* ── User dropdown arrow ── */
+.header__user-arrow {
+  font-size: 12px;
+  color: var(--text3);
+  transition: transform var(--transition-fast);
+}
+
+.header__user:hover .header__user-arrow {
+  transform: rotate(180deg);
+}
+
+/* ── Search box ── */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &__input {
+    flex: 1;
+
+    :deep(.el-input__wrapper) {
+      border: 2px solid var(--line-light);
+      border-radius: 24px 0 0 24px;
+      background: var(--bg2);
+      box-shadow: none;
+      padding-left: 18px;
+      height: 44px;
+      border-right: none;
+      transition: all var(--transition-normal);
+
+      &:hover {
+        border-color: var(--line-regular);
+        background: #fff;
+      }
+
+      &.is-focus {
+        border-color: var(--brand-primary);
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.08);
+      }
+    }
+
+    :deep(.el-input__inner) {
+      color: var(--text1);
+      font-size: 14px;
+
+      &::placeholder {
+        color: var(--text4);
+        font-weight: 400;
+      }
+    }
+
+    :deep(.el-input__prefix) {
+      color: var(--brand-primary);
+      font-size: 18px;
+    }
+  }
+
+  &__btn {
+    width: 48px;
+    height: 44px;
+    border-radius: 0 24px 24px 0;
+    background: var(--brand-primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background var(--transition-fast);
+
+    &:hover {
+      background: var(--brand-primary-hover);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* ── Old search input class (kept for search-history-popper) ── */
 .header-search-input {
   :deep(.el-input__wrapper) {
-    border: 2px solid rgba(var(--brand-primary-rgb), 0.25);
+    border: 1.5px solid var(--line-light);
     border-radius: var(--radius-full);
-    background: rgba(var(--brand-primary-rgb), 0.04);
-    box-shadow: 0 2px 12px rgba(var(--brand-primary-rgb), 0.08);
-    padding-left: 12px;
-    height: 44px;
+    background: var(--bg2);
+    box-shadow: none;
+    padding-left: 16px;
+    height: 42px;
     transition: all var(--transition-normal);
 
     &:hover {
-      border-color: rgba(var(--brand-primary-rgb), 0.45);
-      background: rgba(var(--brand-primary-rgb), 0.07);
-      box-shadow: 0 4px 18px rgba(var(--brand-primary-rgb), 0.14);
+      border-color: var(--line-regular);
+      background: #fff;
     }
 
     &.is-focus {
       border-color: var(--brand-primary);
       background: #fff;
-      box-shadow: 0 6px 24px rgba(var(--brand-primary-rgb), 0.22);
+      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
     }
   }
 
   :deep(.el-input__inner) {
-    color: var(--text2);
-    font-size: 16px;
+    color: var(--text1);
+    font-size: 14px;
 
     &::placeholder {
       color: var(--text4);
@@ -478,7 +637,7 @@ function handleLogout() {
 
   :deep(.el-input__prefix) {
     color: var(--brand-primary);
-    font-size: 20px;
+    font-size: 18px;
   }
 }
 
@@ -490,39 +649,46 @@ function handleLogout() {
 
 /* ── Footer ── */
 .footer {
-  background: #2c2c2c;
-  color: #aaa;
-  padding: 40px 24px 24px;
+  background: #1A2E28;
+  color: #7AACA0;
+  padding: 48px 24px 28px;
 
   &__inner {
     max-width: 1000px;
     margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
+    gap: 40px;
   }
 
   &__col {
     h4 {
-      color: #ddd;
-      font-size: 15px;
-      margin-bottom: 14px;
+      color: #A0C8BC;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
     }
 
     a {
       display: block;
-      color: #999;
+      color: #5A8C80;
       font-size: 13px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       transition: color var(--transition-fast);
 
-      &:hover { color: #fff; }
+      &:hover { color: var(--brand-primary-hover); }
     }
 
     &--brand {
       text-align: right;
-      p { font-size: 18px; font-weight: 600; color: #ddd; margin-bottom: 6px; }
-      span { font-size: 12px; }
+      p {
+        font-size: 18px;
+        font-weight: 600;
+        color: #A0C8BC;
+        margin-bottom: 6px;
+      }
+      span { font-size: 12px; color: #4A7C70; }
     }
   }
 }
@@ -531,11 +697,13 @@ function handleLogout() {
 @media (max-width: 1024px) {
   .header__bar {
     &-left { gap: 16px; }
-    &-search { flex: 0 0 320px; }
+    &-search { max-width: 340px; margin: 0 12px; }
   }
 
-  .header__nav-link { padding: 4px 8px; font-size: 13px; }
+  .header__nav-link { padding: 4px 10px; font-size: 13px; }
+  .header__quick-link { padding: 5px 8px; }
   .header__quick-link span { display: none; }
+  .header__user-name { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -549,12 +717,13 @@ function handleLogout() {
     &-left { gap: 8px; }
     &-search {
       flex: 1 1 auto;
-      max-width: 220px;
+      max-width: 200px;
+      margin: 0 6px;
     }
   }
 
   .header__logo {
-    &-icon { width: 24px; height: 24px; }
+    &-icon { width: 26px; height: 26px; }
 
     span {
       font-size: 15px;
@@ -590,15 +759,15 @@ function handleLogout() {
     line-height: normal;
 
     &:hover {
-      background: #f5f7fa;
+      background: var(--bg2);
     }
 
     &.highlighted {
-      background: #eef1f6;
+      background: var(--brand-primary-light);
     }
 
     &:last-child {
-      border-top: 1px solid #ebeef5;
+      border-top: 1px solid var(--line-light);
     }
   }
 
@@ -606,9 +775,9 @@ function handleLogout() {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #fff;
+    background: var(--bg1);
     padding-bottom: 4px;
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid var(--line-light);
   }
 
   .history-item {
@@ -618,7 +787,7 @@ function handleLogout() {
     padding: 10px 16px;
 
     &__clock {
-      color: #a8abb2;
+      color: #a8a4a0;
       font-size: 14px;
       flex-shrink: 0;
     }
@@ -629,21 +798,21 @@ function handleLogout() {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 14px;
-      color: #333;
+      color: var(--text1);
     }
 
     &__del {
-      color: #c0c4cc;
+      color: var(--text4);
       font-size: 12px;
       flex-shrink: 0;
       cursor: pointer;
       padding: 2px;
       border-radius: 4px;
-      transition: all .15s;
+      transition: all var(--transition-fast);
 
       &:hover {
-        color: #f56c6c;
-        background: rgba(245,108,108,.08);
+        color: var(--brand-primary);
+        background: var(--brand-primary-ghost);
       }
     }
   }
@@ -652,19 +821,19 @@ function handleLogout() {
     padding: 10px 16px;
     text-align: center;
     font-size: 13px;
-    color: #909399;
+    color: var(--text3);
     cursor: pointer;
-    transition: color .15s;
+    transition: color var(--transition-fast);
 
     &:hover {
-      color: #f56c6c;
+      color: var(--brand-primary);
     }
   }
 
   .history-separator {
     padding: 8px 16px 4px;
     font-size: 12px;
-    color: #c0c4cc;
+    color: var(--text4);
     pointer-events: none;
 
     &__text {
@@ -682,7 +851,7 @@ function handleLogout() {
 
     &__count {
       font-size: 12px;
-      color: #c0c4cc;
+      color: var(--text4);
       flex-shrink: 0;
     }
   }

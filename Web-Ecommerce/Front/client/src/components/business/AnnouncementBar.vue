@@ -201,41 +201,41 @@ onUnmounted(() => {
   }
 }
 
-/* ── Level: info (blue) ── */
+/* ── Level: info (mint sage) ── */
 .announcement-bar--info {
   .announcement-bar__inner {
-    background: linear-gradient(90deg, #ecf5ff 0%, #e6f0fc 100%);
-    border-color: #b3d8ff;
+    background: linear-gradient(90deg, #EEF7F3 0%, #E6F3ED 100%);
+    border-color: #C4DDD3;
   }
-  .announcement-bar__icon { color: #409eff; }
-  .announcement-bar__label { color: #409eff; border-right-color: #b3d8ff; }
-  .announcement-bar__title { color: #2c5b8c; }
+  .announcement-bar__icon { color: var(--brand-primary, #4EAB8E); }
+  .announcement-bar__label { color: var(--brand-primary, #4EAB8E); border-right-color: #C4DDD3; }
+  .announcement-bar__title { color: #2A5C4E; }
   .announcement-bar__close {
-    color: #a0cfff;
-    &:hover { color: #409eff; background: rgba(64, 158, 255, .08); }
+    color: #7AACA4;
+    &:hover { color: var(--brand-primary, #4EAB8E); background: rgba(78, 171, 142, .08); }
   }
   .announcement-bar__more {
-    color: #a0cfff;
-    &:hover { color: #409eff; background: rgba(64, 158, 255, .08); }
+    color: #7AACA4;
+    &:hover { color: var(--brand-primary, #4EAB8E); background: rgba(78, 171, 142, .08); }
   }
 }
 
-/* ── Level: warning (orange) ── */
+/* ── Level: warning (amber) ── */
 .announcement-bar--warning {
   .announcement-bar__inner {
-    background: linear-gradient(90deg, #fdf6ec 0%, #fef0e6 100%);
-    border-color: #f5dab1;
+    background: linear-gradient(90deg, #fdf6ec 0%, #fcf0e0 100%);
+    border-color: #e8c888;
   }
-  .announcement-bar__icon { color: #e6a23c; }
-  .announcement-bar__label { color: #e6a23c; border-right-color: #f5dab1; }
-  .announcement-bar__title { color: #5d4e37; }
+  .announcement-bar__icon { color: #c08030; }
+  .announcement-bar__label { color: #c08030; border-right-color: #e8c888; }
+  .announcement-bar__title { color: #5d4030; }
   .announcement-bar__close {
-    color: #c0a87a;
-    &:hover { color: #e6a23c; background: rgba(230, 162, 60, .08); }
+    color: #c8a878;
+    &:hover { color: #c08030; background: rgba(192, 128, 48, .08); }
   }
   .announcement-bar__more {
-    color: #c0a87a;
-    &:hover { color: #e6a23c; background: rgba(230, 162, 60, .08); }
+    color: #c8a878;
+    &:hover { color: #c08030; background: rgba(192, 128, 48, .08); }
   }
 }
 
@@ -243,18 +243,18 @@ onUnmounted(() => {
 .announcement-bar--important {
   .announcement-bar__inner {
     background: linear-gradient(90deg, #fef0f0 0%, #fde8e8 100%);
-    border-color: #fbc4c4;
+    border-color: #f0b0b0;
   }
-  .announcement-bar__icon { color: #f56c6c; }
-  .announcement-bar__label { color: #f56c6c; border-right-color: #fbc4c4; }
+  .announcement-bar__icon { color: #d9534f; }
+  .announcement-bar__label { color: #d9534f; border-right-color: #f0b0b0; }
   .announcement-bar__title { color: #6b3030; }
   .announcement-bar__close {
-    color: #f0b0b0;
-    &:hover { color: #f56c6c; background: rgba(245, 108, 108, .08); }
+    color: #e8a8a8;
+    &:hover { color: #d9534f; background: rgba(217, 83, 79, .08); }
   }
   .announcement-bar__more {
-    color: #f0b0b0;
-    &:hover { color: #f56c6c; background: rgba(245, 108, 108, .08); }
+    color: #e8a8a8;
+    &:hover { color: #d9534f; background: rgba(217, 83, 79, .08); }
   }
 }
 
