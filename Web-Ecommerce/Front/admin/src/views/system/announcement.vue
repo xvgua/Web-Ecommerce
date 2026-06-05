@@ -5,7 +5,8 @@
       <el-button type="primary" @click="$router.push('/system/announcements/edit')">发布公告</el-button>
     </div>
 
-    <el-table :data="list" border v-loading="loading">
+    <div class="table-card">
+      <el-table :data="list" border v-loading="loading">
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="title" label="标题" min-width="200" />
       <el-table-column label="状态" width="100">
@@ -29,6 +30,7 @@
         </template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 </template>
 

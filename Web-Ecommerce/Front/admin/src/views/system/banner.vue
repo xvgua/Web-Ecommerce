@@ -15,7 +15,8 @@
       </div>
     </div>
 
-    <el-table :data="list" border v-loading="loading">
+    <div class="table-card">
+      <el-table :data="list" border v-loading="loading">
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column label="图片" width="160">
         <template #default="{ row }">
@@ -45,6 +46,7 @@
         </template>
       </el-table-column>
     </el-table>
+    </div>
 
     <div class="pagination-wrap" v-if="total > 0">
       <el-pagination

@@ -294,6 +294,13 @@ a { color: inherit; text-decoration: none; }
     font-variant-numeric: tabular-nums;
   }
 
+  // Ensure header/body tables fill the wrapper width
+  .el-table__header,
+  .el-table__body {
+    width: 100% !important;
+    table-layout: auto;
+  }
+
   // Expand icon
   .el-table__expand-icon {
     color: var(--org-text-tertiary);
