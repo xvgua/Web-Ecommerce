@@ -9,6 +9,8 @@ import com.ecommerce.mapper.ProductMapper;
 import com.ecommerce.service.CategoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class CategoryServiceImpl implements CategoryService {
     private ProductMapper productMapper;
 
     @Override
+    @Cacheable(value = "category", key = "'tree'")
     public List<Category> getCategoryTree() {
         List<Category> all = categoryMapper.selectList(
                 new LambdaQueryWrapper<Category>().orderByAsc(Category::getSortOrder));
@@ -64,6 +67,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "category", key = "'tree'")
     public Category create(Category category) {
         if (category.getName() == null || category.getName().isBlank()) {
             throw new BusinessException("分类名称不能为空");
@@ -102,6 +106,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "category", key = "'tree'")
     public void update(Long id, Category category) {
         Category existing = categoryMapper.selectById(id);
         if (existing == null) {
@@ -162,6 +167,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = "category", key = "'tree'")
     public void delete(Long id) {
         if (categoryMapper.selectById(id) == null) {
             throw new BusinessException(404, "分类不存在");

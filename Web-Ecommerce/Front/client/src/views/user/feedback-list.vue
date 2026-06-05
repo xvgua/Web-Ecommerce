@@ -145,8 +145,8 @@ const uploadHeaders = computed(() => ({
 function statusStep(status: number) {
   if (status === 0) return 0
   if (status === 1) return 1
-  if (status >= 2) return 2
-  return 0
+  // status >= 2 (已解决/已关闭): active 设为步骤总数，让所有步骤都显示为完成
+  return 3
 }
 
 function toggleExpand(item: Feedback) {

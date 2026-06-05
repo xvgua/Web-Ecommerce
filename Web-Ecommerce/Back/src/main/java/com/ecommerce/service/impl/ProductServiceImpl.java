@@ -20,6 +20,9 @@ import com.ecommerce.security.UserContext;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -427,6 +430,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "product", key = "#id")
     public Product getProductById(Long id) {
         Product product = productMapper.selectById(id);
         if (product == null) {
@@ -443,6 +447,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "hotProducts", key = "#limit")
     public List<Product> getHotProducts(int limit) {
         LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Product::getStatus, ProductStatus.ON_SALE)
@@ -452,6 +457,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "newProducts", key = "#limit")
     public List<Product> getNewProducts(int limit) {
         // This week's products first, fill to limit with most recent
         LocalDateTime weekStart = LocalDateTime.now().with(DayOfWeek.MONDAY).withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -480,6 +486,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "hotProducts", allEntries = true),
+        @CacheEvict(value = "newProducts", allEntries = true)
+    })
     public Product create(ProductForm form) {
         Product product = new Product();
         product.setName(form.getName());
@@ -521,6 +531,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "product", key = "#id"),
+        @CacheEvict(value = "hotProducts", allEntries = true),
+        @CacheEvict(value = "newProducts", allEntries = true)
+    })
     public void update(Long id, ProductForm form) {
         Product product = productMapper.selectById(id);
         if (product == null) throw new BusinessException(404, "商品不存在");
@@ -602,6 +617,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Caching(evict = {
+        @CacheEvict(value = "product", key = "#id"),
+        @CacheEvict(value = "hotProducts", allEntries = true),
+        @CacheEvict(value = "newProducts", allEntries = true)
+    })
     public void delete(Long id) {
         if (productMapper.selectById(id) == null) {
             throw new BusinessException(404, "商品不存在");

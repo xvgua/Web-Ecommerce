@@ -9,6 +9,8 @@ import com.ecommerce.entity.Banner;
 import com.ecommerce.mapper.BannerMapper;
 import com.ecommerce.service.BannerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,18 +34,21 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @Cacheable(value = "banner", key = "'all'")
     public List<Banner> getAllBanners() {
         return bannerMapper.selectList(
                 new LambdaQueryWrapper<Banner>().orderByAsc(Banner::getSortOrder));
     }
 
     @Override
+    @CacheEvict(value = "banner", key = "'all'")
     public Banner create(Banner banner) {
         bannerMapper.insert(banner);
         return banner;
     }
 
     @Override
+    @CacheEvict(value = "banner", key = "'all'")
     public void update(Long id, Banner banner) {
         banner.setId(id);
         bannerMapper.updateById(banner);
@@ -59,6 +64,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @CacheEvict(value = "banner", key = "'all'")
     public void delete(Long id) {
         if (bannerMapper.selectById(id) == null) {
             throw new BusinessException(404, "轮播图不存在");
@@ -67,6 +73,7 @@ public class BannerServiceImpl implements BannerService {
     }
 
     @Override
+    @CacheEvict(value = "banner", key = "'all'")
     public void toggleStatus(Long id, Integer status) {
         Banner banner = bannerMapper.selectById(id);
         if (banner == null) {

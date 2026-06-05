@@ -6,6 +6,7 @@ import com.ecommerce.security.LoginInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -16,6 +17,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Value("${upload.path:./upload}")
     private String uploadPath;
@@ -32,14 +36,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new LoginInterceptor(jwtUtils))
+        registry.addInterceptor(new LoginInterceptor(jwtUtils, stringRedisTemplate))
                 .addPathPatterns("/api/upload", "/api/reviews/**",
                         "/api/cart/**", "/api/user/**", "/api/orders/**",
                         "/api/favorites/**", "/api/coupons/*/receive", "/api/user/coupons/**",
                         "/api/conversations/**", "/api/seckill/order",
                         "/api/feedback/**");
 
-        registry.addInterceptor(new AdminInterceptor(jwtUtils))
+        registry.addInterceptor(new AdminInterceptor(jwtUtils, stringRedisTemplate))
                 .addPathPatterns("/api/admin/**")
                 .excludePathPatterns("/api/admin/auth/**");
     }

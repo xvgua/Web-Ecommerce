@@ -4,6 +4,7 @@ COPY admin/package*.json ./admin/
 COPY shared/ ./shared/
 WORKDIR /src/admin
 RUN npm ci
+RUN ln -s /src/admin/node_modules /src/node_modules
 COPY admin/ .
 RUN npx vite build
 

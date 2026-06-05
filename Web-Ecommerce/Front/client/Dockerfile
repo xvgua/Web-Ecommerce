@@ -4,6 +4,7 @@ COPY client/package*.json ./client/
 COPY shared/ ./shared/
 WORKDIR /src/client
 RUN npm ci
+RUN ln -s /src/client/node_modules /src/node_modules
 COPY client/ .
 RUN npx vite build
 

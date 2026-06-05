@@ -26,6 +26,7 @@ import com.alibaba.excel.write.metadata.WriteSheet;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -410,6 +411,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "hotProducts", allEntries = true)
     public void confirmPay(Long userId, Long id) {
         Order order = orderMapper.selectById(id);
         if (order == null || !order.getUserId().equals(userId)) {

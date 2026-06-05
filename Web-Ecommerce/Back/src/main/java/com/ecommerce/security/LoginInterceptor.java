@@ -3,14 +3,17 @@ package com.ecommerce.security;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 public class LoginInterceptor implements HandlerInterceptor {
 
     private final JwtUtils jwtUtils;
+    private final StringRedisTemplate redisTemplate;
 
-    public LoginInterceptor(JwtUtils jwtUtils) {
+    public LoginInterceptor(JwtUtils jwtUtils, StringRedisTemplate redisTemplate) {
         this.jwtUtils = jwtUtils;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -26,7 +29,17 @@ public class LoginInterceptor implements HandlerInterceptor {
         String token = authHeader.substring(7);
         try {
             Claims claims = jwtUtils.parseToken(token);
-            UserContext.setUserId(claims.get("userId", Long.class));
+            Long userId = claims.get("userId", Long.class);
+
+            String blacklistKey = "bl:" + userId + ":" + token.substring(0, 20);
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey))) {
+                response.setStatus(401);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"message\":\"Token已失效，请重新登录\",\"data\":null}");
+                return false;
+            }
+
+            UserContext.setUserId(userId);
             UserContext.setRole(claims.get("role", String.class));
             return true;
         } catch (Exception e) {
