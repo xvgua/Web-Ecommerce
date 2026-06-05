@@ -88,6 +88,7 @@ export interface Review {
   isLiked?: boolean
   hasFollowUp?: boolean
   followUpReviews?: Review[]
+  comments?: ReviewComment[]
   productName?: string
   productImage?: string
   productPrice?: number

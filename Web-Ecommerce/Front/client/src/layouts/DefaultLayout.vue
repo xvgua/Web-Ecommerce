@@ -15,9 +15,6 @@
               <span>乐购电商平台</span>
             </router-link>
             <nav class="header__nav">
-              <router-link to="/" class="header__nav-link">首页</router-link>
-              <router-link to="/products?sort=newest" class="header__nav-link">新品</router-link>
-              <router-link to="/products?tag=discount" class="header__nav-link">折扣</router-link>
             </nav>
           </div>
 

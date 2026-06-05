@@ -32,6 +32,7 @@
           <el-menu-item index="/products">商品列表</el-menu-item>
           <el-menu-item index="/products/create">新增商品</el-menu-item>
           <el-menu-item index="/categories">分类管理</el-menu-item>
+          <el-menu-item index="/reviews">评价管理</el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/orders">

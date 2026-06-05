@@ -25,4 +25,15 @@ public interface ReviewService {
     List<ReviewComment> getReviewComments(Long reviewId);
 
     ReviewComment addReviewComment(Long userId, Long reviewId, String content);
+
+    PageResult<Review> adminGetReviewPage(String keyword, String username, Integer rating,
+                                          String startDate, String endDate,
+                                          Boolean hasImage, Boolean hasFollowUp,
+                                          String sort, int page, int pageSize);
+
+    Review adminGetReviewDetail(Long id);
+
+    void adminDeleteReview(Long id);
+
+    void adminBatchDeleteReviews(List<Long> ids);
 }

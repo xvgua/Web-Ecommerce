@@ -15,6 +15,19 @@
       <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
 
+    <div class="toolbar-actions">
+      <el-button type="success" :loading="exporting" @click="handleExport">
+        <el-icon><Download /></el-icon> 导出Excel
+      </el-button>
+    </div>
+
+    <el-dialog v-model="exportErrorVisible" title="导出失败" width="440px">
+      <p>{{ exportErrorMessage }}</p>
+      <template #footer>
+        <el-button type="primary" @click="exportErrorVisible = false">知道了</el-button>
+      </template>
+    </el-dialog>
+
     <div class="table-card">
       <el-table :data="orders" v-loading="loading" stripe>
         <el-table-column prop="orderNo" label="订单号" width="170" />
@@ -72,8 +85,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search, User } from '@element-plus/icons-vue'
-import { getOrderList, shipOrder, cancelOrder } from '@/api/admin'
+import { Search, User, Download } from '@element-plus/icons-vue'
+import { getOrderList, shipOrder, cancelOrder, exportOrders } from '@/api/admin'
 import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_MAP, ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
@@ -101,6 +114,48 @@ async function loadOrders() {
     total.value = res.data.total
   } finally {
     loading.value = false
+  }
+}
+
+const exporting = ref(false)
+const exportErrorVisible = ref(false)
+const exportErrorMessage = ref('')
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const blob = await exportOrders({
+      keyword: keyword.value || undefined,
+      userId: userId.value ? Number(userId.value) : undefined,
+      status: status.value || undefined,
+    })
+
+    if (blob.type === 'application/json') {
+      const text = await blob.text()
+      try {
+        const json = JSON.parse(text)
+        exportErrorMessage.value = json.message || '导出失败'
+      } catch {
+        exportErrorMessage.value = '导出失败，请重试'
+      }
+      exportErrorVisible.value = true
+      return
+    }
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = ''
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e: any) {
+    exportErrorMessage.value = e?.response?.data?.message
+      || e?.message
+      || '导出失败，请检查网络后重试'
+    exportErrorVisible.value = true
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -143,6 +198,12 @@ onMounted(() => { loadOrders() })
   &-search { width: 260px; }
   &-select { width: 160px; }
   &-select-sm { width: 120px; }
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .table-card {

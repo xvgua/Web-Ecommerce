@@ -140,6 +140,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '编辑秒杀活动' },
       },
       {
+        path: 'reviews',
+        name: 'ReviewManage',
+        component: () => import('@/views/review/index.vue'),
+        meta: { title: '评价管理' },
+      },
+      {
         path: 'refunds',
         name: 'RefundManage',
         component: () => import('@/views/refund/index.vue'),

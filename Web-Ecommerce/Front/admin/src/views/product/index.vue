@@ -91,8 +91,13 @@
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column label="主图" width="90">
           <template #default="{ row }">
-            <div style="width:60px;height:60px;border-radius:6px;overflow:hidden">
-              <ProductPlaceholder :seed="row.name + row.id" :size="60" />
+            <div style="width:60px;height:60px;border-radius:6px;overflow:hidden;background:#f0f0f0">
+              <el-image v-if="row.mainImage" :src="row.mainImage" fit="cover">
+                <template #error>
+                  <ProductPlaceholder :seed="row.name + row.id" :size="60" />
+                </template>
+              </el-image>
+              <ProductPlaceholder v-else :seed="row.name + row.id" :size="60" />
             </div>
           </template>
         </el-table-column>

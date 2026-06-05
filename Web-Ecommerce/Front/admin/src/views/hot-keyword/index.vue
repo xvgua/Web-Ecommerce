@@ -2,7 +2,10 @@
   <div class="hot-keyword-page">
     <div class="page-header">
       <h1>热门搜索词</h1>
-      <el-button type="primary" @click="handleCreate">新增关键词</el-button>
+      <div class="page-header__actions">
+        <el-button type="success" :loading="computing" @click="handleCompute">刷新统计</el-button>
+        <el-button type="primary" @click="handleCreate">新增关键词</el-button>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -105,6 +108,7 @@ import {
   deleteHotKeyword,
   toggleHotKeywordPin,
   toggleHotKeywordStatus,
+  computeHotKeywords,
 } from '@/api/admin'
 import type { HotKeyword } from '@shared/types/product'
 import { useDebounceFn } from '@vueuse/core'
@@ -119,6 +123,7 @@ const keyword = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref<number>(0)
+const computing = ref(false)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
 
@@ -215,6 +220,17 @@ async function handleToggleStatus(row: HotKeyword) {
   ElMessage.success('状态已更新')
 }
 
+async function handleCompute() {
+  computing.value = true
+  try {
+    await computeHotKeywords(30, 20)
+    ElMessage.success('热门关键词统计完成')
+    loadData()
+  } finally {
+    computing.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -236,6 +252,11 @@ onMounted(() => {
     font-size: 20px;
     font-weight: 600;
     color: #303133;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
   }
 }
 

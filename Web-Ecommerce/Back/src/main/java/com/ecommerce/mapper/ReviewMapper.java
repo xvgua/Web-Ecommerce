@@ -50,4 +50,23 @@ public interface ReviewMapper extends BaseMapper<Review> {
 
     @Select("SELECT COUNT(*) FROM review WHERE user_id = #{userId} AND is_followup = 0")
     long countByUserId(@Param("userId") Long userId);
+
+    List<Review> selectAdminList(@Param("keyword") String keyword,
+                                  @Param("username") String username,
+                                  @Param("rating") Integer rating,
+                                  @Param("startDate") String startDate,
+                                  @Param("endDate") String endDate,
+                                  @Param("hasImage") Boolean hasImage,
+                                  @Param("hasFollowUp") Boolean hasFollowUp,
+                                  @Param("sort") String sort,
+                                  @Param("offset") int offset,
+                                  @Param("pageSize") int pageSize);
+
+    long countAdminList(@Param("keyword") String keyword,
+                         @Param("username") String username,
+                         @Param("rating") Integer rating,
+                         @Param("startDate") String startDate,
+                         @Param("endDate") String endDate,
+                         @Param("hasImage") Boolean hasImage,
+                         @Param("hasFollowUp") Boolean hasFollowUp);
 }

@@ -12,19 +12,28 @@ import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
 import com.ecommerce.dto.RefundApplyRequest;
 import com.ecommerce.dto.RefundAuditRequest;
+import com.ecommerce.dto.OrderExcelDTO;
+import com.ecommerce.dto.OrderItemExcelDTO;
 import com.ecommerce.dto.RefundQuery;
 
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
 import com.ecommerce.service.CouponService;
 import com.ecommerce.service.OrderService;
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.write.metadata.WriteSheet;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -776,6 +785,92 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order confirmed: orderNo={}", order.getOrderNo());
     }
 
+    @Override
+    public void exportOrders(ProductQuery query, HttpServletResponse response) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        if (query.getStatus() != null) {
+            wrapper.eq(Order::getStatus, query.getStatus());
+        }
+        if (query.getUserId() != null) {
+            wrapper.eq(Order::getUserId, query.getUserId());
+        }
+        if (StringUtils.hasText(query.getKeyword())) {
+            wrapper.eq(Order::getOrderNo, query.getKeyword());
+        }
+        wrapper.orderByDesc(Order::getCreateTime);
+
+        long count = orderMapper.selectCount(wrapper);
+        if (count > 10000) {
+            throw new BusinessException(
+                    "匹配订单超过 10000 条上限（当前 " + count + " 条），请缩小筛选范围");
+        }
+        if (count == 0) {
+            writeEmptyExcel(response);
+            return;
+        }
+
+        List<Order> orders = orderMapper.selectList(wrapper);
+
+        // Batch load associations
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        Set<Long> addressIds = orders.stream()
+                .map(Order::getAddressId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<OrderItem> allItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().in(OrderItem::getOrderId, orderIds));
+        Map<Long, List<OrderItem>> itemsMap = allItems.stream()
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
+
+        Map<Long, Address> addressMap = new HashMap<>();
+        if (!addressIds.isEmpty()) {
+            List<Address> addresses = addressMapper.selectBatchIds(addressIds);
+            addressMap = addresses.stream()
+                    .collect(Collectors.toMap(Address::getId, a -> a));
+        }
+
+        // Populate non-persistent fields
+        for (Order order : orders) {
+            order.setItems(itemsMap.getOrDefault(order.getId(), List.of()));
+            order.setAddress(addressMap.get(order.getAddressId()));
+            order.setStatusText(getStatusText(order.getStatus()));
+            if (order.getRefundStatus() != null) {
+                order.setRefundReasonText(RefundReason.getReasonText(order.getRefundReason()));
+                order.setRefundStatusText(RefundStatus.getStatusText(order.getRefundStatus()));
+            }
+        }
+
+        // Convert to export DTOs
+        List<OrderExcelDTO> sheet1 = orders.stream().map(this::toOrderExcelDTO).toList();
+        List<OrderItemExcelDTO> sheet2 = orders.stream()
+                .flatMap(o -> o.getItems().stream().map(item -> toItemExcelDTO(o.getOrderNo(), item)))
+                .toList();
+
+        try {
+            String filename = "订单导出_"
+                    + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                    + ".xlsx";
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-Disposition",
+                    "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+
+            ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream()).build();
+            WriteSheet sheet1Write = EasyExcel.writerSheet(0, "订单列表")
+                    .head(OrderExcelDTO.class).build();
+            WriteSheet sheet2Write = EasyExcel.writerSheet(1, "订单明细")
+                    .head(OrderItemExcelDTO.class).build();
+            excelWriter.write(sheet1, sheet1Write);
+            excelWriter.write(sheet2, sheet2Write);
+            excelWriter.finish();
+
+            log.info("Orders exported: count={}, filename={}", orders.size(), filename);
+        } catch (IOException e) {
+            throw new BusinessException("导出Excel失败: " + e.getMessage());
+        }
+    }
+
     // Admin methods
     @Override
     public PageResult<Order> adminGetOrderPage(ProductQuery query) {
@@ -965,6 +1060,73 @@ public class OrderServiceImpl implements OrderService {
             } catch (Exception ex) {
                 return List.of();
             }
+        }
+    }
+
+    private OrderExcelDTO toOrderExcelDTO(Order o) {
+        OrderExcelDTO dto = new OrderExcelDTO();
+        dto.setOrderNo(o.getOrderNo());
+        dto.setUserId(o.getUserId());
+        if (o.getAddress() instanceof Address addr) {
+            dto.setReceiverName(addr.getName());
+            dto.setReceiverPhone(addr.getPhone());
+            dto.setReceiverAddress(
+                    addr.getProvince() + addr.getCity() + addr.getDistrict() + " " + addr.getDetail());
+        }
+        dto.setTotalAmount(o.getTotalAmount());
+        dto.setCouponDiscount(o.getCouponDiscount());
+        dto.setDiscountAmount(o.getDiscountAmount());
+        dto.setPayAmount(o.getPayAmount());
+        dto.setStatusText(o.getStatusText());
+        dto.setCreateTime(formatDateTime(o.getCreateTime()));
+        dto.setPayTime(formatDateTime(o.getPayTime()));
+        dto.setDealTime(formatDateTime(o.getDealTime()));
+        if (o.getRefundStatus() != null) {
+            dto.setRefundTypeText(o.getRefundType() != null && o.getRefundType() == 2
+                    ? "退货退款" : "仅退款");
+            dto.setRefundAmount(o.getRefundAmount());
+            dto.setRefundReasonText(o.getRefundReasonText());
+            dto.setRefundStatusText(o.getRefundStatusText());
+            dto.setRefundApplyTime(formatDateTime(o.getRefundApplyTime()));
+            dto.setRefundDealTime(formatDateTime(o.getRefundDealTime()));
+        }
+        return dto;
+    }
+
+    private OrderItemExcelDTO toItemExcelDTO(String orderNo, OrderItem item) {
+        OrderItemExcelDTO dto = new OrderItemExcelDTO();
+        dto.setOrderNo(orderNo);
+        dto.setProductName(item.getProductName());
+        dto.setSpecDesc(item.getSpecDesc());
+        dto.setPrice(item.getPrice());
+        dto.setQuantity(item.getQuantity());
+        dto.setSubtotal(item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+        return dto;
+    }
+
+    private String formatDateTime(LocalDateTime dt) {
+        return dt != null
+                ? dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                : null;
+    }
+
+    private void writeEmptyExcel(HttpServletResponse response) {
+        try {
+            String filename = "订单导出_"
+                    + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                    + ".xlsx";
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-Disposition",
+                    "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+            ExcelWriter excelWriter = EasyExcel.write(response.getOutputStream()).build();
+            excelWriter.write(List.of(),
+                    EasyExcel.writerSheet(0, "订单列表").head(OrderExcelDTO.class).build());
+            excelWriter.write(List.of(),
+                    EasyExcel.writerSheet(1, "订单明细").head(OrderItemExcelDTO.class).build());
+            excelWriter.finish();
+        } catch (IOException e) {
+            throw new BusinessException("导出Excel失败: " + e.getMessage());
         }
     }
 }

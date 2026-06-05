@@ -6,3 +6,4 @@ dist/
 screenshot-*.png
 .claude/settings.local.json
 target/
+upload/

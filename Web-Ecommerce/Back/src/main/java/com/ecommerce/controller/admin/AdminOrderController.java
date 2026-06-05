@@ -7,8 +7,10 @@ import com.ecommerce.dto.RefundAuditRequest;
 import com.ecommerce.dto.RefundQuery;
 import com.ecommerce.entity.Order;
 import com.ecommerce.service.OrderService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +19,11 @@ public class AdminOrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @GetMapping("/export")
+    public void exportOrders(ProductQuery query, HttpServletResponse response) {
+        orderService.exportOrders(query, response);
+    }
 
     @GetMapping
     public Result<PageResult<Order>> list(ProductQuery query) {

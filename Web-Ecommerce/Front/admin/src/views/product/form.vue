@@ -10,31 +10,47 @@
           <el-input v-model="form.name" placeholder="请输入商品名称" maxlength="60" show-word-limit />
         </el-form-item>
         <el-form-item label="商品分类" prop="categoryId">
-          <el-select v-model="form.categoryId" placeholder="请选择分类">
+          <el-select v-model="form.categoryId" placeholder="请输入关键词搜索或下拉选择" filterable clearable>
             <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="价格" prop="price">
-              <el-input-number v-model="form.price" :min="0" :precision="2" :step="1" controls-position="right" />
+              <el-input-number
+                v-model="form.price"
+                :min="0"
+                :precision="2"
+                disabled
+                controls-position="right"
+              />
+              <div class="field-hint">{{ form.skus && form.skus.length > 0 ? '取自规格最低价' : '添加规格后自动计算' }}</div>
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="库存" prop="stock">
-              <el-input-number v-model="form.stock" :min="0" :step="1" controls-position="right" />
+              <el-input-number
+                v-model="form.stock"
+                :min="0"
+                :step="1"
+                disabled
+                controls-position="right"
+              />
+              <div class="field-hint">{{ form.skus && form.skus.length > 0 ? '取自规格库存总和' : '添加规格后自动计算' }}</div>
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="商品主图" prop="mainImage">
           <div class="upload-area">
             <div class="upload-preview" v-if="form.mainImage">
-              <ProductPlaceholder :seed="form.name || 'product'" :size="120" />
+              <img :src="form.mainImage" class="main-image-preview" />
             </div>
             <el-upload
               action="/api/admin/upload"
+              :headers="uploadHeaders"
               :show-file-list="false"
               :on-success="handleMainImageSuccess"
+              :on-error="handleUploadError"
               :before-upload="beforeUpload"
             >
               <el-button :type="form.mainImage ? '' : 'primary'">
@@ -71,8 +87,10 @@
                 <el-upload
                   v-else
                   action="/api/admin/upload"
+                  :headers="uploadHeaders"
                   :show-file-list="false"
-                  :on-success="(res: {data:string}) => sku.image = res.data"
+                  :on-success="(res: any) => { sku.image = res.data.url; ElMessage.success('规格图上传成功') }"
+                  :on-error="handleUploadError"
                   :before-upload="beforeUpload"
                 >
                   <el-button text size="small" type="primary">上传</el-button>
@@ -96,15 +114,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { createProduct, updateProduct, getProductById, getCategoryList } from '@/api/admin'
 import { Delete } from '@element-plus/icons-vue'
-import { requiredRule, priceRules } from '@shared/validators'
+import { requiredRule } from '@shared/validators'
+import { ADMIN_TOKEN_KEY } from '@shared/constants'
 import type { Category, ProductForm, SkuForm } from '@shared/types/product'
-import ProductPlaceholder from '@/components/common/ProductPlaceholder.vue'
+
+const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem(ADMIN_TOKEN_KEY) || ''}` }
 
 const route = useRoute()
 const router = useRouter()
@@ -129,29 +149,47 @@ const form = reactive<ProductForm>({
 const rules: FormRules = {
   name: [requiredRule('商品名称')],
   categoryId: [requiredRule('商品分类')],
-  price: priceRules,
-  stock: [requiredRule('库存')],
 }
 
-function handleMainImageSuccess(response: { data: string }) {
-  form.mainImage = response.data
+function syncPriceAndStock() {
+  const skus = form.skus || []
+  if (skus.length > 0) {
+    form.price = Math.min(...skus.map(s => s.price || 0))
+    form.stock = skus.reduce((sum, s) => sum + (s.stock || 0), 0)
+  } else {
+    form.price = 0
+    form.stock = 0
+  }
+}
+
+watch(() => form.skus, syncPriceAndStock, { deep: true })
+
+function handleMainImageSuccess(response: { data: { url: string } }) {
+  form.mainImage = response.data.url
+  ElMessage.success('主图上传成功')
+}
+
+function handleUploadError() {
+  ElMessage.error('图片上传失败，请重试')
 }
 
 function beforeUpload(file: File) {
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB')
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB')
   }
-  return isLt2M
+  return isLt5M
 }
 
 function addSku() {
   if (!form.skus) form.skus = []
-  form.skus.push({ specName: '', price: 0, stock: 0, image: '' })
+  form.skus.push({ specName: '', specValue: '', price: 0, stock: 0, image: '' })
+  syncPriceAndStock()
 }
 
 function removeSku(index: number) {
   form.skus?.splice(index, 1)
+  syncPriceAndStock()
 }
 
 async function handleSubmit() {
@@ -159,7 +197,7 @@ async function handleSubmit() {
   if (!valid) return
   submitting.value = true
   try {
-    const payload = { ...form }
+    const payload = { ...form, images: JSON.stringify(form.images || []) }
     // Always send skus so the backend knows when to create a default
     if (!payload.skus) payload.skus = []
     if (isEdit.value) {
@@ -214,6 +252,13 @@ onMounted(async () => {
   :deep(.el-input-number) { width: 100%; }
 }
 
+.field-hint {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
 .upload-area {
   display: flex;
   align-items: flex-end;
@@ -226,6 +271,12 @@ onMounted(async () => {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #eee;
+}
+
+.main-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sku-list {

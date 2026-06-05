@@ -8,7 +8,9 @@ import com.ecommerce.dto.HotKeywordForm;
 import com.ecommerce.entity.HotKeyword;
 import com.ecommerce.mapper.HotKeywordMapper;
 import com.ecommerce.service.HotKeywordService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -16,6 +18,7 @@ import org.springframework.util.StringUtils;
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Service
 public class HotKeywordServiceImpl implements HotKeywordService {
 
@@ -40,6 +43,16 @@ public class HotKeywordServiceImpl implements HotKeywordService {
         hotKeywordMapper.disableOldComputed(days, limit);
         for (HotKeyword kw : topKeywords) {
             hotKeywordMapper.upsertComputed(kw.getKeyword(), kw.getSearchCount(), days, limit);
+        }
+    }
+
+    @Scheduled(fixedRate = 300000, initialDelay = 60000)
+    public void scheduledCompute() {
+        try {
+            computeAndRefresh(30, 20);
+            log.info("Hot keyword compute completed");
+        } catch (Exception e) {
+            log.error("Hot keyword compute failed: {}", e.getMessage());
         }
     }
 

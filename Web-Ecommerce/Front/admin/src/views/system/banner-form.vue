@@ -19,8 +19,10 @@
           />
           <el-upload
             action="/api/admin/upload"
+            :headers="uploadHeaders"
             :show-file-list="false"
             :on-success="handleUploadSuccess"
+            :on-error="handleUploadError"
             :before-upload="beforeUpload"
           >
             <el-button :type="form.imageUrl ? '' : 'primary'">
@@ -67,6 +69,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { createBanner, updateBanner, getBannerById } from '@/api/admin'
+import { ADMIN_TOKEN_KEY } from '@shared/constants'
+
+const uploadHeaders = { Authorization: `Bearer ${localStorage.getItem(ADMIN_TOKEN_KEY) || ''}` }
 
 const route = useRoute()
 const router = useRouter()
@@ -111,16 +116,21 @@ onMounted(async () => {
   finally { loading.value = false }
 })
 
-function handleUploadSuccess(response: { data: string }) {
-  form.value.imageUrl = response.data
+function handleUploadSuccess(response: { data: { url: string } }) {
+  form.value.imageUrl = response.data.url
+  ElMessage.success('上传成功')
+}
+
+function handleUploadError() {
+  ElMessage.error('图片上传失败，请重试')
 }
 
 function beforeUpload(file: File) {
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB')
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB')
   }
-  return isLt2M
+  return isLt5M
 }
 
 async function handleSubmit() {

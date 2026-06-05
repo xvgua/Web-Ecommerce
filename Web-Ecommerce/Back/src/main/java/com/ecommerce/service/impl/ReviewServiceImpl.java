@@ -27,6 +27,8 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ReviewServiceImpl implements ReviewService {
@@ -291,5 +293,154 @@ public class ReviewServiceImpl implements ReviewService {
                         .eq(Review::getId, reviewId)
                         .setSql("comment_count = comment_count + 1"));
         return comment;
+    }
+
+    @Override
+    public PageResult<Review> adminGetReviewPage(String keyword, String username, Integer rating,
+                                                  String startDate, String endDate,
+                                                  Boolean hasImage, Boolean hasFollowUp,
+                                                  String sort, int page, int pageSize) {
+        int offset = (page - 1) * pageSize;
+        String endDateAdjusted = endDate != null && !endDate.isEmpty() ? endDate + " 23:59:59" : null;
+        long total = reviewMapper.countAdminList(keyword, username, rating, startDate, endDateAdjusted, hasImage, hasFollowUp);
+        List<Review> records = reviewMapper.selectAdminList(keyword, username, rating, startDate, endDateAdjusted,
+                hasImage, hasFollowUp, sort, offset, pageSize);
+
+        if (!records.isEmpty()) {
+            List<Long> reviewIds = records.stream().map(Review::getId).toList();
+            List<Long> orderIds = records.stream().map(Review::getOrderId).distinct().toList();
+            List<Long> productIds = records.stream().map(Review::getProductId).distinct().toList();
+
+            List<Review> followUps = reviewMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                            .eq(Review::getIsFollowup, 1)
+                            .in(Review::getOrderId, orderIds)
+                            .in(Review::getProductId, productIds));
+            Map<String, List<Review>> followUpMap = followUps.stream()
+                    .collect(Collectors.groupingBy(r -> r.getOrderId() + "_" + r.getProductId()));
+
+            for (Review r : records) {
+                String key = r.getOrderId() + "_" + r.getProductId();
+                List<Review> fuList = followUpMap.get(key);
+                r.setHasFollowUp(fuList != null && !fuList.isEmpty());
+            }
+        }
+
+        return PageResult.of(records, total, page, pageSize);
+    }
+
+    @Override
+    public Review adminGetReviewDetail(Long id) {
+        Review review = reviewMapper.selectById(id);
+        if (review == null) {
+            throw new BusinessException("评价不存在");
+        }
+        Product product = productMapper.selectById(review.getProductId());
+        if (product != null) {
+            review.setProductName(product.getName());
+            review.setProductImage(product.getMainImage());
+            review.setProductPrice(product.getPrice());
+        }
+
+        List<ReviewComment> comments = reviewCommentMapper.selectByReviewId(id);
+        review.setCommentCount(comments.size());
+        review.setComments(comments);
+
+        List<Review> followUps = reviewMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                        .eq(Review::getIsFollowup, 1)
+                        .eq(Review::getOrderId, review.getOrderId())
+                        .eq(Review::getProductId, review.getProductId()));
+        review.setHasFollowUp(!followUps.isEmpty());
+        review.setFollowUpReviews(followUps);
+
+        return review;
+    }
+
+    @Override
+    @Transactional
+    public void adminDeleteReview(Long id) {
+        Review review = reviewMapper.selectById(id);
+        if (review == null) {
+            throw new BusinessException("评价不存在");
+        }
+
+        // Delete follow-up reviews for the same order+product
+        reviewMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                .eq(Review::getOrderId, review.getOrderId())
+                .eq(Review::getProductId, review.getProductId())
+                .eq(Review::getIsFollowup, 1));
+
+        // Delete comments and likes for this review
+        reviewCommentMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewComment>()
+                .eq(ReviewComment::getReviewId, id));
+        reviewLikeMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewLike>()
+                .eq(ReviewLike::getReviewId, id));
+
+        // Delete the review itself
+        reviewMapper.deleteById(id);
+
+        // Recalculate product rating
+        recalculateProductRating(review.getProductId());
+    }
+
+    @Override
+    @Transactional
+    public void adminBatchDeleteReviews(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException("请选择要删除的评价");
+        }
+
+        // Collect product IDs before deletion for recalculation
+        List<Review> reviews = reviewMapper.selectBatchIds(ids);
+        Set<Long> productIds = reviews.stream().map(Review::getProductId).collect(Collectors.toSet());
+
+        for (Review review : reviews) {
+            // Delete follow-up reviews
+            reviewMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                    .eq(Review::getOrderId, review.getOrderId())
+                    .eq(Review::getProductId, review.getProductId())
+                    .eq(Review::getIsFollowup, 1));
+            // Delete comments
+            reviewCommentMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewComment>()
+                    .eq(ReviewComment::getReviewId, review.getId()));
+            // Delete likes
+            reviewLikeMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ReviewLike>()
+                    .eq(ReviewLike::getReviewId, review.getId()));
+        }
+
+        // Batch delete reviews
+        reviewMapper.deleteBatchIds(ids);
+
+        // Recalculate ratings for affected products
+        for (Long productId : productIds) {
+            recalculateProductRating(productId);
+        }
+    }
+
+    private void recalculateProductRating(Long productId) {
+        Product product = productMapper.selectById(productId);
+        if (product == null) return;
+
+        long count = reviewMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                        .eq(Review::getProductId, productId)
+                        .eq(Review::getIsFollowup, 0));
+        if (count == 0) {
+            product.setAvgRating(BigDecimal.ZERO);
+            product.setReviewCount(0);
+        } else {
+            List<Review> productReviews = reviewMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
+                            .eq(Review::getProductId, productId)
+                            .eq(Review::getIsFollowup, 0));
+            BigDecimal totalRating = productReviews.stream()
+                    .map(Review::getRating)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal newAvg = totalRating.divide(BigDecimal.valueOf(count), 1, RoundingMode.HALF_UP);
+            product.setAvgRating(newAvg);
+            product.setReviewCount((int) count);
+        }
+        productMapper.updateById(product);
     }
 }

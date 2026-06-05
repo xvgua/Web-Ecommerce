@@ -11,6 +11,7 @@ import com.ecommerce.dto.RefundAuditRequest;
 import com.ecommerce.dto.RefundQuery;
 
 import com.ecommerce.entity.Order;
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface OrderService {
     Order createOrder(Long userId, CreateOrderRequest req);
@@ -36,6 +37,9 @@ public interface OrderService {
     Order adminGetOrderById(Long id);
     void shipOrder(Long id);
     void adminCancelOrder(Long id);
+
+    // Admin export
+    void exportOrders(ProductQuery query, HttpServletResponse response);
 
     // Admin refund
     PageResult<Order> adminGetRefundPage(RefundQuery query);

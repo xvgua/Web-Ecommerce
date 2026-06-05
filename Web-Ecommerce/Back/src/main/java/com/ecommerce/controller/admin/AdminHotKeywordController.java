@@ -51,4 +51,11 @@ public class AdminHotKeywordController {
         hotKeywordService.adminToggleStatus(id);
         return Result.success();
     }
+
+    @PostMapping("/compute")
+    public Result<Void> compute(@RequestParam(defaultValue = "30") int days,
+                                @RequestParam(defaultValue = "20") int limit) {
+        hotKeywordService.computeAndRefresh(days, limit);
+        return Result.success();
+    }
 }

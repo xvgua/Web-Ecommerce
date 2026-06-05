@@ -503,11 +503,11 @@ public class ProductServiceImpl implements ProductService {
                 ProductSku sku = new ProductSku();
                 sku.setProductId(product.getId());
                 sku.setSpecName(sf.getSpecName());
-                sku.setSpecValue(sf.getSpecValue());
+                sku.setSpecValue(sf.getSpecValue() != null ? sf.getSpecValue() : "");
                 sku.setPrice(sf.getPrice());
                 sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
                 sku.setStatus(sf.getStatus() != null ? sf.getStatus() : 1);
-                sku.setImage(sf.getImage());
+                sku.setImage(sf.getImage() != null ? sf.getImage() : "");
                 skuMapper.insert(sku);
             }
             syncProductFromSkus(product.getId());
@@ -549,11 +549,11 @@ public class ProductServiceImpl implements ProductService {
                     ProductSku sku = new ProductSku();
                     sku.setProductId(id);
                     sku.setSpecName(sf.getSpecName());
-                    sku.setSpecValue(sf.getSpecValue());
+                    sku.setSpecValue(sf.getSpecValue() != null ? sf.getSpecValue() : "");
                     sku.setPrice(sf.getPrice());
                     sku.setStock(sf.getStock() != null ? sf.getStock() : 0);
                     sku.setStatus(sf.getStatus() != null ? sf.getStatus() : 1);
-                    sku.setImage(sf.getImage());
+                    sku.setImage(sf.getImage() != null ? sf.getImage() : "");
                     skuMapper.insert(sku);
                 }
             } else {

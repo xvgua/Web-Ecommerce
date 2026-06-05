@@ -9,8 +9,8 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   servlet:
     multipart:
-      max-file-size: 2MB
-      max-request-size: 10MB
+      max-file-size: 5MB
+      max-request-size: 15MB
   mail:
     host: ${MAIL_HOST:smtp.163.com}
     port: ${MAIL_PORT:465}
@@ -45,4 +45,4 @@ jwt:
 upload:
   path: ./upload
   allowed-extensions: jpg,jpeg,png,gif,webp
-  max-size: 2097152
+  max-size: 5242880

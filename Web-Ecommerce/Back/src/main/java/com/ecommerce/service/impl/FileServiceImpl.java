@@ -40,7 +40,7 @@ public class FileServiceImpl implements FileService {
             throw new BusinessException("文件不能为空");
         }
         if (file.getSize() > maxSize) {
-            throw new BusinessException("文件大小不能超过2MB");
+            throw new BusinessException("文件大小不能超过5MB");
         }
 
         String originalName = file.getOriginalFilename();

@@ -49,6 +49,8 @@ public class Review {
     private Boolean hasFollowUp;
     @TableField(exist = false)
     private List<Review> followUpReviews;
+    @TableField(exist = false)
+    private List<ReviewComment> comments;
 
     @JsonProperty("images")
     public List<String> getImageList() {
