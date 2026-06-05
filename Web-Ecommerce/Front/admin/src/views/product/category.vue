@@ -112,7 +112,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
-  moveCategory,
+  moveCategorySort,
 } from '@/api/admin'
 import type { Category } from '@shared/types/product'
 
@@ -212,7 +212,7 @@ async function handleDelete(id: number) {
 async function handleMove(id: number, direction: 'up' | 'down') {
   movingId.value = id
   try {
-    await moveCategory(id, direction)
+    await moveCategorySort(id, direction)
     loadCategories()
   } catch {
     // handled
