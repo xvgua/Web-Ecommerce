@@ -17,7 +17,7 @@ export function getProductReviews(
   ratingMin?: number,
   ratingMax?: number
 ): Promise<ApiResponse<PageResponse<Review>>> {
-  return request.get('/reviews', { params: { productId: id, page, pageSize, ratingMin, ratingMax } })
+  return request.get(`/products/${id}/reviews`, { params: { page, pageSize, ratingMin, ratingMax } })
 }
 
 export function createReview(data: {

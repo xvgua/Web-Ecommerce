@@ -11,8 +11,10 @@ export function getConversations(params: {
   return request.get('/admin/conversations', { params })
 }
 
-export function getConversationMessages(id: number): Promise<ApiResponse<ChatMessage[]>> {
-  return request.get(`/admin/conversations/${id}/messages`)
+export function getConversationMessages(id: number, skipErrorToast = false): Promise<ApiResponse<ChatMessage[]>> {
+  return request.get(`/admin/conversations/${id}/messages`, {
+    _skipErrorToast: skipErrorToast,
+  } as any)
 }
 
 export function replyConversation(id: number, content: string): Promise<ApiResponse<ChatMessage>> {

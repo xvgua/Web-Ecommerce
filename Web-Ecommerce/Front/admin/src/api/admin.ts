@@ -51,6 +51,15 @@ export function getHotProducts(range: string, top?: number): Promise<ApiResponse
   return request.get('/admin/dashboard/hot-products', { params: { range, top } })
 }
 
+export interface CategorySalesItem {
+  categoryName: string
+  sales: number
+}
+
+export function getCategorySales(): Promise<ApiResponse<CategorySalesItem[]>> {
+  return request.get('/admin/dashboard/category-sales')
+}
+
 // ===== Product Management =====
 export function getProductList(params: ProductQuery): Promise<ApiResponse<PageResponse<Product>>> {
   return request.get('/admin/products', { params })
@@ -120,6 +129,10 @@ export function cancelOrder(id: number): Promise<ApiResponse<null>> {
 // ===== User Management =====
 export function getUserList(params: PageQuery): Promise<ApiResponse<PageResponse<User>>> {
   return request.get('/admin/users', { params })
+}
+
+export function getUserById(id: number): Promise<ApiResponse<User>> {
+  return request.get(`/admin/users/${id}`)
 }
 
 export function toggleUserStatus(id: number, status: number): Promise<ApiResponse<null>> {

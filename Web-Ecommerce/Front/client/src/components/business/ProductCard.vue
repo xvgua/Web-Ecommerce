@@ -44,14 +44,14 @@ function goDetail() {
 <style lang="scss" scoped>
 .product-card {
   background: var(--bg1);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  border: 1px solid var(--line-light);
+  transition: border-color var(--transition-fast);
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    border-color: var(--line-regular);
 
     .product-card__image :deep(.product-placeholder),
     .product-card__image :deep(.el-image img) {
@@ -63,7 +63,7 @@ function goDetail() {
     aspect-ratio: 4 / 5;
     overflow: hidden;
     position: relative;
-    background: var(--bg3);
+    background: var(--bg2);
 
     :deep(.product-image),
     :deep(.el-image),

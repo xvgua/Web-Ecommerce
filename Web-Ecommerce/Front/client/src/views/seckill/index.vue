@@ -1,90 +1,103 @@
 <template>
   <div class="seckill-page">
-    <!-- Header with countdown -->
-    <div class="seckill-header" v-if="currentActivity">
-      <div class="seckill-header__info">
-        <h2 class="seckill-header__title">
-          <el-icon :size="24"><Timer /></el-icon>
-          {{ currentActivity.name }}
-        </h2>
-        <div class="seckill-header__countdown">
-          <span class="countdown-label">{{ countdownLabel }}</span>
-          <span class="countdown-timer">{{ countdownText }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Activity tabs for multiple concurrent activities -->
-    <div class="seckill-tabs" v-if="activities.length > 1">
-      <div
-        v-for="act in activities"
-        :key="act.id"
-        :class="['seckill-tab', { active: currentActivity?.id === act.id }]"
-        @click="selectActivity(act)"
-      >
-        {{ act.name }}
-      </div>
-    </div>
-
-    <!-- Product grid -->
-    <div class="seckill-products" v-if="currentActivity && currentActivity.products?.length">
-      <div
-        v-for="sp in currentActivity.products"
-        :key="sp.id"
-        class="seckill-product-card"
-      >
-        <div class="seckill-product-card__image" @click="goProduct(sp.productId)">
-          <ProductImage :src="sp.productImage" :seed="sp.productName + sp.productId" fit="cover" />
-          <div class="seckill-tag" v-if="sp.remainStock === 0">已售罄</div>
-        </div>
-        <div class="seckill-product-card__info">
-          <h4 class="product-name" @click="goProduct(sp.productId)">{{ sp.productName }}</h4>
-          <p class="spec-desc" v-if="sp.specDesc">{{ sp.specDesc }}</p>
-          <div class="price-row">
-            <span class="seckill-price">&yen;{{ sp.seckillPrice }}</span>
-            <span class="original-price" v-if="sp.originalPrice">&yen;{{ sp.originalPrice }}</span>
-          </div>
-          <div class="stock-bar">
-            <div class="stock-bar__inner" :style="{ width: stockPercent(sp) + '%' }"></div>
-          </div>
-          <div class="stock-info">
-            <span>已抢{{ sp.seckillStock - sp.remainStock }}件</span>
-            <span>剩余{{ sp.remainStock }}件</span>
-          </div>
-          <el-button
-            type="danger"
-            :disabled="sp.remainStock === 0 || hasPurchased(sp)"
-            @click="goSeckill(sp)"
-            class="seckill-btn"
-            :loading="seckillingId === sp.id"
-          >
-            {{ sp.remainStock === 0 ? '已售罄' : hasPurchased(sp) ? '您已抢购过该商品啦' : '立即秒杀' }}
-          </el-button>
-        </div>
-      </div>
+    <div class="seckill-page__header">
+      <h1 class="seckill-page__title">
+        <el-icon :size="26"><Timer /></el-icon>
+        限时秒杀
+      </h1>
     </div>
 
     <!-- Empty state -->
     <el-empty
-      v-if="!currentActivity || !currentActivity.products?.length"
+      v-if="!activities.length"
       description="暂无秒杀活动"
       :image-size="160"
     />
+
+    <!-- Activity sections -->
+    <section
+      v-for="act in activities"
+      :key="act.id"
+      class="seckill-section"
+      :class="{ 'seckill-section--upcoming': act.status === 0 }"
+      :style="act.backgroundImage
+        ? { background: `url(${act.backgroundImage}) center/cover no-repeat` }
+        : {}"
+    >
+      <div class="seckill-section__bar">
+        <div class="seckill-section__bar-left">
+          <h2 class="seckill-section__name">{{ act.name }}</h2>
+          <span v-if="act.status === 1" class="seckill-section__badge seckill-section__badge--active">进行中</span>
+          <span v-else class="seckill-section__badge seckill-section__badge--upcoming">即将开始</span>
+        </div>
+        <div class="seckill-section__bar-right">
+          <template v-if="act.status === 1">
+            <span class="countdown-label">距离结束</span>
+            <span class="countdown-timer">{{ countdownText(act, 'end') }}</span>
+          </template>
+          <template v-else>
+            <span class="countdown-label">开始时间</span>
+            <span class="seckill-section__start-time">{{ formatStartTime(act.startTime) }}</span>
+          </template>
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="seckill-products" v-if="act.products?.length">
+        <div
+          v-for="sp in act.products"
+          :key="sp.id"
+          class="seckill-product-card"
+        >
+          <div class="seckill-product-card__image" @click="goProduct(sp.productId)">
+            <ProductImage :src="sp.productImage" :seed="sp.productName + sp.productId" fit="cover" />
+            <div class="seckill-tag" v-if="sp.remainStock === 0">已售罄</div>
+          </div>
+          <div class="seckill-product-card__info">
+            <h4 class="product-name" @click="goProduct(sp.productId)">{{ sp.productName }}</h4>
+            <p class="spec-desc" v-if="sp.specDesc">{{ sp.specDesc }}</p>
+            <div class="price-row">
+              <span class="seckill-price">&yen;{{ sp.seckillPrice }}</span>
+              <span class="original-price" v-if="sp.originalPrice">&yen;{{ sp.originalPrice }}</span>
+            </div>
+            <div class="stock-bar">
+              <div class="stock-bar__inner" :style="{ width: stockPercent(sp) + '%' }"></div>
+            </div>
+            <div class="stock-info">
+              <span>已抢{{ sp.seckillStock - sp.remainStock }}件</span>
+              <span>剩余{{ sp.remainStock }}件</span>
+            </div>
+            <el-button
+              type="danger"
+              :disabled="sp.remainStock === 0 || hasPurchased(sp) || act.status === 0"
+              @click="goSeckill(sp)"
+              class="seckill-btn"
+              :loading="seckillingId === sp.id"
+            >
+              <template v-if="act.status === 0">即将开始</template>
+              <template v-else-if="sp.remainStock === 0">已售罄</template>
+              <template v-else-if="hasPurchased(sp)">已抢购</template>
+              <template v-else>立即秒杀</template>
+            </el-button>
+          </div>
+        </div>
+      </div>
+      <el-empty v-else description="暂无秒杀商品" :image-size="80" />
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Timer } from '@element-plus/icons-vue'
 import ProductImage from '@/components/common/ProductImage.vue'
-import { getActiveActivities, getMyPurchasedSeckill } from '@/api/seckill'
+import { getAllActivities, getMyPurchasedSeckill } from '@/api/seckill'
 import type { SeckillActivity, SeckillProduct } from '@shared/types/seckill'
 
 const router = useRouter()
 
 const activities = ref<SeckillActivity[]>([])
-const currentActivity = ref<SeckillActivity | null>(null)
 const now = ref(Date.now())
 let timer: number | null = null
 
@@ -92,38 +105,31 @@ const purchasedIds = ref<Set<number>>(new Set())
 const seckillingId = ref<number | null>(null)
 const hasPurchased = (sp: SeckillProduct) => purchasedIds.value.has(sp.id)
 
-const countdownLabel = computed(() => {
-  if (!currentActivity.value) return ''
-  const start = new Date(currentActivity.value.startTime).getTime()
-  const end = new Date(currentActivity.value.endTime).getTime()
-  if (now.value < start) return '距离开始'
-  if (now.value < end) return '距离结束'
-  return '已结束'
-})
-
-const countdownText = computed(() => {
-  if (!currentActivity.value) return '--:--:--:----'
-  const start = new Date(currentActivity.value.startTime).getTime()
-  const end = new Date(currentActivity.value.endTime).getTime()
-  let diff: number
-  if (now.value < start) diff = start - now.value
-  else if (now.value < end) diff = end - now.value
-  else return '00:00:00:0000'
+function countdownText(act: SeckillActivity, type: 'end' | 'start'): string {
+  const target = type === 'end'
+    ? new Date(act.endTime).getTime()
+    : new Date(act.startTime).getTime()
+  let diff = target - now.value
+  if (diff < 0) return '00:00:00'
 
   const h = Math.floor(diff / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   const s = Math.floor((diff % 60000) / 1000)
-  const ms = diff % 1000
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(ms).padStart(4, '0')}`
-})
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function formatStartTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const hours = String(d.getHours()).padStart(2, '0')
+  const mins = String(d.getMinutes()).padStart(2, '0')
+  return `${month}月${day}日 ${hours}:${mins}`
+}
 
 function stockPercent(sp: SeckillProduct) {
   if (sp.seckillStock === 0) return 0
   return Math.round((sp.remainStock / sp.seckillStock) * 100)
-}
-
-function selectActivity(act: SeckillActivity) {
-  currentActivity.value = act
 }
 
 function goProduct(productId: number) {
@@ -133,14 +139,11 @@ function goProduct(productId: number) {
 async function loadActivities() {
   try {
     const [actRes, purchasedRes] = await Promise.all([
-      getActiveActivities(),
+      getAllActivities(),
       getMyPurchasedSeckill().catch(() => ({ data: [] as number[] })),
     ])
     activities.value = actRes.data || []
     purchasedIds.value = new Set(purchasedRes.data || [])
-    if (activities.value.length > 0) {
-      currentActivity.value = activities.value[0]
-    }
   } catch {
     // handled by interceptor
   }
@@ -156,7 +159,7 @@ onMounted(() => {
   loadActivities()
   timer = window.setInterval(() => {
     now.value = Date.now()
-  }, 50)
+  }, 1000)
 })
 
 onUnmounted(() => {
@@ -164,124 +167,141 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .seckill-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 24px 16px 60px;
 }
 
-.seckill-header {
-  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-  border-radius: 12px;
-  padding: 24px 32px;
+.seckill-page__header {
   margin-bottom: 24px;
-  color: #fff;
 }
 
-.seckill-header__info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.seckill-header__title {
+.seckill-page__title {
   margin: 0;
-  font-size: 24px;
+  font-size: 26px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--text1);
 }
 
-.seckill-header__countdown {
+/* ── Activity section ── */
+.seckill-section {
+  margin-bottom: 32px;
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+
+  &--upcoming {
+    .seckill-section__bar {
+      background: linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 100%);
+    }
+  }
+}
+
+.seckill-section__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  border-radius: 10px 10px 0 0;
+  color: #fff;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.seckill-section__bar-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.seckill-section__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.seckill-section__badge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+
+  &--active {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  &--upcoming {
+    background: rgba(0, 0, 0, 0.1);
+    color: #666;
+  }
+}
+
+.seckill-section__bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seckill-section__start-time {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
 .countdown-label {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.85;
 }
 
 .countdown-timer {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
   letter-spacing: 2px;
 }
 
-.seckill-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.seckill-tab {
-  padding: 8px 20px;
-  border: 1px solid #dcdfe6;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.seckill-tab.active {
-  background: #ff4d4f;
-  color: #fff;
-  border-color: #ff4d4f;
-}
-
+/* ── Products grid ── */
 .seckill-products {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
+  gap: 1px;
+  background: #eee;
+  border: 1px solid #eee;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
 
-@media (max-width: 1024px) {
-  .seckill-products {
+  @media (max-width: 1024px) {
     grid-template-columns: repeat(3, 1fr);
   }
-}
 
-@media (max-width: 768px) {
-  .seckill-products {
+  @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .seckill-header__info {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
 .seckill-product-card {
   background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #ebeef5;
-  transition: box-shadow 0.3s;
-}
 
-.seckill-product-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
+  &__image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    cursor: pointer;
+    overflow: hidden;
+    background: #f5f5f5;
+  }
 
-.seckill-product-card__image {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  cursor: pointer;
-  overflow: hidden;
-  background: #f5f5f5;
-}
-
-.seckill-product-card__image :deep(.product-image),
-.seckill-product-card__image :deep(.el-image),
-.seckill-product-card__image :deep(img) {
-  width: 100%;
-  height: 100%;
+  &__info {
+    padding: 12px;
+  }
 }
 
 .seckill-tag {
@@ -295,10 +315,6 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-.seckill-product-card__info {
-  padding: 12px;
-}
-
 .product-name {
   margin: 0 0 4px;
   font-size: 14px;
@@ -306,10 +322,8 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
 
-.product-name:hover {
-  color: #ff4d4f;
+  &:hover { color: #ff4d4f; }
 }
 
 .spec-desc {
@@ -363,5 +377,4 @@ onUnmounted(() => {
 .seckill-btn {
   width: 100%;
 }
-
 </style>

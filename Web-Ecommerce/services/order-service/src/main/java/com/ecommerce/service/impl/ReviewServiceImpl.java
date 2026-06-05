@@ -237,6 +237,24 @@ public class ReviewServiceImpl implements ReviewService {
         if (!records.isEmpty()) {
             List<Long> orderIds = records.stream().map(Review::getOrderId).distinct().toList();
             List<Long> productIds = records.stream().map(Review::getProductId).distinct().toList();
+
+            // Batch-fetch product info via Feign (product table is in product-service)
+            try {
+                Result<List<Product>> batchResult = productFeignClient.batchGetProducts(productIds);
+                if (batchResult.isSuccess() && batchResult.getData() != null) {
+                    Map<Long, Product> productMap = batchResult.getData().stream()
+                            .collect(Collectors.toMap(Product::getId, p -> p));
+                    for (Review r : records) {
+                        Product p = productMap.get(r.getProductId());
+                        if (p != null) {
+                            r.setProductName(p.getName());
+                            r.setProductImage(p.getMainImage());
+                            r.setProductPrice(p.getPrice());
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+
             List<Review> followUps = reviewMapper.selectList(new LambdaQueryWrapper<Review>()
                     .eq(Review::getIsFollowup, 1).in(Review::getOrderId, orderIds)
                     .in(Review::getProductId, productIds));

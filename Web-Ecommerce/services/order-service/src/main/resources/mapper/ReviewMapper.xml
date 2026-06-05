@@ -5,13 +5,9 @@
     <select id="selectAdminList" resultType="com.ecommerce.entity.Review">
         SELECT r.id, r.user_id, r.username, r.avatar, r.product_id, r.order_id,
                r.rating, r.rating_desc, r.rating_logistics, r.rating_service,
-               r.content, r.images, r.is_followup, r.like_count, r.comment_count, r.create_time,
-               p.name AS product_name, p.main_image AS product_image
-        FROM review r LEFT JOIN product p ON r.product_id = p.id
+               r.content, r.images, r.is_followup, r.like_count, r.comment_count, r.create_time
+        FROM review r
         WHERE r.is_followup = 0
-        <if test="keyword != null and keyword != ''">
-            AND p.name LIKE CONCAT('%', #{keyword}, '%')
-        </if>
         <if test="username != null and username != ''">
             AND r.username LIKE CONCAT('%', #{username}, '%')
         </if>
@@ -45,11 +41,8 @@
 
     <select id="countAdminList" resultType="long">
         SELECT COUNT(*)
-        FROM review r LEFT JOIN product p ON r.product_id = p.id
+        FROM review r
         WHERE r.is_followup = 0
-        <if test="keyword != null and keyword != ''">
-            AND p.name LIKE CONCAT('%', #{keyword}, '%')
-        </if>
         <if test="username != null and username != ''">
             AND r.username LIKE CONCAT('%', #{username}, '%')
         </if>

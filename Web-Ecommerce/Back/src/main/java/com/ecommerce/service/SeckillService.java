@@ -13,6 +13,7 @@ public interface SeckillService {
 
     // Client
     List<SeckillActivity> getActiveActivities();
+    List<SeckillActivity> getAllActivities();
     SeckillActivity getActivityDetail(Long activityId);
     Order createSeckillOrder(Long userId, SeckillOrderRequest req);
     SeckillProduct getSeckillProductDetail(Long seckillProductId);

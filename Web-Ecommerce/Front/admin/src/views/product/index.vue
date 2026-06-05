@@ -333,7 +333,7 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
-.product-manage { max-width: 1400px; }
+.product-manage { /* max-width handled by .content-wrapper */ }
 
 .page-subtitle {
   font-size: 13px;
@@ -485,7 +485,7 @@ onMounted(async () => {
     color: var(--org-text-secondary);
 
     &--success .import-result__num { color: var(--org-accent-deep); }
-    &--fail .import-result__num { color: #e08880; }
+    &--fail .import-result__num { color: #EF4444; }
   }
 
   &__num {
@@ -505,7 +505,7 @@ onMounted(async () => {
 
   &__error {
     font-size: 14px;
-    color: #e08880;
+    color: #EF4444;
     padding: 4px 0;
     border-bottom: 1px solid var(--org-border-soft);
 

@@ -307,10 +307,19 @@ public class ReviewServiceImpl implements ReviewService {
                 hasImage, hasFollowUp, sort, offset, pageSize);
 
         if (!records.isEmpty()) {
-            List<Long> reviewIds = records.stream().map(Review::getId).toList();
             List<Long> orderIds = records.stream().map(Review::getOrderId).distinct().toList();
             List<Long> productIds = records.stream().map(Review::getProductId).distinct().toList();
 
+            // Fill product info
+            Map<Long, Product> productMap = new HashMap<>();
+            if (!productIds.isEmpty()) {
+                List<Product> products = productMapper.selectBatchIds(productIds);
+                for (Product p : products) {
+                    productMap.put(p.getId(), p);
+                }
+            }
+
+            // Fill follow-up status
             List<Review> followUps = reviewMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Review>()
                             .eq(Review::getIsFollowup, 1)
@@ -323,6 +332,13 @@ public class ReviewServiceImpl implements ReviewService {
                 String key = r.getOrderId() + "_" + r.getProductId();
                 List<Review> fuList = followUpMap.get(key);
                 r.setHasFollowUp(fuList != null && !fuList.isEmpty());
+
+                Product p = productMap.get(r.getProductId());
+                if (p != null) {
+                    r.setProductName(p.getName());
+                    r.setProductImage(p.getMainImage());
+                    r.setProductPrice(p.getPrice());
+                }
             }
         }
 

@@ -236,14 +236,6 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 28px;
-
-  .page-title {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0;
-    color: var(--org-text);
-    letter-spacing: -.4px;
-  }
 }
 
 .primary-list {

@@ -184,7 +184,7 @@ onMounted(() => { loadCoupons() })
 </script>
 
 <style lang="scss" scoped>
-.coupon-manage { max-width: 1400px; }
+.coupon-manage { /* max-width handled by .content-wrapper */ }
 
 .toolbar {
   &-search { width: 240px; }

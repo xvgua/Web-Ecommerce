@@ -84,14 +84,10 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .order-detail-page {
-  max-width: 1000px;
+  /* max-width handled by .content-wrapper */
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--org-text);
-  letter-spacing: -.4px;
   margin-bottom: 28px;
 }
 

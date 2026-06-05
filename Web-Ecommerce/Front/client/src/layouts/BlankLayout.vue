@@ -10,6 +10,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
+  background: var(--bg2);
 }
 </style>

@@ -118,10 +118,10 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  getConversationList,
-  getMessages,
-  sendMessage as apiSendMessage,
-  closeConversation as apiCloseConversation,
+  getConversations,
+  getConversationMessages,
+  replyConversation,
+  adminCloseConversation,
   getQuickReplies,
 } from '@/api/chat'
 import { formatDate } from '@/utils/format'
@@ -161,7 +161,7 @@ const quickReplies = ref<{ id: number; title: string; content: string }[]>([])
 async function loadConversations() {
   convLoading.value = true
   try {
-    const res = await getConversationList({
+    const res = await getConversations({
       page: convPage.value,
       pageSize: convPageSize.value,
       status: statusFilter.value,
@@ -177,7 +177,7 @@ async function selectConversation(conv: Conversation) {
   activeConvId.value = conv.id
   activeConv.value = conv
   try {
-    const res = await getMessages(conv.id)
+    const res = await getConversationMessages(conv.id, true)
     messages.value = res.data || []
     await nextTick()
     scrollToBottom()
@@ -191,7 +191,7 @@ async function sendMessage() {
   if (!content || !activeConvId.value) return
   inputMsg.value = ''
   try {
-    const res = await apiSendMessage({ conversationId: activeConvId.value, content, senderType: 2 })
+    const res = await replyConversation(activeConvId.value!, content)
     messages.value.push(res.data)
     await nextTick()
     scrollToBottom()
@@ -207,9 +207,13 @@ function scrollToBottom() {
 }
 
 async function closeConversation() {
-  await ElMessageBox.confirm('确定关闭此会话？', '提示', { type: 'warning' })
+  try {
+    await ElMessageBox.confirm('确定关闭此会话？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
   if (!activeConvId.value) return
-  await apiCloseConversation(activeConvId.value)
+  await adminCloseConversation(activeConvId.value!)
   ElMessage.success('会话已关闭')
   loadConversations()
 }
@@ -222,7 +226,7 @@ function insertQuickReply(content: string | undefined) {
 
 async function loadQuickReplies() {
   try {
-    const res = await getQuickReplies({ page: 1, pageSize: 100, enabled: true })
+    const res = await getQuickReplies()
     quickReplies.value = (res.data || []) as any
   } catch {
     // silent
@@ -242,11 +246,7 @@ onMounted(() => {
   flex-direction: column;
 }
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0 0 20px;
-  color: var(--org-text);
-  letter-spacing: -.4px;
+  margin: 0 0 24px;
 }
 
 .cs-layout {
@@ -315,7 +315,7 @@ onMounted(() => {
   }
 
   &__badge {
-    background: #e08880;
+    background: #EF4444;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -370,7 +370,7 @@ onMounted(() => {
     justify-content: space-between;
     padding: 16px 24px;
     border-bottom: 1px solid var(--org-border-soft);
-    background: #f9f7f4;
+    background: var(--bg-layer-2);
   }
 
   &__header-info {
@@ -404,7 +404,7 @@ onMounted(() => {
   &__quick {
     padding: 10px 24px;
     border-top: 1px solid var(--org-border-soft);
-    background: #f9f7f4;
+    background: var(--bg-layer-2);
   }
 
   &__footer {
@@ -428,10 +428,10 @@ onMounted(() => {
     align-items: flex-end;
 
     .cs-msg__bubble {
-      background: linear-gradient(135deg, #6eb89a, #5aad8a);
+      background: var(--brand-primary);
       color: #fff;
-      border-radius: 20px 4px 20px 20px;
-      box-shadow: 0 2px 8px rgba(110, 184, 154, .25);
+      border-radius: 10px 4px 10px 10px;
+      box-shadow: 0 2px 8px rgba(57, 100, 254, .15);
     }
   }
 

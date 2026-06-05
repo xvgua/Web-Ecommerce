@@ -172,6 +172,7 @@ async function handleBatchFavorite() {
     skuId: item.skuId,
   }))
   await batchAddFavorites(items)
+  await cartStore.removeSelected()
   ElMessage.success(`已将 ${items.length} 件商品移入收藏`)
 }
 
@@ -195,9 +196,10 @@ onMounted(() => { cartStore.fetchCart() })
 }
 
 .cart-content {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
   overflow: hidden;
+  border: 1px solid var(--line-light);
 }
 
 .cart-toolbar {
@@ -205,7 +207,7 @@ onMounted(() => { cartStore.fetchCart() })
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line-light);
 
   &__right {
     display: flex;

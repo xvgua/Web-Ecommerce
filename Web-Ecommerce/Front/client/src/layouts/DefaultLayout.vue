@@ -8,7 +8,7 @@
             <router-link to="/" class="header__nav-link" exact-active-class="header__nav-link--active">首页</router-link>
             <router-link to="/products" class="header__nav-link" active-class="header__nav-link--active">全部商品</router-link>
             <router-link to="/seckill" class="header__nav-link" active-class="header__nav-link--active">限时秒杀</router-link>
-            <router-link to="/coupon/center" class="header__nav-link" active-class="header__nav-link--active">领券中心</router-link>
+            <router-link to="/coupons" class="header__nav-link" active-class="header__nav-link--active">领券中心</router-link>
           </nav>
           <div class="header__top-right">
             <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
@@ -126,6 +126,7 @@
               >{{ kw.keyword }}</span>
             </div>
           </div>
+          <div class="header__search-spacer"></div>
         </div>
       </div>
 
@@ -185,6 +186,7 @@ const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
 const hotKeywords = ref<HotKeyword[]>([])
+const categories = ref<Category[]>([])
 const scrolled = ref(false)
 
 function onScroll() {
@@ -202,6 +204,24 @@ function findCategoryName(tree: Category[], id: number): string | null {
     }
   }
   return null
+}
+
+/** Match a keyword to a category name and return the category id.
+ *  Returns 0 if no match found.
+ *  Matches exact name, keyword-contained-in-category, or category-contained-in-keyword. */
+function findCategoryIdByName(tree: Category[], keyword: string): number {
+  const kw = keyword.toLowerCase()
+  for (const node of tree) {
+    const name = node.name.toLowerCase()
+    if (name === kw || name.includes(kw) || kw.includes(name)) return node.id
+    if (node.children) {
+      for (const child of node.children) {
+        const childName = child.name.toLowerCase()
+        if (childName === kw || childName.includes(kw) || kw.includes(childName)) return child.id
+      }
+    }
+  }
+  return 0
 }
 
 function fetchSuggestions(queryString: string, callback: (data: any[]) => void) {
@@ -227,12 +247,22 @@ function fetchSuggestions(queryString: string, callback: (data: any[]) => void) 
 function handleSelect(item: any) {
   if (item.type === 'clear' || item.type === 'hot-section' || item.type === 'history-separator') return
   keyword.value = item.keyword
-  router.push({ path: '/products', query: { keyword: item.keyword } })
+  const catId = findCategoryIdByName(categories.value, item.keyword)
+  if (catId > 0) {
+    router.push({ path: '/products', query: { categoryId: String(catId) } })
+  } else {
+    router.push({ path: '/products', query: { keyword: item.keyword } })
+  }
 }
 
 function handleHotClick(kw: { keyword: string }) {
   keyword.value = kw.keyword
-  router.push({ path: '/products', query: { keyword: kw.keyword } })
+  const catId = findCategoryIdByName(categories.value, kw.keyword)
+  if (catId > 0) {
+    router.push({ path: '/products', query: { categoryId: String(catId) } })
+  } else {
+    router.push({ path: '/products', query: { keyword: kw.keyword } })
+  }
 }
 
 function handleRemoveHistory(keyword: string) {
@@ -246,8 +276,12 @@ function handleClearHistory() {
 
 function handleSearch() {
   const kw = keyword.value.trim()
-  if (kw) {
-    addHistory(kw)
+  if (!kw) return
+  addHistory(kw)
+  const catId = findCategoryIdByName(categories.value, kw)
+  if (catId > 0) {
+    router.push({ path: '/products', query: { categoryId: String(catId) } })
+  } else {
     router.push({ path: '/products', query: { keyword: kw } })
   }
 }
@@ -256,19 +290,21 @@ watch(() => route.query.keyword, (kw) => {
   keyword.value = (kw as string) || ''
 })
 
-watch(() => route.query.categoryId, async (catId) => {
+watch(() => route.query.categoryId, (catId) => {
   const cid = catId ? Number(catId) : 0
   if (!cid) return
-  try {
-    const res = await getCategories()
-    const name = findCategoryName(res.data, cid)
-    if (name) keyword.value = name
-  } catch { /* ignore */ }
-}, { immediate: false })
+  const name = findCategoryName(categories.value, cid)
+  if (name) keyword.value = name
+})
 
-// Clear search box when returning to home page
+// Clear search box and refresh cart/stats when returning to home page
 watch(() => route.path, (path) => {
-  if (path === '/') keyword.value = ''
+  if (path === '/') {
+    keyword.value = ''
+    if (userStore.isLoggedIn) {
+      cartStore.fetchCart(true)
+    }
+  }
 })
 
 onMounted(async () => {
@@ -278,6 +314,7 @@ onMounted(async () => {
     tasks.push(userStore.fetchUser())
   }
   tasks.push(getHotKeywords(10).then(res => hotKeywords.value = res.data))
+  tasks.push(getCategories().then(res => categories.value = res.data))
   await Promise.allSettled(tasks)
 })
 
@@ -300,56 +337,56 @@ function handleLogout() {
    ═══════════════════════════════════════════════════════════ */
 :root {
   /* ═══════════════════════════════════════════════════════════
-     Mint Sage — Design Tokens
-     Primary: #4EAB8E | A fresh, clean palette for ecommerce
+     Swiss Minimalism — Design Tokens
+     Monochrome + single accent. No gradients, no glow.
      ═══════════════════════════════════════════════════════════ */
 
-  /* Brand — Mint Sage */
-  --brand-primary: #4EAB8E;
-  --brand-primary-rgb: 78, 171, 142;
-  --brand-primary-hover: #5FC0A2;
-  --brand-primary-active: #3D8F76;
-  --brand-primary-light: #E8F6F0;
-  --brand-primary-ghost: rgba(var(--brand-primary-rgb), 0.08);
+  /* Brand — Swiss Red */
+  --brand-primary: #C41E3A;
+  --brand-primary-rgb: 196, 30, 58;
+  --brand-primary-hover: #A01830;
+  --brand-primary-active: #8B1528;
+  --brand-primary-light: rgba(196, 30, 58, 0.06);
+  --brand-primary-ghost: rgba(196, 30, 58, 0.04);
 
-  /* Text — neutral charcoal-to-gray with cool undertone */
-  --text1: #1A1C1B;
-  --text2: #3D4A47;
-  --text3: #80948F;
-  --text4: #B0BDB9;
+  /* Text — high-contrast monochrome */
+  --text1: #111111;
+  --text2: #444444;
+  --text3: #777777;
+  --text4: #AAAAAA;
 
-  /* Background — cool-tinted whites with slight sage undertone */
-  --bg1: #fff;
-  --bg2: #F4F9F7;
-  --bg3: #EBF2EF;
+  /* Background — pure white / near-white */
+  --bg1: #FFFFFF;
+  --bg2: #F7F7F7;
+  --bg3: #EEEEEE;
 
-  /* Border — cool gray matching the green family */
-  --line-light: #E0E8E5;
-  --line-regular: #C8D4D0;
+  /* Border — hairline gray */
+  --line-light: #E8E8E8;
+  --line-regular: #D4D4D4;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-full: 24px;
+  /* Radius — restrained */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-full: 20px;
 
-  /* Transition */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transition — snappy */
+  --transition-fast: 0.12s ease;
+  --transition-normal: 0.18s ease;
+  --transition-slow: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Shadow — tinted mint sage (matches brand hue) */
-  --shadow-sm: 0 1px 3px rgba(40, 95, 75, 0.04);
-  --shadow-md: 0 1px 6px rgba(40, 95, 75, 0.07);
-  --shadow-lg: 0 8px 24px rgba(40, 95, 75, 0.10);
-  --shadow-xl: 0 16px 40px rgba(40, 95, 75, 0.14);
+  /* Shadow — none or barely there */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 1px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.08);
 
-  /* Accent — semantic colors that harmonize with mint */
-  --color-success: #3DA06E;
-  --color-warning: #E6A23C;
-  --color-danger: #D94A4A;
-  --color-info: #5C9E8E;
+  /* Semantic — restrained */
+  --color-success: #2E7D32;
+  --color-warning: #E65100;
+  --color-danger: #C62828;
+  --color-info: #1565C0;
 }
 </style>
 
@@ -366,13 +403,13 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #fff;
+  background: var(--bg1);
   border-bottom: 1px solid var(--line-light);
 }
 
 /* ── Pipe separator ── */
 .header__pipe {
-  color: #ddd;
+  color: var(--line-regular);
   font-size: 12px;
   user-select: none;
 }
@@ -465,6 +502,7 @@ function handleLogout() {
   transition: transform .2s;
 }
 
+
 .header__user:hover .header__user-arrow {
   transform: rotate(180deg);
 }
@@ -487,18 +525,18 @@ function handleLogout() {
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 12px 40px;
+  gap: 16px;
+  padding: 12px 0;
 }
 
-/* ── Logo (in search row) ── */
+/* ── Logo (in search row) — left-align with hero-cat ── */
 .header__logo {
   display: flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
   white-space: nowrap;
-  flex-shrink: 0;
+  flex: 0 0 200px;
   transition: all .2s;
 
   span {
@@ -522,9 +560,13 @@ function handleLogout() {
 
 .search-area {
   flex: 1;
-  max-width: 700px;
   display: flex;
   flex-direction: column;
+}
+
+/* ── Right spacer — mirrors hero-right sidebar width ── */
+.header__search-spacer {
+  flex: 0 0 260px;
 }
 
 .search-box {
@@ -535,21 +577,22 @@ function handleLogout() {
     flex: 1;
 
     :deep(.el-input__wrapper) {
-      border: 2px solid var(--brand-primary);
-      border-radius: 24px 0 0 24px;
-      background: #fff;
+      border: 1px solid var(--text1);
+      border-radius: 2px 0 0 2px;
+      background: var(--bg1);
       box-shadow: none;
-      padding-left: 18px;
-      height: 42px;
+      padding-left: 16px;
+      height: 44px;
       border-right: none;
-      transition: box-shadow var(--transition-normal);
+      transition: border-color var(--transition-fast);
 
       &:hover {
-        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.08);
+        border-color: var(--text1);
       }
 
       &.is-focus {
-        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.12);
+        border-color: var(--text1);
+        box-shadow: none;
       }
     }
 
@@ -561,8 +604,8 @@ function handleLogout() {
     }
 
     :deep(.el-input__prefix) {
-      color: var(--brand-primary);
-      font-size: 18px;
+      color: var(--text2);
+      font-size: 16px;
     }
 
     :deep(.el-input__suffix) { color: var(--text4); }
@@ -573,19 +616,20 @@ function handleLogout() {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    height: 42px;
-    padding: 0 24px;
-    border-radius: 0 24px 24px 0;
-    background: var(--brand-primary);
+    height: 44px;
+    padding: 0 28px;
+    border-radius: 0 2px 2px 0;
+    background: var(--text1);
     color: #fff;
     border: none;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     flex-shrink: 0;
+    letter-spacing: -0.01em;
     transition: background var(--transition-fast);
 
-    &:hover { background: var(--brand-primary-hover); }
+    &:hover { background: #333; }
   }
 }
 
@@ -605,15 +649,15 @@ function handleLogout() {
   &__tag {
     padding: 2px 10px;
     background: var(--bg3);
-    border-radius: 12px;
+    border-radius: 2px;
     color: var(--text2);
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
 
     &:hover {
-      color: var(--brand-primary);
-      background: var(--brand-primary-light);
+      color: var(--text1);
+      background: var(--line-regular);
     }
   }
 }
@@ -669,8 +713,9 @@ function handleLogout() {
 
 /* ── Footer ── */
 .footer {
-  background: #1A2E28;
-  color: #7AACA0;
+  background: var(--bg1);
+  border-top: 1px solid var(--line-light);
+  color: var(--text2);
   padding: 48px 24px 28px;
 
   &__inner {
@@ -683,32 +728,33 @@ function handleLogout() {
 
   &__col {
     h4 {
-      color: #A0C8BC;
-      font-size: 14px;
+      color: var(--text1);
+      font-size: 13px;
       font-weight: 600;
       margin-bottom: 16px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
 
     a {
       display: block;
-      color: #5A8C80;
+      color: var(--text3);
       font-size: 13px;
       margin-bottom: 10px;
       transition: color var(--transition-fast);
 
-      &:hover { color: var(--brand-primary-hover); }
+      &:hover { color: var(--text1); }
     }
 
     &--brand {
       text-align: right;
       p {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
-        color: #A0C8BC;
+        color: var(--text1);
         margin-bottom: 6px;
       }
-      span { font-size: 12px; color: #4A7C70; }
+      span { font-size: 12px; color: var(--text4); }
     }
   }
 }
@@ -720,6 +766,8 @@ function handleLogout() {
   .header__nav-link { padding: 0 8px; font-size: 12px; }
   .header__user-name { display: none; }
   .header--scrolled .header__search-inner { padding: 8px 24px; }
+  .header__logo { flex: 0 0 180px; }
+  .header__search-spacer { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -733,8 +781,12 @@ function handleLogout() {
   .header__top-right { gap: 4px; }
 
   .header__search-inner {
-    padding: 10px 12px;
+    padding: 10px 0;
     gap: 10px;
+  }
+
+  .header__logo {
+    flex: 0 0 auto;
   }
 
   .header__logo {
@@ -772,6 +824,13 @@ function handleLogout() {
     max-height: 390px;
   }
 
+  .el-autocomplete-suggestion {
+    background: var(--bg1);
+    border: 1px solid var(--line-light);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+  }
+
   li {
     padding: 0;
     line-height: normal;
@@ -781,7 +840,7 @@ function handleLogout() {
     }
 
     &.highlighted {
-      background: var(--brand-primary-light);
+      background: var(--bg3);
     }
 
     &:last-child {
@@ -805,7 +864,7 @@ function handleLogout() {
     padding: 10px 16px;
 
     &__clock {
-      color: #a8a4a0;
+      color: var(--text4);
       font-size: 14px;
       flex-shrink: 0;
     }
@@ -873,5 +932,10 @@ function handleLogout() {
       flex-shrink: 0;
     }
   }
+}
+
+/* ── User dropdown items — force single-line ── */
+.el-dropdown-menu__item {
+  white-space: nowrap;
 }
 </style>

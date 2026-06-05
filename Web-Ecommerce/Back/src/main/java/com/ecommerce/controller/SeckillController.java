@@ -25,6 +25,11 @@ public class SeckillController {
         return Result.success(seckillService.getActiveActivities());
     }
 
+    @GetMapping("/activities/all")
+    public Result<List<SeckillActivity>> getAllActivities() {
+        return Result.success(seckillService.getAllActivities());
+    }
+
     @GetMapping("/activities/{id}")
     public Result<SeckillActivity> getActivityDetail(@PathVariable Long id) {
         return Result.success(seckillService.getActivityDetail(id));

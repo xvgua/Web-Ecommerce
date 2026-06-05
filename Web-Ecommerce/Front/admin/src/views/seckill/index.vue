@@ -2,7 +2,7 @@
   <div class="seckill-manage">
     <el-card>
       <div class="page-header">
-        <h3>秒杀活动管理</h3>
+        <h1 class="page-title">秒杀活动管理</h1>
         <el-button type="primary" @click="handleCreate">新增秒杀活动</el-button>
       </div>
 
@@ -123,21 +123,7 @@ onMounted(loadData)
 </script>
 
 <style lang="scss" scoped>
-.seckill-manage { max-width: 1400px; }
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--org-text);
-  }
-}
+.seckill-manage { /* max-width handled by .content-wrapper */ }
 
 .search-form {
   margin-bottom: 20px;

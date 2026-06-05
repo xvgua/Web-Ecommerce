@@ -158,14 +158,7 @@ async function handleSubmit() {
 }
 
 .page-header {
-  margin-bottom: 32px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--org-text);
-  letter-spacing: -.4px;
+  margin-bottom: 28px;
 }
 
 .upload-area {

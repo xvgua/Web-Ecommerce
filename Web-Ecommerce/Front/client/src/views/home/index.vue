@@ -145,7 +145,13 @@
     </section>
 
     <!-- Seckill Section -->
-    <section class="home-seckill" v-if="currentSeckill">
+    <section
+      class="home-seckill"
+      v-if="currentSeckill"
+      :style="currentSeckill.backgroundImage
+        ? { background: `url(${currentSeckill.backgroundImage}) center/cover no-repeat` }
+        : {}"
+    >
       <div class="home-seckill__header">
         <div class="home-seckill__header-info">
           <h2 class="home-seckill__title">
@@ -208,9 +214,8 @@ import {
   ArrowRight,
   Goods, ShoppingBag, Star, Present, Grid, Timer,
 } from '@element-plus/icons-vue'
-import { getHotProducts, getNewProducts, getCategories } from '@/api/product'
-import { getActiveActivities, getMyPurchasedSeckill } from '@/api/seckill'
-import { getBanners } from '@/api/banner'
+import request from '@/api/request'
+import { getMyPurchasedSeckill } from '@/api/seckill'
 import type { Product, Category } from '@shared/types/product'
 import type { SeckillActivity, SeckillProduct } from '@shared/types/seckill'
 import type { Banner } from '@shared/types'
@@ -219,6 +224,7 @@ import ProductImage from '@/components/common/ProductImage.vue'
 import AnnouncementBar from '@/components/business/AnnouncementBar.vue'
 import UserSidebar from '@/components/business/UserSidebar.vue'
 
+const skipOpt = { _skipErrorToast: true } as Record<string, unknown>
 const catIcons = [Goods, ShoppingBag, Star, Present]
 
 const categories = ref<Category[]>([])
@@ -295,25 +301,25 @@ const featureList = [
 
 onMounted(async () => {
   try {
-    const res = await getBanners()
-    banners.value = res.data
-  } catch { /* handled by interceptor */ }
+    const res = await request.get('/banners', skipOpt)
+    banners.value = (res as any).data
+  } catch { /* skip error toast via _skipErrorToast */ }
 
   try {
-    const cats = await getCategories()
-    categories.value = cats.data
-  } catch { /* handled by interceptor */ }
+    const cats = await request.get('/categories', skipOpt)
+    categories.value = (cats as any).data
+  } catch { /* skip */ }
 
   hotLoading.value = true
   newLoading.value = true
   try {
     const [hotRes, newRes] = await Promise.all([
-      getHotProducts(),
-      getNewProducts(),
+      request.get('/products/hot', skipOpt),
+      request.get('/products/new', skipOpt),
     ])
-    hotProducts.value = hotRes.data
-    newProducts.value = newRes.data
-  } catch { /* handled by interceptor */ }
+    hotProducts.value = (hotRes as any).data
+    newProducts.value = (newRes as any).data
+  } catch { /* skip */ }
   finally {
     hotLoading.value = false
     newLoading.value = false
@@ -321,14 +327,14 @@ onMounted(async () => {
 
   try {
     const [seckillRes, purchasedRes] = await Promise.all([
-      getActiveActivities(),
+      request.get('/seckill/activities', skipOpt),
       getMyPurchasedSeckill().catch(() => ({ data: [] as number[] })),
     ])
     purchasedIds.value = new Set(purchasedRes.data || [])
-    if (seckillRes.data?.length) {
-      currentSeckill.value = seckillRes.data[0]
+    if ((seckillRes as any).data?.length) {
+      currentSeckill.value = (seckillRes as any).data[0]
     }
-  } catch { /* handled by interceptor */ }
+  } catch { /* skip */ }
 
   seckillTimer = window.setInterval(() => {
     now.value = Date.now()
@@ -341,12 +347,12 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-$cat-accent: #4EAB8E;
-$cat-accent-hover: #5FC0A2;
-$cat-bg: #F0F8F5;
-$cat-hover-bg: #E6F3EE;
-$cat-text: #1A2C26;
-$cat-subtle: #6D9A8E;
+$cat-accent: #C41E3A;
+$cat-accent-hover: #A01830;
+$cat-bg: #F7F7F7;
+$cat-hover-bg: #EEEEEE;
+$cat-text: #111111;
+$cat-subtle: #777777;
 
 .home {
   max-width: 1400px;
@@ -369,25 +375,25 @@ $cat-subtle: #6D9A8E;
   width: 200px;
   flex-shrink: 0;
   height: 100%;
-  background: #fff;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-light);
   position: relative;
   overflow: visible;
   display: flex;
   flex-direction: column;
 
   &__header {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #fff;
-    background: linear-gradient(135deg, #3D8F76 0%, #4EAB8E 100%);
+    background: var(--text1);
     padding: 14px 20px;
-    border-radius: 12px 12px 0 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
+    text-transform: uppercase;
   }
 
   &__header-icon {
@@ -447,13 +453,14 @@ $cat-subtle: #6D9A8E;
 
   &__panel {
     position: absolute;
-    left: calc(100% + 4px);
+    left: 100%;
     top: 0;
     width: 556px;
     min-height: 400px;
-    background: #fff;
-    border-radius: 0 12px 12px 12px;
-    box-shadow: 6px 12px 40px rgba(40, 95, 75, 0.10);
+    background: var(--bg1);
+    border: 1px solid var(--line-light);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+    box-shadow: var(--shadow-xl);
     z-index: 100;
     padding: 24px 28px;
     display: flex;
@@ -476,7 +483,7 @@ $cat-subtle: #6D9A8E;
     margin-bottom: 10px;
     transition: color .15s;
     padding-bottom: 6px;
-    border-bottom: 1px solid $cat-bg;
+    border-bottom: 1px solid var(--line-light);
     width: 100%;
 
     &:hover { color: $cat-accent; }
@@ -495,11 +502,11 @@ $cat-subtle: #6D9A8E;
     color: $cat-subtle;
     padding: 4px 12px;
     background: $cat-bg;
-    border-radius: 14px;
+    border-radius: var(--radius-sm);
     transition: all .18s;
 
     &:hover {
-      color: $cat-accent;
+      color: $cat-text;
       background: $cat-hover-bg;
     }
   }
@@ -538,7 +545,7 @@ $cat-subtle: #6D9A8E;
     justify-content: center;
     width: 100%;
     height: 100%;
-    background: var(--bg3);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text3);
     font-size: 14px;
 
@@ -568,21 +575,20 @@ $cat-subtle: #6D9A8E;
 
   .feature-item {
     background: var(--bg1);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-sm);
     padding: 24px 20px;
     display: flex;
     align-items: center;
     gap: 14px;
-    transition: transform .2s, box-shadow .2s;
+    transition: border-color var(--transition-fast);
     border: 1px solid var(--line-light);
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
+      border-color: var(--line-regular);
     }
 
     &__icon { font-size: 28px; flex-shrink: 0; }
-    strong { font-size: 14px; display: block; margin-bottom: 4px; color: $cat-text; font-weight: 600; }
+    strong { font-size: 13px; display: block; margin-bottom: 4px; color: $cat-text; font-weight: 600; }
     p     { font-size: 12px; color: $cat-subtle; margin: 0; }
   }
 }
@@ -614,7 +620,6 @@ $cat-subtle: #6D9A8E;
         top: 4px;
         bottom: 4px;
         width: 3px;
-        border-radius: 2px;
         background: $cat-accent;
       }
     }
@@ -643,10 +648,13 @@ $cat-subtle: #6D9A8E;
 /* ── Home Seckill Section ── */
 .home-seckill {
   margin-bottom: 56px;
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 
   &__header {
-    background: linear-gradient(135deg, #3D8F76 0%, #4EAB8E 100%);
-    border-radius: var(--radius-lg);
+    background: var(--text1);
+    border-radius: var(--radius-sm);
     padding: 22px 28px;
     margin-bottom: 18px;
     display: flex;
@@ -680,15 +688,14 @@ $cat-subtle: #6D9A8E;
   }
 
   &__more {
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: $cat-accent !important;
+    background: #fff !important;
+    color: var(--text1) !important;
     border: none !important;
-    font-weight: 600 !important;
-    border-radius: var(--radius-full) !important;
+    font-weight: 500 !important;
+    border-radius: var(--radius-sm) !important;
 
     &:hover {
-      background: #fff !important;
-      transform: scale(1.02);
+      background: #f0f0f0 !important;
     }
   }
 
@@ -715,14 +722,13 @@ $cat-subtle: #6D9A8E;
 /* Seckill Product Card (reused from seckill page) */
 .seckill-product-card {
   background: var(--bg1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--line-light);
-  transition: box-shadow .3s, transform .3s;
+  transition: border-color var(--transition-fast);
 
   &:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
+    border-color: var(--line-regular);
   }
 
   &__image {
@@ -731,7 +737,7 @@ $cat-subtle: #6D9A8E;
     height: 200px;
     cursor: pointer;
     overflow: hidden;
-    background: var(--bg3);
+    background: var(--bg2);
 
     :deep(.product-image),
     :deep(.el-image),
@@ -803,8 +809,7 @@ $cat-subtle: #6D9A8E;
 
   &__inner {
     height: 100%;
-    background: linear-gradient(90deg, $cat-accent 0%, $cat-accent-hover 100%);
-    border-radius: 3px;
+    background: $cat-accent;
     transition: width .3s;
   }
 }

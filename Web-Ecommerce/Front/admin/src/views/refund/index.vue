@@ -245,7 +245,11 @@ onMounted(() => { loadList() })
 </script>
 
 <style lang="scss" scoped>
-.refund-manage { max-width: 1400px; }
+.refund-manage { /* max-width handled by .content-wrapper */ }
+
+.page-title {
+  margin-bottom: 24px;
+}
 
 .toolbar {
   &-search { width: 260px; }

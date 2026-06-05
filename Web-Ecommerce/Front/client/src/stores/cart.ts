@@ -16,8 +16,8 @@ export const useCartStore = defineStore('cart', () => {
 
   const checkedIds = computed(() => checkedItems.value.map((item) => item.id))
 
-  async function fetchCart() {
-    const res = await getCartList()
+  async function fetchCart(skipErrorToast = false) {
+    const res = await getCartList(skipErrorToast)
     items.value = res.data.map((item) => ({ ...item, checked: !!item.checked }))
   }
 

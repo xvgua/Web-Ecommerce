@@ -1,6 +1,7 @@
 package com.ecommerce.controller.admin;
 
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.HotProductDTO;
 import com.ecommerce.dto.SalesTrendDTO;
 import com.ecommerce.service.AdminService;
@@ -31,5 +32,10 @@ public class AdminDashboardController {
     public Result<List<HotProductDTO>> hotProducts(@RequestParam(defaultValue = "all") String range,
                                                     @RequestParam(defaultValue = "10") int top) {
         return Result.success(adminService.getHotProducts(range, top));
+    }
+
+    @GetMapping("/category-sales")
+    public Result<List<CategorySalesDTO>> categorySales() {
+        return Result.success(adminService.getCategorySales());
     }
 }

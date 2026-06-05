@@ -180,13 +180,13 @@ onMounted(() => { loadProducts(); loadSubCategories() })
   gap: 8px;
   margin-bottom: 12px;
   padding: 14px 20px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-light);
 
   &__label {
     font-size: 13px;
-    color: #999;
+    color: var(--text3);
     flex-shrink: 0;
   }
 }
@@ -194,36 +194,36 @@ onMounted(() => { loadProducts(); loadSubCategories() })
 .subcat-tag {
   display: inline-block;
   padding: 5px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   cursor: pointer;
-  color: #555;
-  background: #f5f5f5;
+  color: var(--text2);
+  background: var(--bg2);
   transition: all .15s;
 
   &:hover {
-    color: #409eff;
-    background: rgba(64,158,255,.08);
+    color: var(--text1);
+    background: var(--bg3);
   }
 
   &--active {
     color: #fff;
-    background: #409eff;
+    background: var(--text1);
     font-weight: 500;
 
     &:hover {
       color: #fff;
-      background: #409eff;
+      background: #333;
     }
   }
 }
 
 .filter-bar {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
   padding: 20px 24px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  border: 1px solid var(--line-light);
 
   &__sort {
     display: flex;

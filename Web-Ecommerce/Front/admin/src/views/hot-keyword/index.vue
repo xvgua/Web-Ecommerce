@@ -1,7 +1,7 @@
 <template>
   <div class="hot-keyword-page">
     <div class="page-header">
-      <h1>热门搜索词</h1>
+      <h1 class="page-title">热门搜索词</h1>
       <div class="page-header__actions">
         <el-button :loading="computing" @click="handleCompute">刷新统计</el-button>
         <el-button type="primary" @click="handleCreate">新增关键词</el-button>
@@ -238,23 +238,10 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .hot-keyword-page {
-  max-width: 1200px;
+  /* max-width handled by .content-wrapper */
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-
-  h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--org-text);
-    letter-spacing: -.4px;
-  }
-
   &__actions {
     display: flex;
     gap: 10px;

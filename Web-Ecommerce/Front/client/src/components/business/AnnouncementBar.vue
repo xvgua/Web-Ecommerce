@@ -32,7 +32,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Bell, Close } from '@element-plus/icons-vue'
-import { getAnnouncements } from '@/api/announcement'
+import request from '@/api/request'
 import type { Announcement } from '@shared/types'
 
 const DISMISSED_KEY = 'announcement_dismissed_ids'
@@ -113,9 +113,9 @@ function resumeCarousel() {
 
 onMounted(async () => {
   try {
-    const res = await getAnnouncements(5)
+    const res = await request.get('/announcements', { params: { limit: 5 }, _skipErrorToast: true } as any)
     const dismissed = dismissedIds()
-    announcements.value = (res.data || []).filter(a => !dismissed.includes(a.id))
+    announcements.value = ((res.data || []) as unknown as Announcement[]).filter(a => !dismissed.includes(a.id))
     if (announcements.value.length) {
       startCarousel()
     }
@@ -201,22 +201,22 @@ onUnmounted(() => {
   }
 }
 
-/* ── Level: info (mint sage) ── */
+/* ── Level: info (Swiss red tint) ── */
 .announcement-bar--info {
   .announcement-bar__inner {
-    background: linear-gradient(90deg, #EEF7F3 0%, #E6F3ED 100%);
-    border-color: #C4DDD3;
+    background: #FEF8F8;
+    border-color: #F0D0D0;
   }
-  .announcement-bar__icon { color: var(--brand-primary, #4EAB8E); }
-  .announcement-bar__label { color: var(--brand-primary, #4EAB8E); border-right-color: #C4DDD3; }
-  .announcement-bar__title { color: #2A5C4E; }
+  .announcement-bar__icon { color: var(--brand-primary); }
+  .announcement-bar__label { color: var(--brand-primary); border-right-color: #F0D0D0; }
+  .announcement-bar__title { color: #5C2020; }
   .announcement-bar__close {
-    color: #7AACA4;
-    &:hover { color: var(--brand-primary, #4EAB8E); background: rgba(78, 171, 142, .08); }
+    color: var(--text3);
+    &:hover { color: var(--brand-primary); background: rgba(196, 30, 58, .06); }
   }
   .announcement-bar__more {
-    color: #7AACA4;
-    &:hover { color: var(--brand-primary, #4EAB8E); background: rgba(78, 171, 142, .08); }
+    color: var(--text3);
+    &:hover { color: var(--brand-primary); background: rgba(196, 30, 58, .06); }
   }
 }
 

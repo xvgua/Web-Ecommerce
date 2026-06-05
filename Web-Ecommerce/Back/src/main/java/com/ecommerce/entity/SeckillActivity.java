@@ -10,6 +10,7 @@ public class SeckillActivity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
+    private String backgroundImage;  // 活动背景图URL
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Integer status;          // 0=未开始 1=进行中 2=已结束

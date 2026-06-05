@@ -1,7 +1,7 @@
 <template>
   <div class="feedback-manage">
     <div class="page-header">
-      <h2>用户反馈管理</h2>
+      <h1 class="page-title">用户反馈管理</h1>
     </div>
 
     <!-- Filters -->
@@ -294,11 +294,10 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .feedback-manage {
-  max-width: 1400px;
+  /* max-width handled by .content-wrapper */
 
   .page-header {
-    margin-bottom: 20px;
-    h2 { font-size: 24px; font-weight: 700; color: var(--org-text); letter-spacing: -.4px; }
+    margin-bottom: 24px;
   }
 }
 

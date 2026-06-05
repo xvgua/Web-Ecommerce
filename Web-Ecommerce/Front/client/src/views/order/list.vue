@@ -456,21 +456,25 @@ onMounted(() => {
 }
 
 .order-tabs {
-  background: #fff;
+  background: var(--bg1);
   padding: 4px 20px 0;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   margin-bottom: 0;
+  border: 1px solid var(--line-light);
+  border-bottom: none;
 }
 
 .review-subtabs {
-  background: #fff;
+  background: var(--bg2);
   padding: 12px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line-light);
 }
 
 .order-list {
-  background: #fff;
-  border-radius: 0 0 12px 12px;
+  background: var(--bg1);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  border: 1px solid var(--line-light);
+  border-top: none;
   padding: 0 20px 20px;
 
   &--review {
@@ -617,8 +621,10 @@ onMounted(() => {
 
 // 已评价列表
 .review-list {
-  background: #fff;
-  border-radius: 0 0 12px 12px;
+  background: var(--bg1);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  border: 1px solid var(--line-light);
+  border-top: none;
   padding: 0 20px;
 }
 

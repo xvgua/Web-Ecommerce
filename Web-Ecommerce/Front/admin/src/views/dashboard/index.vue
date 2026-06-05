@@ -11,60 +11,44 @@
       </div>
     </div>
 
-    <!-- Biomorphic Stat Cards -->
-    <div class="stat-garden">
-      <div class="bio-card bio-card--sage">
-        <div class="bio-card__blob" />
-        <div class="bio-card__icon-wrap">
-          <el-icon :size="24"><User /></el-icon>
-        </div>
-        <div class="bio-card__body">
-          <div class="bio-card__value">{{ stats.totalUsers.toLocaleString() }}</div>
-          <div class="bio-card__label">总用户数</div>
+    <!-- Flat Stat Cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-card__label">总用户数</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value">{{ stats.totalUsers.toLocaleString() }}</span>
         </div>
       </div>
 
-      <div class="bio-card bio-card--amber">
-        <div class="bio-card__blob" />
-        <div class="bio-card__icon-wrap">
-          <el-icon :size="24"><Document /></el-icon>
-        </div>
-        <div class="bio-card__body">
-          <div class="bio-card__value">{{ stats.totalOrders.toLocaleString() }}</div>
-          <div class="bio-card__label">总订单数</div>
+      <div class="stat-card">
+        <div class="stat-card__label">总订单数</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value">{{ stats.totalOrders.toLocaleString() }}</span>
         </div>
       </div>
 
-      <div class="bio-card bio-card--coral">
-        <div class="bio-card__blob" />
-        <div class="bio-card__icon-wrap">
-          <el-icon :size="24"><Money /></el-icon>
-        </div>
-        <div class="bio-card__body">
-          <div class="bio-card__value">&yen;{{ formatNum(stats.totalSales) }}</div>
-          <div class="bio-card__label">总销售额</div>
+      <div class="stat-card">
+        <div class="stat-card__label">总销售额</div>
+        <div class="stat-card__body">
+          <span class="stat-card__symbol">&yen;</span>
+          <span class="stat-card__value">{{ formatNum(stats.totalSales) }}</span>
+          <span class="stat-card__unit">CNY</span>
         </div>
       </div>
 
-      <div class="bio-card bio-card--lavender">
-        <div class="bio-card__blob" />
-        <div class="bio-card__icon-wrap">
-          <el-icon :size="24"><TrendCharts /></el-icon>
-        </div>
-        <div class="bio-card__body">
-          <div class="bio-card__value">{{ stats.todayOrders }}</div>
-          <div class="bio-card__label">今日订单</div>
+      <div class="stat-card">
+        <div class="stat-card__label">今日订单</div>
+        <div class="stat-card__body">
+          <span class="stat-card__value">{{ stats.todayOrders.toLocaleString() }}</span>
         </div>
       </div>
 
-      <div class="bio-card bio-card--sky">
-        <div class="bio-card__blob" />
-        <div class="bio-card__icon-wrap">
-          <el-icon :size="24"><Wallet /></el-icon>
-        </div>
-        <div class="bio-card__body">
-          <div class="bio-card__value">&yen;{{ formatNum(stats.todaySales) }}</div>
-          <div class="bio-card__label">今日销售额</div>
+      <div class="stat-card">
+        <div class="stat-card__label">今日销售额</div>
+        <div class="stat-card__body">
+          <span class="stat-card__symbol">&yen;</span>
+          <span class="stat-card__value">{{ formatNum(stats.todaySales) }}</span>
+          <span class="stat-card__unit">CNY</span>
         </div>
       </div>
     </div>
@@ -108,6 +92,18 @@
         </div>
       </el-col>
       <el-col :span="10">
+        <div class="chart-card" style="margin-bottom: 20px">
+          <div class="chart-card__header">
+            <div>
+              <h3>品类销量排行</h3>
+              <p class="chart-card__desc">各品类累计销量</p>
+            </div>
+          </div>
+          <div class="chart-card__body">
+            <v-chart :option="categorySalesOption" autoresize style="height:280px" v-if="categorySales.length" />
+            <el-empty v-else description="暂无数据" :image-size="60" />
+          </div>
+        </div>
         <div class="chart-card">
           <div class="chart-card__header">
             <div>
@@ -116,7 +112,7 @@
             </div>
           </div>
           <div class="chart-card__body">
-            <v-chart :option="orderStatusOption" autoresize style="height:320px" />
+            <v-chart :option="orderStatusOption" autoresize style="height:260px" />
           </div>
         </div>
       </el-col>
@@ -126,14 +122,14 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
-import { User, Document, Money, TrendCharts, Wallet } from '@element-plus/icons-vue'
+import { Money } from '@element-plus/icons-vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import { getDashboardStats, getSalesTrend, getHotProducts } from '@/api/admin'
-import type { SalesTrendItem, HotProductItem } from '@/api/admin'
+import { getDashboardStats, getSalesTrend, getHotProducts, getCategorySales } from '@/api/admin'
+import type { SalesTrendItem, HotProductItem, CategorySalesItem } from '@/api/admin'
 
 use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -154,6 +150,7 @@ const stats = reactive<Record<string, number>>({
 
 const trendData = ref<SalesTrendItem[]>([])
 const hotProducts = ref<HotProductItem[]>([])
+const categorySales = ref<CategorySalesItem[]>([])
 
 function formatNum(v: number | string) {
   if (v == null) return '0'
@@ -162,24 +159,24 @@ function formatNum(v: number | string) {
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-// ── Organic chart colors ──
-const ORG_COLORS = ['#6eb89a', '#e8a860', '#e08880', '#b8b0e0', '#8ab8d8', '#a8d8c0']
+// ── DeepSeek chart palette ──
+const CHART_COLORS = ['#3964FE', '#61666B', '#979DA6', '#ADB2B8', '#5686FE', '#81858C']
 
 const salesTrendOption = computed(() => ({
-  color: ['#6eb89a', '#e8a860'],
+  color: ['#3964FE', '#61666B'],
   tooltip: {
     trigger: 'axis' as const,
     backgroundColor: '#fff',
-    borderColor: '#e8e4dc',
+    borderColor: 'rgba(0,0,0,.06)',
     borderWidth: 1,
-    textStyle: { color: '#2d2a26', fontSize: 13 },
-    boxShadow: '0 8px 32px rgba(44,40,32,.08)',
-    axisPointer: { type: 'cross' as const, crossStyle: { color: '#c4bbb0' } },
+    textStyle: { color: '#0F1115', fontSize: 13 },
+    boxShadow: '0 4px 12px rgba(15,17,21,.08)',
+    axisPointer: { type: 'cross' as const, crossStyle: { color: '#CFD3D6' } },
   },
   legend: {
     data: ['订单量', '销售额'],
     bottom: 0,
-    textStyle: { fontSize: 12, color: '#7a7570', fontWeight: 500 },
+    textStyle: { fontSize: 12, color: '#81858C', fontWeight: 500 },
     itemWidth: 12,
     itemHeight: 12,
     itemGap: 24,
@@ -188,23 +185,23 @@ const salesTrendOption = computed(() => ({
   xAxis: {
     type: 'category' as const,
     data: trendData.value.map(d => d.date.slice(5)),
-    axisLine: { lineStyle: { color: '#e8e4dc' } },
+    axisLine: { lineStyle: { color: 'rgba(0,0,0,.06)' } },
     axisTick: { show: false },
-    axisLabel: { fontSize: 11, color: '#a8a49e', fontWeight: 500 },
+    axisLabel: { fontSize: 11, color: '#ADB2B8', fontWeight: 500 },
   },
   yAxis: [
     {
       type: 'value' as const,
       name: '单',
-      nameTextStyle: { fontSize: 11, color: '#a8a49e' },
-      axisLabel: { fontSize: 11, color: '#a8a49e' },
-      splitLine: { lineStyle: { color: '#f0ece6', type: 'dashed' } },
+      nameTextStyle: { fontSize: 11, color: '#ADB2B8' },
+      axisLabel: { fontSize: 11, color: '#ADB2B8' },
+      splitLine: { lineStyle: { color: 'rgba(0,0,0,.04)', type: 'dashed' } },
     },
     {
       type: 'value' as const,
       name: '元',
-      nameTextStyle: { fontSize: 11, color: '#a8a49e' },
-      axisLabel: { fontSize: 11, color: '#a8a49e', formatter: (v: number) => `${(v / 1000).toFixed(0)}k` },
+      nameTextStyle: { fontSize: 11, color: '#ADB2B8' },
+      axisLabel: { fontSize: 11, color: '#ADB2B8', formatter: (v: number) => `${(v / 1000).toFixed(0)}k` },
       splitLine: { show: false },
     },
   ],
@@ -215,10 +212,10 @@ const salesTrendOption = computed(() => ({
       data: trendData.value.map(d => d.orderCount),
       barMaxWidth: 30,
       itemStyle: {
-        borderRadius: [8, 8, 0, 0],
-        color: '#6eb89a',
+        borderRadius: [6, 6, 0, 0],
+        color: '#3964FE',
       },
-      emphasis: { itemStyle: { color: '#8cc9aa' } },
+      emphasis: { itemStyle: { color: '#5686FE' } },
     },
     {
       name: '销售额',
@@ -227,15 +224,15 @@ const salesTrendOption = computed(() => ({
       data: trendData.value.map(d => d.salesAmount),
       smooth: true,
       symbolSize: 8,
-      lineStyle: { width: 3, color: '#e8a860' },
-      itemStyle: { color: '#e8a860', borderColor: '#fff', borderWidth: 2 },
+      lineStyle: { width: 3, color: '#61666B' },
+      itemStyle: { color: '#61666B', borderColor: '#fff', borderWidth: 2 },
       areaStyle: {
         color: {
           type: 'linear' as const,
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(232,168,96,.15)' },
-            { offset: 1, color: 'rgba(232,168,96,0)' },
+            { offset: 0, color: 'rgba(97,102,107,.10)' },
+            { offset: 1, color: 'rgba(97,102,107,0)' },
           ],
         },
       },
@@ -247,22 +244,22 @@ const hotProductsOption = computed(() => ({
   tooltip: {
     trigger: 'axis' as const,
     backgroundColor: '#fff',
-    borderColor: '#e8e4dc',
+    borderColor: 'rgba(0,0,0,.06)',
     borderWidth: 1,
-    textStyle: { color: '#2d2a26', fontSize: 13 },
+    textStyle: { color: '#0F1115', fontSize: 13 },
     axisPointer: { type: 'shadow' as const },
   },
   grid: { left: 10, right: 50, top: 10, bottom: 30 },
   xAxis: {
     type: 'value' as const,
-    axisLabel: { fontSize: 11, color: '#a8a49e' },
-    splitLine: { lineStyle: { color: '#f0ece6', type: 'dashed' } },
+    axisLabel: { fontSize: 11, color: '#ADB2B8' },
+    splitLine: { lineStyle: { color: 'rgba(0,0,0,.04)', type: 'dashed' } },
   },
   yAxis: {
     type: 'category' as const,
     inverse: true,
-    data: hotProducts.value.map(p => p.name.length > 12 ? p.name.slice(0, 12) + '...' : p.name),
-    axisLabel: { fontSize: 11, color: '#7a7570', fontWeight: 500 },
+    data: hotProducts.value.map(p => p.name),
+    axisLabel: { fontSize: 11, color: '#61666B', fontWeight: 500 },
     axisLine: { show: false },
     axisTick: { show: false },
   },
@@ -272,30 +269,68 @@ const hotProductsOption = computed(() => ({
     data: hotProducts.value.map((p, i) => ({
       value: p.sales,
       itemStyle: {
-        color: ORG_COLORS[i % ORG_COLORS.length],
-        borderRadius: [0, 8, 8, 0],
+        color: CHART_COLORS[i % CHART_COLORS.length],
+        borderRadius: [0, 6, 6, 0],
       },
     })),
     barMaxWidth: 18,
-    label: { show: true, position: 'right' as const, fontSize: 11, color: '#7a7570', fontWeight: 600 },
+    label: { show: true, position: 'right' as const, fontSize: 11, color: '#61666B', fontWeight: 600 },
+  }],
+}))
+
+const categorySalesOption = computed(() => ({
+  color: ['#3964FE', '#61666B', '#979DA6', '#ADB2B8', '#5686FE', '#81858C', '#7B8EBD', '#5B6C93'],
+  tooltip: {
+    trigger: 'item' as const,
+    backgroundColor: '#fff',
+    borderColor: 'rgba(0,0,0,.06)',
+    borderWidth: 1,
+    textStyle: { color: '#0F1115', fontSize: 13 },
+    formatter: '{b}: {c} 件 ({d}%)',
+  },
+  legend: {
+    orient: 'vertical' as const,
+    right: 6,
+    top: 'center',
+    textStyle: { fontSize: 11, color: '#61666B', fontWeight: 500 },
+    itemWidth: 8,
+    itemHeight: 8,
+    itemGap: 10,
+  },
+  series: [{
+    type: 'pie' as const,
+    radius: ['50%', '80%'],
+    center: ['42%', '50%'],
+    avoidLabelOverlap: false,
+    label: { show: false },
+    emphasis: {
+      label: { show: true, fontSize: 14, fontWeight: 'bold' },
+      scaleSize: 6,
+    },
+    itemStyle: {
+      borderColor: '#fff',
+      borderWidth: 3,
+      borderRadius: 4,
+    },
+    data: categorySales.value.map(c => ({ name: c.categoryName, value: c.sales })),
   }],
 }))
 
 const orderStatusOption = computed(() => ({
-  color: ['#6eb89a', '#e8a860', '#8ab8d8', '#e08880'],
+  color: ['#3964FE', '#61666B', '#979DA6', '#ADB2B8'],
   tooltip: {
     trigger: 'item' as const,
     backgroundColor: '#fff',
-    borderColor: '#e8e4dc',
+    borderColor: 'rgba(0,0,0,.06)',
     borderWidth: 1,
-    textStyle: { color: '#2d2a26', fontSize: 13 },
+    textStyle: { color: '#0F1115', fontSize: 13 },
     formatter: '{b}: {c} 单 ({d}%)',
   },
   legend: {
     orient: 'vertical' as const,
     right: 10,
     top: 'center',
-    textStyle: { fontSize: 12, color: '#7a7570', fontWeight: 500 },
+    textStyle: { fontSize: 12, color: '#61666B', fontWeight: 500 },
     itemWidth: 10,
     itemHeight: 10,
     itemGap: 16,
@@ -339,8 +374,13 @@ async function loadHotProducts() {
   hotProducts.value = res.data
 }
 
+async function loadCategorySales() {
+  const res = await getCategorySales()
+  categorySales.value = res.data || []
+}
+
 async function loadAll() {
-  await Promise.all([loadStats(), loadSalesTrend(), loadHotProducts()])
+  await Promise.all([loadStats(), loadSalesTrend(), loadHotProducts(), loadCategorySales()])
 }
 
 let refreshTimer: number | null = null
@@ -357,25 +397,25 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .dashboard {
-  max-width: 1440px;
+  // max-width handled by .content-wrapper
 }
 
 /* ── Live indicator ── */
 .dashboard-live {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--org-text-muted);
-  font-weight: 600;
+  gap: 8px;
+  font-size: var(--font-size-s);
+  color: var(--text-muted);
+  font-weight: var(--font-weight-strong);
 }
 
 .live-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #6eb89a;
-  box-shadow: 0 0 10px rgba(110, 184, 154, .5);
+  background: #22C55E;
+  box-shadow: 0 0 8px rgba(34, 197, 94, .4);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
@@ -385,109 +425,53 @@ onUnmounted(() => {
 }
 
 /* ═══════════════════════════════════════
-   Biomorphic Stat Cards
+   Flat Stat Cards — DeepSeek style
    ═══════════════════════════════════════ */
-.stat-garden {
+.stat-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  gap: 32px 12px;
 
   @media (max-width: 1300px) { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 900px)  { grid-template-columns: repeat(2, 1fr); }
 }
 
-.bio-card {
-  background: var(--org-surface);
-  border: 1px solid var(--org-border);
-  border-radius: var(--org-radius-xl);
-  padding: 24px;
+.stat-card {
   display: flex;
-  align-items: center;
-  gap: 18px;
-  position: relative;
-  overflow: hidden;
-  cursor: default;
-  transition: all var(--org-duration) var(--org-ease);
+  flex-direction: column;
 
-  &:hover {
-    transform: translateY(-3px);
-    border-color: transparent;
+  &__label {
+    font-size: var(--font-size-s);
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: var(--font-size-s);
   }
-
-  // Organic blob decoration
-  &__blob {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(36px);
-    opacity: .12;
-    pointer-events: none;
-    transition: all var(--org-duration) var(--org-ease);
-  }
-
-  &--sage {
-    .bio-card__blob { width: 100px; height: 100px; background: #6eb89a; top: -30px; right: -20px; }
-    &:hover { box-shadow: 0 8px 32px rgba(110, 184, 154, .15); }
-  }
-  &--amber {
-    .bio-card__blob { width: 90px; height: 90px; background: #e8a860; top: -25px; right: -15px; }
-    &:hover { box-shadow: 0 8px 32px rgba(232, 168, 96, .15); }
-  }
-  &--coral {
-    .bio-card__blob { width: 95px; height: 95px; background: #e08880; top: -28px; right: -18px; }
-    &:hover { box-shadow: 0 8px 32px rgba(224, 136, 128, .15); }
-  }
-  &--lavender {
-    .bio-card__blob { width: 88px; height: 88px; background: #b8b0e0; top: -22px; right: -12px; }
-    &:hover { box-shadow: 0 8px 32px rgba(184, 176, 224, .15); }
-  }
-  &--sky {
-    .bio-card__blob { width: 92px; height: 92px; background: #8ab8d8; top: -26px; right: -16px; }
-    &:hover { box-shadow: 0 8px 32px rgba(138, 184, 216, .15); }
-  }
-
-  &:hover &__blob {
-    opacity: .2;
-    transform: scale(1.15);
-  }
-
-  &__icon-wrap {
-    width: 52px;
-    height: 52px;
-    border-radius: var(--org-radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-  }
-
-  &--sage    &__icon-wrap { background: #edf7f3; color: #6eb89a; }
-  &--amber   &__icon-wrap { background: #fdf6ed; color: #e8a860; }
-  &--coral   &__icon-wrap { background: #fdf0ef; color: #e08880; }
-  &--lavender &__icon-wrap { background: #f5f3fc; color: #b8b0e0; }
-  &--sky     &__icon-wrap { background: #eef6fb; color: #8ab8d8; }
 
   &__body {
-    flex: 1;
-    min-width: 0;
-    position: relative;
-    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  &__symbol {
+    font-size: 18px;
+    color: var(--text-secondary);
+    line-height: 18px;
   }
 
   &__value {
-    font-size: 27px;
-    font-weight: 700;
-    color: var(--org-text);
-    letter-spacing: -.6px;
-    line-height: 1.2;
+    font-size: 28px;
+    font-weight: var(--font-weight-strong);
+    color: var(--text-primary);
+    line-height: 28px;
+    font-variant-numeric: tabular-nums;
   }
 
-  &__label {
-    font-size: 13px;
-    color: var(--org-text-muted);
-    margin-top: 4px;
-    font-weight: 600;
+  &__unit {
+    font-size: 18px;
+    color: var(--text-secondary);
+    line-height: 18px;
+    margin-left: 6px;
   }
 }
 
@@ -495,39 +479,39 @@ onUnmounted(() => {
    Chart Cards
    ═══════════════════════════════════════ */
 .chart-card {
-  background: var(--org-surface);
-  border: 1px solid var(--org-border);
-  border-radius: var(--org-radius-xl);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-l1);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: all var(--org-duration) var(--org-ease-soft);
+  transition: box-shadow var(--duration) var(--ease-in-out);
 
   &:hover {
-    box-shadow: var(--org-shadow-md);
+    box-shadow: var(--shadow-sm);
   }
 
   &__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 24px 28px 0;
+    padding: 20px 24px 0;
 
     h3 {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--org-text);
-      letter-spacing: -.3px;
+      font-size: var(--font-size-l);
+      font-weight: var(--font-weight-strong);
+      color: var(--text-primary);
+      letter-spacing: 0;
     }
   }
 
   &__desc {
-    font-size: 12.5px;
-    color: var(--org-text-muted);
-    margin-top: 3px;
-    font-weight: 500;
+    font-size: var(--font-size-s);
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: var(--font-weight-normal);
   }
 
   &__body {
-    padding: 16px 28px 24px;
+    padding: 12px 24px 20px;
   }
 }
 </style>

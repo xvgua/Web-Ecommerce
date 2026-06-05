@@ -3,6 +3,7 @@ package com.ecommerce.controller;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.common.Result;
 import com.ecommerce.dto.AddressUpdateRequest;
+import com.ecommerce.dto.OrderStats;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.CreatePayIntentRequest;
 import com.ecommerce.dto.OrderQuery;
@@ -24,6 +25,11 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @GetMapping("/stats")
+    public Result<OrderStats> stats() {
+        return Result.success(orderService.getOrderStats(UserContext.getUserId()));
+    }
 
     @GetMapping
     public Result<PageResult<Order>> list(OrderQuery query) {

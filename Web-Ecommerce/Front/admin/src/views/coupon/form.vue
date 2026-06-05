@@ -241,14 +241,6 @@ onMounted(async () => {
   margin-bottom: 28px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--org-text);
-  letter-spacing: -.4px;
-}
-
 .coupon-form {
   :deep(.el-input-number) { width: 160px; }
 }

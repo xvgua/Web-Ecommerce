@@ -182,7 +182,11 @@ onMounted(() => { loadOrders() })
 </script>
 
 <style lang="scss" scoped>
-.order-manage { max-width: 1400px; }
+.order-manage { /* max-width handled by .content-wrapper */ }
+
+.page-title {
+  margin-bottom: 24px;
+}
 
 .toolbar {
   &-search { width: 260px; }

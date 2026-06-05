@@ -3,6 +3,7 @@ package com.ecommerce.service;
 import com.ecommerce.common.PageResult;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.OrderQuery;
+import com.ecommerce.dto.OrderStats;
 import com.ecommerce.dto.PayIntentResponse;
 import com.ecommerce.dto.PayStatusResponse;
 import com.ecommerce.dto.ProductQuery;
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public interface OrderService {
     Order createOrder(Long userId, CreateOrderRequest req);
+    OrderStats getOrderStats(Long userId);
     PageResult<Order> getOrderPage(Long userId, OrderQuery query);
     Order getOrderById(Long userId, Long id);
     void payOrder(Long userId, Long id, String payMethod);

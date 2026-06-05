@@ -2,8 +2,8 @@ import request from './request'
 import type { ApiResponse } from '@shared/types'
 import type { CartItem, AddToCartForm, UpdateCartForm } from '@shared/types/cart'
 
-export function getCartList(): Promise<ApiResponse<CartItem[]>> {
-  return request.get('/cart')
+export function getCartList(skipErrorToast = false): Promise<ApiResponse<CartItem[]>> {
+  return request.get('/cart', { _skipErrorToast: skipErrorToast } as any)
 }
 
 export function addToCart(data: AddToCartForm): Promise<ApiResponse<null>> {

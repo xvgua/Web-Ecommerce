@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.HotProductDTO;
 import com.ecommerce.dto.PageQuery;
 import com.ecommerce.dto.SalesTrendDTO;
@@ -40,6 +41,8 @@ public class AdminServiceImpl implements AdminService {
     private OrderItemMapper orderItemMapper;
     @Autowired
     private ProductMapper productMapper;
+    @Autowired
+    private CategoryMapper categoryMapper;
     @Autowired
     private JwtUtils jwtUtils;
 
@@ -175,6 +178,35 @@ public class AdminServiceImpl implements AdminService {
         return new ArrayList<>(dtoMap.values());
     }
 
+    @Override
+    public List<CategorySalesDTO> getCategorySales() {
+        List<CategorySalesDTO> result = new ArrayList<>();
+        List<Category> categories = categoryMapper.selectList(null);
+        Map<Long, String> nameMap = new HashMap<>();
+        for (Category c : categories) {
+            nameMap.put(c.getId(), c.getName());
+        }
+
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(Product::getCategoryId, Product::getSales)
+                .isNotNull(Product::getSales)
+                .gt(Product::getSales, 0);
+        List<Product> products = productMapper.selectList(wrapper);
+
+        Map<Long, Long> salesMap = new LinkedHashMap<>();
+        for (Product p : products) {
+            Long catId = p.getCategoryId();
+            salesMap.merge(catId, (long) (p.getSales() != null ? p.getSales() : 0), Long::sum);
+        }
+
+        for (Map.Entry<Long, Long> entry : salesMap.entrySet()) {
+            String name = nameMap.getOrDefault(entry.getKey(), "未知分类");
+            result.add(new CategorySalesDTO(name, entry.getValue()));
+        }
+        result.sort((a, b) -> b.getSales().compareTo(a.getSales()));
+        return result;
+    }
+
     private LocalDateTime computeStart(String range) {
         LocalDate today = LocalDate.now();
         return switch (range) {
@@ -190,8 +222,14 @@ public class AdminServiceImpl implements AdminService {
     public PageResult<User> getUserPage(PageQuery query) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(query.getKeyword())) {
-            wrapper.like(User::getUsername, query.getKeyword())
-                    .or().like(User::getPhone, query.getKeyword());
+            wrapper.and(w -> w
+                    .like(User::getUsername, query.getKeyword())
+                    .or().like(User::getPhone, query.getKeyword()));
+            try {
+                Long accountId = Long.parseLong(query.getKeyword().trim());
+                wrapper.or().eq(User::getAccountId, accountId);
+            } catch (NumberFormatException ignored) {
+            }
         }
         wrapper.orderByDesc(User::getCreateTime);
 
@@ -203,6 +241,14 @@ public class AdminServiceImpl implements AdminService {
         }
 
         return PageResult.of(result.getRecords(), result.getTotal(), query.getPage(), query.getPageSize());
+    }
+
+    @Override
+    public User getUserById(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) throw new BusinessException(404, "用户不存在");
+        user.setPassword(null);
+        return user;
     }
 
     @Override

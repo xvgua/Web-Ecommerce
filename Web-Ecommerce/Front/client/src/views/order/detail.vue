@@ -202,10 +202,11 @@ onMounted(() => { loadOrder() })
 }
 
 .detail-block {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
   padding: 24px;
   margin-bottom: 16px;
+  border: 1px solid var(--line-light);
 
   &__header {
     display: flex;

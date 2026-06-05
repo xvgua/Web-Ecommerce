@@ -129,7 +129,7 @@
         <el-table-column label="评价内容" min-width="200">
           <template #default="{ row }">
             <div class="content-cell">
-              <span class="content-text">{{ truncateText(row.content, 80) }}</span>
+              <span class="content-text" :title="row.content">{{ truncateText(row.content, 8) }}</span>
               <el-tag v-if="row.hasFollowUp" type="warning" size="small" class="followup-tag">有追评</el-tag>
             </div>
           </template>
@@ -434,14 +434,10 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.review-manage { max-width: 1400px; }
+.review-manage { /* max-width handled by .content-wrapper */ }
 
 .page-title {
-  font-size: 24px;
-  font-weight: 700;
   margin-bottom: 24px;
-  color: var(--org-text);
-  letter-spacing: -.4px;
 }
 
 .toolbar {

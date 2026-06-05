@@ -2,12 +2,29 @@
   <div class="seckill-form-page">
     <el-card>
       <div class="page-header">
-        <h3>{{ isEdit ? '编辑秒杀活动' : '新增秒杀活动' }}</h3>
+        <h1 class="page-title">{{ isEdit ? '编辑秒杀活动' : '新增秒杀活动' }}</h1>
       </div>
 
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" style="max-width: 960px">
         <el-form-item label="活动名称" prop="name">
           <el-input v-model="form.name" placeholder="如：618年中秒杀" maxlength="50" />
+        </el-form-item>
+
+        <el-form-item label="背景图片">
+          <el-input v-model="form.backgroundImage" placeholder="输入背景图URL，留空则使用默认颜色">
+            <template #append>
+              <el-upload
+                :show-file-list="false"
+                :before-upload="(f: any) => handleBgUpload(f)"
+                accept="image/*"
+              >
+                <el-button>本地上传</el-button>
+              </el-upload>
+            </template>
+          </el-input>
+          <div v-if="form.backgroundImage" class="bg-preview">
+            <el-image :src="form.backgroundImage" fit="cover" style="width:200px;height:80px;border-radius:6px" />
+          </div>
         </el-form-item>
 
         <el-form-item label="活动时间" prop="timeRange">
@@ -101,7 +118,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
+import request from '@/api/request'
 import { getSeckillActivityById, createSeckillActivity, updateSeckillActivity, getProductList } from '@/api/admin'
 import type { SeckillActivityForm, SeckillProductForm } from '@shared/types/seckill'
 
@@ -122,10 +141,12 @@ const isEdit = computed(() => !!activityId.value)
 
 const form = ref<{
   name: string
+  backgroundImage: string
   timeRange: [string, string] | null
   products: ProductRow[]
 }>({
   name: '',
+  backgroundImage: '',
   timeRange: null,
   products: [{ productId: 0, skuId: 0, seckillPrice: 0, seckillStock: 10, limitPerUser: 1, _skus: [] }],
 })
@@ -189,6 +210,19 @@ function removeProduct(index: number) {
   form.value.products.splice(index, 1)
 }
 
+async function handleBgUpload(file: File) {
+  const fd = new FormData()
+  fd.append('file', file)
+  try {
+    const res = await request.post('/admin/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    form.value.backgroundImage = res.data.url
+    ElMessage.success('背景图上传成功')
+  } catch { /* handled */ }
+  return false
+}
+
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -218,6 +252,7 @@ async function handleSubmit() {
   submitting.value = true
   const data: SeckillActivityForm = {
     name: form.value.name,
+    backgroundImage: form.value.backgroundImage || undefined,
     startTime: form.value.timeRange[0],
     endTime: form.value.timeRange[1],
     products: form.value.products.map(p => ({
@@ -247,6 +282,7 @@ async function loadActivity() {
     const res = await getSeckillActivityById(activityId.value)
     const act = res.data
     form.value.name = act.name
+    form.value.backgroundImage = act.backgroundImage || ''
     form.value.timeRange = [act.startTime, act.endTime]
     form.value.products = (act.products || []).map(p => ({
       productId: p.productId,
@@ -283,14 +319,6 @@ onMounted(() => {
 
 .page-header {
   margin-bottom: 28px;
-
-  h3 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--org-text);
-    letter-spacing: -.3px;
-  }
 }
 
 /* Column header */

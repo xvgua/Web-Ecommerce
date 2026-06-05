@@ -7,6 +7,10 @@ export function getActiveActivities(): Promise<ApiResponse<SeckillActivity[]>> {
   return request.get('/seckill/activities')
 }
 
+export function getAllActivities(): Promise<ApiResponse<SeckillActivity[]>> {
+  return request.get('/seckill/activities/all')
+}
+
 export function getActivityDetail(id: number): Promise<ApiResponse<SeckillActivity>> {
   return request.get(`/seckill/activities/${id}`)
 }

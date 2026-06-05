@@ -133,9 +133,13 @@ const isEdit = computed(() => !!route.params.id)
 const submitting = ref(false)
 const categories = ref<Category[]>([])
 
-const form = reactive<ProductForm>({
+interface ProductFormState extends Omit<ProductForm, 'categoryId'> {
+  categoryId: number | undefined
+}
+
+const form = reactive<ProductFormState>({
   name: '',
-  categoryId: 0,
+  categoryId: undefined,
   price: 0,
   stock: 0,
   detail: '',
@@ -197,8 +201,11 @@ async function handleSubmit() {
   if (!valid) return
   submitting.value = true
   try {
-    const payload = { ...form, images: JSON.stringify(form.images || []) }
-    // Always send skus so the backend knows when to create a default
+    const payload: ProductForm = {
+      ...form,
+      categoryId: form.categoryId!, // validated above, guaranteed non-undefined
+      images: JSON.stringify(form.images || []),
+    }
     if (!payload.skus) payload.skus = []
     if (isEdit.value) {
       await updateProduct(Number(route.params.id), payload)
@@ -240,14 +247,6 @@ onMounted(async () => {
 
 .page-header {
   margin-bottom: 28px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--org-text);
-  letter-spacing: -.4px;
 }
 
 .product-form {

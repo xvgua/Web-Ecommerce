@@ -14,6 +14,8 @@ public class SeckillActivityForm {
     @NotBlank(message = "活动名称不能为空")
     private String name;
 
+    private String backgroundImage;
+
     @NotNull(message = "开始时间不能为空")
     private LocalDateTime startTime;
 

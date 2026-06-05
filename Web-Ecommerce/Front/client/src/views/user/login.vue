@@ -133,9 +133,10 @@ async function handleLogin() {
   display: flex;
   max-width: 880px;
   width: 100%;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0,0,0,.1);
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--line-light);
   overflow: hidden;
 
   &__brand {

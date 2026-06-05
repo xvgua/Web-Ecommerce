@@ -136,20 +136,12 @@ onMounted(() => { loadReplies() })
 </script>
 
 <style lang="scss" scoped>
-.qr-page { max-width: 1400px; }
+.qr-page { /* max-width handled by .content-wrapper */ }
 
 .page-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--org-text);
-  letter-spacing: -.4px;
 }
 </style>

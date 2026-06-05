@@ -17,7 +17,7 @@ public class AdminCategoryController {
 
     @GetMapping
     public Result<List<Category>> list() {
-        return Result.success(categoryService.getAllCategories());
+        return Result.success(categoryService.getCategoryTree());
     }
 
     @PostMapping

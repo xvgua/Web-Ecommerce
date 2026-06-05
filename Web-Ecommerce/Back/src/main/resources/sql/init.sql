@@ -114,12 +114,23 @@ CREATE TABLE IF NOT EXISTS `order` (
   user_id       BIGINT         NOT NULL,
   address_id    BIGINT         NOT NULL,
   total_amount  DECIMAL(10,2)  NOT NULL COMMENT '商品原价合计',
-  coupon_id     BIGINT         DEFAULT NULL COMMENT '使用的user_coupon.id',
+  coupon_ids    VARCHAR(500)   DEFAULT NULL COMMENT '使用优惠券ID列表(JSON)',
   coupon_discount DECIMAL(10,2) DEFAULT 0.00 COMMENT '优惠券抵扣金额',
   discount_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '商品级折扣金额',
   pay_amount    DECIMAL(10,2)  DEFAULT 0.00 COMMENT '实付金额',
-  status        TINYINT        DEFAULT 0 COMMENT '0=待支付 1=待发货 2=待收货 3=已完成 4=已取消 5=退款中',
+  status        TINYINT        DEFAULT 0 COMMENT '0=待支付 1=待发货 2=待收货 3=已完成 4=已取消 5=退款中 6=已退款',
   remark        VARCHAR(500)   DEFAULT '',
+  refund_type   TINYINT        DEFAULT NULL COMMENT '退款类型: 1=仅退款, 2=退货退款',
+  refund_reason VARCHAR(50)    DEFAULT NULL COMMENT '退款原因枚举',
+  refund_desc   VARCHAR(500)   DEFAULT NULL COMMENT '退款补充说明',
+  refund_amount DECIMAL(10,2)  DEFAULT NULL COMMENT '退款金额',
+  refund_item_ids VARCHAR(500) DEFAULT NULL COMMENT '退款商品项ID(JSON数组)',
+  refund_status TINYINT        DEFAULT NULL COMMENT '退款子状态: 0=待审核 1=已拒绝 2=已完成 3=已撤销',
+  refund_reject_reason VARCHAR(500) DEFAULT NULL COMMENT '拒绝原因',
+  refund_apply_time DATETIME   DEFAULT NULL COMMENT '退款申请时间',
+  refund_deal_time  DATETIME   DEFAULT NULL COMMENT '退款处理时间',
+  return_logistics_company VARCHAR(100) DEFAULT NULL COMMENT '退货物流公司',
+  return_logistics_no     VARCHAR(100) DEFAULT NULL COMMENT '退货物流单号',
   pay_time      DATETIME       NULL,
   deal_time     DATETIME       NULL COMMENT '成交时间（确认收货时写入）',
   address_modified TINYINT     DEFAULT 0 COMMENT '0=未修改 1=已修改',
@@ -281,6 +292,7 @@ CREATE TABLE IF NOT EXISTS `coupon` (
   scope_type  TINYINT        DEFAULT 1 COMMENT '适用范围: 1=通用 2=指定分类 3=指定商品',
   scope_ids   VARCHAR(500)   DEFAULT '' COMMENT '适用范围ID列表(JSON数组)',
   is_large    TINYINT        DEFAULT 0 COMMENT '是否大额券: 0=小额 1=大额(有抢购时间)',
+  stackable   TINYINT        DEFAULT 0 COMMENT '0=不可叠加 1=可叠加',
   status      TINYINT        DEFAULT 1 COMMENT '1=启用 0=停用',
   create_time DATETIME       DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -374,6 +386,21 @@ INSERT INTO `product` (name, category_id, price, stock, description, detail, mai
 ('Samsung 990 Pro 2TB', 11, 1299.00, 150, '三星 990 Pro 2TB NVMe M.2 SSD，读取速度 7450MB/s。',
  '<table class=\"param-table\"><tr><td>品牌</td><td>Samsung</td></tr><tr><td>型号</td><td>990 Pro</td></tr><tr><td>容量</td><td>2TB</td></tr><tr><td>接口类型</td><td>PCIe 4.0 ×4 / NVMe M.2</td></tr><tr><td>顺序读取</td><td>最高 7450 MB/s</td></tr><tr><td>顺序写入</td><td>最高 6900 MB/s</td></tr><tr><td>随机读取</td><td>最高 1400K IOPS</td></tr><tr><td>随机写入</td><td>最高 1550K IOPS</td></tr><tr><td>闪存类型</td><td>Samsung V-NAND V8</td></tr><tr><td>缓存</td><td>2GB LPDDR4</td></tr><tr><td>写入寿命</td><td>1200 TBW</td></tr><tr><td>质保</td><td>5年有限保修</td></tr></table>',
  '', '', 1, 432, NOW());
+
+-- 默认规格（每个商品生成一条，规格名=商品名、价格=商品价、库存=商品库存、图片=商品主图）
+INSERT INTO `product_sku` (product_id, spec_name, spec_value, price, stock, sales, status, image) VALUES
+(1, 'iPhone 15 Pro Max 256GB', '', 9999.00, 100, 256, 1, ''),
+(2, 'Samsung Galaxy S24 Ultra', '', 8999.00, 80, 189, 1, ''),
+(3, 'Xiaomi 14 Pro', '', 4999.00, 150, 312, 1, ''),
+(4, 'iPad Pro M4 11英寸', '', 6799.00, 60, 98, 1, ''),
+(5, 'Huawei MatePad Pro', '', 4299.00, 45, 67, 1, ''),
+(6, 'AirPods Pro 2', '', 1899.00, 200, 520, 1, ''),
+(7, 'Sony WH-1000XM5', '', 2499.00, 70, 234, 1, ''),
+(8, 'MacBook Pro 14 M3 Pro', '', 12999.00, 40, 156, 1, ''),
+(9, 'ThinkPad X1 Carbon', '', 8999.00, 35, 89, 1, ''),
+(10, 'Dell XPS 15', '', 10999.00, 25, 45, 1, ''),
+(11, 'Kingston DDR5 32GB', '', 799.00, 300, 678, 1, ''),
+(12, 'Samsung 990 Pro 2TB', '', 1299.00, 150, 432, 1, '');
 
 -- 示例公告
 INSERT INTO `announcement` (title, content, status, sort_order, level) VALUES
@@ -479,3 +506,122 @@ INSERT INTO `hot_keyword` (keyword, search_count, is_manual, is_pinned, sort_ord
 ('显示器', 54, 0, 0, 6, 1),
 ('运动鞋', 48, 0, 0, 7, 1),
 ('固态硬盘', 42, 1, 0, 8, 1);
+
+-- ============================================
+-- 17. 搜索日志表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `search_log` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  keyword     VARCHAR(200) NOT NULL COMMENT '搜索关键词',
+  user_id     BIGINT       DEFAULT NULL COMMENT '用户ID（匿名用户为NULL）',
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '搜索时间',
+  INDEX idx_keyword (keyword),
+  INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搜索日志';
+
+-- ============================================
+-- 18. 用户反馈表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `feedback` (
+  id          BIGINT        AUTO_INCREMENT PRIMARY KEY,
+  user_id     BIGINT        NOT NULL COMMENT '提交用户ID',
+  type        TINYINT       NOT NULL DEFAULT 1 COMMENT '反馈类型: 1=问题反馈, 2=功能建议',
+  title       VARCHAR(200)  NOT NULL COMMENT '反馈标题',
+  content     VARCHAR(2000) NOT NULL COMMENT '反馈内容',
+  contact     VARCHAR(100)  DEFAULT NULL COMMENT '联系方式(邮箱/手机)',
+  images      VARCHAR(2000) DEFAULT NULL COMMENT '截图URL列表(JSON数组)',
+  status      TINYINT       NOT NULL DEFAULT 0 COMMENT '状态: 0=待处理, 1=处理中, 2=已解决, 3=已关闭',
+  admin_reply VARCHAR(2000) DEFAULT NULL COMMENT '管理员回复内容',
+  admin_id    BIGINT        DEFAULT NULL COMMENT '处理管理员ID',
+  handle_time DATETIME      DEFAULT NULL COMMENT '处理时间',
+  create_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
+  update_time DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_user_id (user_id),
+  INDEX idx_status (status),
+  INDEX idx_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户反馈表';
+
+-- ============================================
+-- 19. 秒杀活动表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `seckill_activity` (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL COMMENT '活动名称',
+  background_image VARCHAR(500) DEFAULT NULL COMMENT '活动背景图URL',
+  start_time  DATETIME     NOT NULL COMMENT '开始时间',
+  end_time    DATETIME     NOT NULL COMMENT '结束时间',
+  status      TINYINT      DEFAULT 0 COMMENT '0=未开始 1=进行中 2=已结束',
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='秒杀活动表';
+
+-- ============================================
+-- 20. 秒杀商品表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `seckill_product` (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  activity_id     BIGINT         NOT NULL COMMENT '秒杀活动ID',
+  product_id      BIGINT         NOT NULL COMMENT '商品ID',
+  sku_id          BIGINT         DEFAULT 0 COMMENT 'SKU ID，0=商品级别',
+  seckill_price   DECIMAL(10,2)  NOT NULL COMMENT '秒杀价',
+  seckill_stock   INT            NOT NULL COMMENT '秒杀总库存',
+  remain_stock    INT            NOT NULL COMMENT '剩余库存',
+  limit_per_user  INT            DEFAULT 1 COMMENT '每人限购数量',
+  create_time     DATETIME       DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_activity (activity_id),
+  INDEX idx_product (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='秒杀商品表';
+
+-- ============================================
+-- 21. 客服会话表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `conversation` (
+  id            BIGINT       AUTO_INCREMENT PRIMARY KEY,
+  user_id       BIGINT       NOT NULL COMMENT '用户ID',
+  username      VARCHAR(50)  DEFAULT '' COMMENT '用户名(快照)',
+  avatar        VARCHAR(500) DEFAULT '' COMMENT '头像(快照)',
+  subject       VARCHAR(200) DEFAULT '' COMMENT '会话主题',
+  source_type   TINYINT      DEFAULT NULL COMMENT '来源类型',
+  source_id     BIGINT       DEFAULT NULL COMMENT '来源ID',
+  source_name   VARCHAR(200) DEFAULT NULL COMMENT '来源名称',
+  status        TINYINT      DEFAULT 1 COMMENT '1=进行中 2=已关闭',
+  unread_count  INT          DEFAULT 0 COMMENT '未读消息数(管理员端)',
+  user_unread   INT          DEFAULT 0 COMMENT '未读消息数(用户端)',
+  last_message  VARCHAR(500) DEFAULT NULL COMMENT '最后消息摘要',
+  last_active   DATETIME     DEFAULT NULL COMMENT '最后活跃时间',
+  create_time   DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  close_time    DATETIME     DEFAULT NULL COMMENT '关闭时间',
+  INDEX idx_user (user_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客服会话表';
+
+-- ============================================
+-- 22. 客服消息表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `chat_message` (
+  id               BIGINT       AUTO_INCREMENT PRIMARY KEY,
+  conversation_id  BIGINT       NOT NULL COMMENT '会话ID',
+  sender_type      TINYINT      NOT NULL COMMENT '1=用户 2=管理员',
+  sender_id        BIGINT       NOT NULL COMMENT '发送者ID',
+  sender_name      VARCHAR(50)  DEFAULT '' COMMENT '发送者名称',
+  sender_avatar    VARCHAR(500) DEFAULT '' COMMENT '发送者头像',
+  content          TEXT         NOT NULL COMMENT '消息内容',
+  content_type     TINYINT      DEFAULT 1 COMMENT '1=文本 2=商品卡片',
+  extra_data       TEXT         DEFAULT NULL COMMENT '扩展数据(JSON)',
+  is_read          TINYINT      DEFAULT 0 COMMENT '0=未读 1=已读',
+  create_time      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+  INDEX idx_conversation (conversation_id),
+  INDEX idx_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客服消息表';
+
+-- ============================================
+-- 23. 快捷回复表
+-- ============================================
+CREATE TABLE IF NOT EXISTS `quick_reply` (
+  id          BIGINT       AUTO_INCREMENT PRIMARY KEY,
+  title       VARCHAR(100) NOT NULL COMMENT '标题',
+  content     VARCHAR(500) NOT NULL COMMENT '回复内容',
+  sort_order  INT          DEFAULT 0 COMMENT '排序',
+  status      TINYINT      DEFAULT 1 COMMENT '0=禁用 1=启用',
+  create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='快捷回复表';

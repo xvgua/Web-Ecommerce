@@ -67,6 +67,25 @@ public class SeckillServiceImpl implements SeckillService {
     }
 
     @Override
+    public List<SeckillActivity> getAllActivities() {
+        syncActivityStatuses();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime weekLater = now.plusDays(7);
+        List<SeckillActivity> activities = activityMapper.selectList(
+                new LambdaQueryWrapper<SeckillActivity>()
+                        .and(w -> w.eq(SeckillActivity::getStatus, 1)
+                                .or(w2 -> w2.eq(SeckillActivity::getStatus, 0)
+                                        .ge(SeckillActivity::getStartTime, now)
+                                        .le(SeckillActivity::getStartTime, weekLater)))
+                        .orderByAsc(SeckillActivity::getStartTime));
+
+        for (SeckillActivity activity : activities) {
+            fillActivityProducts(activity);
+        }
+        return activities;
+    }
+
+    @Override
     public SeckillActivity getActivityDetail(Long activityId) {
         SeckillActivity activity = activityMapper.selectById(activityId);
         if (activity == null) {
@@ -312,10 +331,9 @@ public class SeckillServiceImpl implements SeckillService {
     @Override
     @Transactional
     public SeckillActivity adminCreate(SeckillActivityForm form) {
-        validateNoTimeOverlap(form.getStartTime(), form.getEndTime(), null);
-
         SeckillActivity activity = new SeckillActivity();
         activity.setName(form.getName());
+        activity.setBackgroundImage(form.getBackgroundImage());
         activity.setStartTime(form.getStartTime());
         activity.setEndTime(form.getEndTime());
         activity.setStatus(0);
@@ -345,8 +363,8 @@ public class SeckillServiceImpl implements SeckillService {
             throw new BusinessException(404, "秒杀活动不存在");
         }
 
-        validateNoTimeOverlap(form.getStartTime(), form.getEndTime(), id);
         activity.setName(form.getName());
+        activity.setBackgroundImage(form.getBackgroundImage());
         activity.setStartTime(form.getStartTime());
         activity.setEndTime(form.getEndTime());
         activityMapper.updateById(activity);
@@ -470,19 +488,6 @@ public class SeckillServiceImpl implements SeckillService {
             }
         }
         activity.setProducts(products);
-    }
-
-    private void validateNoTimeOverlap(LocalDateTime start, LocalDateTime end, Long excludeId) {
-        LambdaQueryWrapper<SeckillActivity> wrapper = new LambdaQueryWrapper<>();
-        if (excludeId != null) {
-            wrapper.ne(SeckillActivity::getId, excludeId);
-        }
-        wrapper.lt(SeckillActivity::getStartTime, end)
-                .gt(SeckillActivity::getEndTime, start);
-        List<SeckillActivity> overlapping = activityMapper.selectList(wrapper);
-        if (!overlapping.isEmpty()) {
-            throw new BusinessException("当前时段已存在秒杀活动「" + overlapping.get(0).getName() + "」，同一时段仅允许一个活动");
-        }
     }
 
     private String generateOrderNo() {

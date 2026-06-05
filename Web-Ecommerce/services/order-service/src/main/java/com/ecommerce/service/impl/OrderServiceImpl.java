@@ -197,6 +197,27 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public OrderStats getOrderStats(Long userId) {
+        long pendingPayment = orderMapper.selectCount(
+                new LambdaQueryWrapper<Order>()
+                        .eq(Order::getUserId, userId)
+                        .eq(Order::getStatus, OrderStatus.PENDING_PAY));
+        long pendingShipment = orderMapper.selectCount(
+                new LambdaQueryWrapper<Order>()
+                        .eq(Order::getUserId, userId)
+                        .eq(Order::getStatus, OrderStatus.PENDING_SHIP));
+        long pendingReceipt = orderMapper.selectCount(
+                new LambdaQueryWrapper<Order>()
+                        .eq(Order::getUserId, userId)
+                        .eq(Order::getStatus, OrderStatus.SHIPPED));
+        long pendingReview = orderMapper.selectCount(
+                new LambdaQueryWrapper<Order>()
+                        .eq(Order::getUserId, userId)
+                        .eq(Order::getStatus, OrderStatus.COMPLETED));
+        return new OrderStats(pendingPayment, pendingShipment, pendingReceipt, pendingReview);
+    }
+
+    @Override
     public PageResult<Order> getOrderPage(Long userId, OrderQuery query) {
         if (query.getReviewFilter() != null) {
             return getOrderPageByReviewFilter(userId, query);
@@ -758,6 +779,7 @@ public class OrderServiceImpl implements OrderService {
                 + String.format("%06d", new Random().nextInt(1000000));
     }
     private String getStatusText(Integer status) {
+        if (status == null) return "未知";
         return switch (status) {
             case 0 -> "待支付"; case 1 -> "待发货"; case 2 -> "待收货";
             case 3 -> "已完成"; case 4 -> "已取消"; case 5 -> "退款中"; case 6 -> "已退款";

@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
-   Mint Sage — Global Base
+   Swiss Minimalism — Global Base
    ═══════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 * {
   margin: 0;
@@ -10,12 +10,15 @@
 }
 
 body {
-  font-family: 'Outfit', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system,
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system,
     BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   color: var(--text1);
   background: var(--bg2);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -28,12 +31,20 @@ img {
   height: auto;
 }
 
-/* ── Element Plus overrides ── */
-.el-empty { padding: 60px 0; }
+/* ── Element Plus overrides — Swiss Minimalism ── */
+.el-empty {
+  padding: 60px 0;
+}
+
+.el-empty__description {
+  color: var(--text3);
+}
 
 .el-button {
   border-radius: var(--radius-md);
-  transition: all var(--transition-normal);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all var(--transition-fast);
 
   &:active {
     transform: translateY(1px);
@@ -65,36 +76,43 @@ img {
 }
 
 .el-tag--success {
-  --el-tag-bg-color: rgba(61, 160, 110, 0.10);
-  --el-tag-border-color: rgba(61, 160, 110, 0.20);
+  --el-tag-bg-color: rgba(46, 125, 50, 0.08);
+  --el-tag-border-color: rgba(46, 125, 50, 0.16);
   --el-tag-text-color: var(--color-success);
 }
 
 .el-tag--warning {
-  --el-tag-bg-color: rgba(230, 162, 60, 0.10);
-  --el-tag-border-color: rgba(230, 162, 60, 0.20);
+  --el-tag-bg-color: rgba(230, 81, 0, 0.08);
+  --el-tag-border-color: rgba(230, 81, 0, 0.16);
   --el-tag-text-color: var(--color-warning);
 }
 
 .el-tag--danger {
-  --el-tag-bg-color: rgba(217, 74, 74, 0.10);
-  --el-tag-border-color: rgba(217, 74, 74, 0.20);
+  --el-tag-bg-color: rgba(198, 40, 40, 0.08);
+  --el-tag-border-color: rgba(198, 40, 40, 0.16);
   --el-tag-text-color: var(--color-danger);
 }
 
 .el-tag--info {
-  --el-tag-bg-color: rgba(92, 158, 142, 0.10);
-  --el-tag-border-color: rgba(92, 158, 142, 0.20);
+  --el-tag-bg-color: rgba(21, 101, 192, 0.06);
+  --el-tag-border-color: rgba(21, 101, 192, 0.12);
   --el-tag-text-color: var(--color-info);
 }
 
 .el-card {
-  border-radius: var(--radius-lg);
-  border: none;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-light);
+  box-shadow: none;
 }
 
 .el-table {
   --el-table-border-color: var(--line-light);
+  --el-table-bg-color: var(--bg1);
+  --el-table-tr-bg-color: var(--bg1);
+  --el-table-header-bg-color: var(--bg2);
+  --el-table-row-hover-bg-color: var(--bg2);
+  --el-table-text-color: var(--text1);
+  --el-table-header-text-color: var(--text2);
 }
 
 .el-tabs__nav-wrap::after { height: 1px; }
@@ -105,8 +123,56 @@ img {
   }
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #B0C8C0; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #8CACA4; }
+/* ── Input — clean ── */
+.el-input__wrapper {
+  background: var(--bg1);
+  box-shadow: none;
+  border: 1px solid var(--line-regular);
+  border-radius: var(--radius-md);
+}
+
+.el-input__inner {
+  color: var(--text1);
+
+  &::placeholder {
+    color: var(--text4);
+  }
+}
+
+/* ── Dialog — flat ── */
+.el-dialog {
+  --el-dialog-bg-color: var(--bg1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+}
+
+.el-message-box {
+  border-radius: var(--radius-md);
+}
+
+/* ── Pagination ── */
+.el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-button-color: var(--text2);
+  --el-pagination-button-bg-color: var(--bg1);
+  --el-pagination-button-disabled-color: var(--text4);
+  --el-pagination-button-disabled-bg-color: var(--bg2);
+  --el-pagination-hover-color: var(--brand-primary);
+}
+
+/* ── Loading — light overlay ── */
+.el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Scrollbar — thin and minimal ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #CCCCCC; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #AAAAAA; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Selection ── */
+::selection {
+  background: rgba(196, 30, 58, 0.12);
+  color: var(--text1);
+}

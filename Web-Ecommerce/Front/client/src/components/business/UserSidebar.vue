@@ -62,37 +62,30 @@
         <span class="user-sidebar__entry-value">{{ favoriteCount }}</span>
         <span class="user-sidebar__entry-label">我的收藏</span>
       </router-link>
-      <router-link to="/coupon/center" class="user-sidebar__entry">
+      <router-link to="/coupons" class="user-sidebar__entry">
         <span class="user-sidebar__entry-icon">🎫</span>
         <span class="user-sidebar__entry-value">{{ couponCount }}张</span>
         <span class="user-sidebar__entry-label">优惠券</span>
       </router-link>
       <div class="user-sidebar__entry user-sidebar__entry--saved">
         <span class="user-sidebar__entry-icon">💡</span>
-        <span class="user-sidebar__entry-value">&yen;{{ formatPrice(savedAmount) }}</span>
+        <span class="user-sidebar__entry-value">{{ formatPrice(savedAmount) }}</span>
         <span class="user-sidebar__entry-label">已节省</span>
       </div>
-    <!-- Announcement Ticker -->
-    <div v-if="latestAnnouncement" class="user-sidebar__notice" @click="$router.push('/announcements')">
-      <el-icon class="user-sidebar__notice-icon"><Bell /></el-icon>
-      <span class="user-sidebar__notice-text">{{ latestAnnouncement.title }}</span>
-      <el-icon class="user-sidebar__notice-arrow"><ArrowRight /></el-icon>
-    </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { UserFilled, Bell, ArrowRight } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
-import { getOrderStats } from '@/api/order'
-import { getUserCoupons } from '@/api/coupon'
-import { getAnnouncements } from '@/api/announcement'
-import { getFavoriteList } from '@/api/favorite'
+import request from '@/api/request'
 import { formatPrice } from '@/utils/format'
 
+const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 
@@ -108,63 +101,75 @@ const orderStats = reactive({
   pendingReview: 0,
 })
 
-onMounted(async () => {
+async function loadSidebarData() {
+  const skipOpt = { _skipErrorToast: true } as Record<string, unknown>
+
   if (userStore.isLoggedIn) {
     try {
-      const res = await getOrderStats()
+      const res = await request.get('/orders/stats', skipOpt as any)
       Object.assign(orderStats, res.data)
     } catch { /* silent */ }
 
     try {
-      await cartStore.fetchCart()
+      await cartStore.fetchCart(true)
     } catch { /* silent */ }
 
     try {
-      const res = await getUserCoupons({ status: 0, page: 1, pageSize: 1 })
-      couponCount.value = res.data.total
+      const res = await request.get('/user/coupons', { params: { status: 0, page: 1, pageSize: 1 }, ...skipOpt } as any)
+      couponCount.value = res.data?.total || 0
     } catch { /* silent */ }
 
     try {
-      const usedRes = await getUserCoupons({ status: 1, page: 1, pageSize: 100 })
-      savedAmount.value = usedRes.data.records.reduce(
-        (sum, uc) => sum + (uc.coupon?.discount || 0),
+      const usedRes = await request.get('/user/coupons', { params: { status: 1, page: 1, pageSize: 100 }, ...skipOpt } as any)
+      const records = usedRes.data?.records || []
+      savedAmount.value = records.reduce(
+        (sum: number, uc: any) => sum + (uc.coupon?.discount || 0),
         0,
       )
     } catch { /* silent */ }
 
     try {
-      const favRes = await getFavoriteList()
-      favoriteCount.value = favRes.data.length
+      const favRes = await request.get('/favorites', skipOpt as any)
+      favoriteCount.value = (favRes.data || []).length
     } catch { /* silent */ }
   }
 
   try {
-    const res = await getAnnouncements(1)
-    if (res.data.length) {
+    const res = await request.get('/announcements', { params: { limit: 1 }, ...skipOpt } as any)
+    if ((res.data || []).length) {
       latestAnnouncement.value = res.data[0]
     }
   } catch { /* silent */ }
+}
+
+onMounted(() => { loadSidebarData() })
+
+// Refresh when navigating back to home (after order/payment flow)
+watch(() => route.path, (path) => {
+  if (path === '/' && userStore.isLoggedIn) {
+    loadSidebarData()
+  }
 })
 </script>
 
 <style lang="scss" scoped>
 .user-sidebar {
-  background: #fff;
-  border-radius: var(--radius-lg);
+  background: var(--bg1);
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line-light);
   display: flex;
   flex-direction: column;
   min-height: 100%;
 
   > :last-child {
-    margin-top: auto;   /* push notice to bottom */
+    margin-top: auto;
   }
 }
 
 /* ── User Info ── */
 .user-sidebar__info {
-  background: #fff;
+  background: transparent;
   padding: 20px 16px 16px;
   display: flex;
   align-items: center;
@@ -207,9 +212,9 @@ onMounted(async () => {
   a {
     padding: 5px 14px;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text2);
     border: 1px solid var(--line-light);
     transition: all var(--transition-fast);
@@ -217,6 +222,7 @@ onMounted(async () => {
     &:hover {
       color: var(--brand-primary);
       border-color: var(--brand-primary);
+      background: rgba(139, 92, 246, 0.10);
       text-decoration: none;
     }
   }
@@ -224,7 +230,7 @@ onMounted(async () => {
 
 /* ── Login Guide ── */
 .user-sidebar__login-guide {
-  background: #fff;
+  background: transparent;
   padding: 24px 20px 20px;
   text-align: center;
   border-bottom: 1px solid var(--line-light);
@@ -234,13 +240,12 @@ onMounted(async () => {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg2);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 12px;
-  color: var(--text4);
-  box-shadow: var(--shadow-sm);
+  color: var(--text3);
 }
 
 .user-sidebar__login-title {
@@ -278,7 +283,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   padding: 12px 4px;
-  background: #fff;
+  background: transparent;
   border-bottom: 1px solid var(--line-light);
 }
 
@@ -318,16 +323,20 @@ onMounted(async () => {
 }
 
 .user-sidebar__entry {
-  background: #fff;
-  padding: 14px 8px;
+  background: var(--bg1);
+  padding: 14px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 78px;
+  min-width: 0;
   font-size: 11px;
   color: var(--text3);
   transition: all var(--transition-fast);
   cursor: pointer;
+  overflow: hidden;
 
   &-icon { font-size: 18px; }
   &-value {
@@ -335,6 +344,10 @@ onMounted(async () => {
     font-weight: 700;
     color: var(--text1);
     font-variant-numeric: tabular-nums;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
   &-label { font-size: 11px; color: var(--text3); }
 
@@ -355,37 +368,4 @@ onMounted(async () => {
   }
 }
 
-/* ── Announcement Ticker ── */
-.user-sidebar__notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #fff;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-
-  &:hover { background: var(--bg2); }
-
-  &-icon {
-    color: var(--brand-primary);
-    font-size: 15px;
-    flex-shrink: 0;
-  }
-
-  &-text {
-    flex: 1;
-    font-size: 12px;
-    color: var(--text3);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &-arrow {
-    font-size: 12px;
-    color: var(--text4);
-    flex-shrink: 0;
-  }
-}
 </style>

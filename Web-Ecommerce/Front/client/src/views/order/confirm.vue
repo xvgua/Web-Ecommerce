@@ -400,9 +400,7 @@ async function handleSubmit() {
       res = await createOrder(orderData)
     }
     ElMessage.success('订单已提交')
-    if (!isDirectBuy.value && !isSeckillBuy.value) {
-      cartStore.fetchCart()
-    }
+    cartStore.fetchCart(true)
     router.push(`/orders/${res.data.id}/pay`)
   } finally {
     submitting.value = false
@@ -432,10 +430,11 @@ onMounted(async () => {
   }
 
   .confirm-section {
-    background: #fff;
+    background: var(--bg1);
     padding: 24px;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     margin-bottom: 16px;
+    border: 1px solid var(--line-light);
 
     h2 {
       font-size: 16px;
@@ -600,10 +599,11 @@ onMounted(async () => {
     position: sticky;
     bottom: 0;
     z-index: 100;
-    background: #fff;
+    background: var(--bg1);
     margin-top: 20px;
     padding: 16px 24px;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-light);
     display: flex;
     justify-content: flex-end;
     align-items: center;

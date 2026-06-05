@@ -27,7 +27,8 @@ public class AuthFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/auth", "/api/products", "/api/categories",
         "/api/banners", "/api/announcements", "/api/seckill",
-        "/api/coupons", "/api/admin/auth", "/api/upload"
+        "/api/coupons", "/api/admin/auth", "/api/upload",
+        "/api/reviews", "/api/hot-keywords", "/upload"
     );
 
     @Override

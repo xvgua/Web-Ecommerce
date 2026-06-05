@@ -119,27 +119,15 @@ onMounted(fetchList)
 
 <style lang="scss" scoped>
 .banner-manage {
-  max-width: 1400px;
+  /* max-width handled by .content-wrapper */
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-
   &__right {
     display: flex;
     align-items: center;
     gap: 12px;
   }
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--org-text);
-  letter-spacing: -.4px;
 }
 
 .pagination-wrap {

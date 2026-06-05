@@ -209,6 +209,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, WarningFilled, ChatDotSquare, Wallet, CreditCard, Loading, CircleCheckFilled } from '@element-plus/icons-vue'
+import { useCartStore } from '@/stores/cart'
 import { getOrderById, cancelOrder, createPayIntent, simulateScan, confirmPay } from '@/api/order'
 import { addToCart } from '@/api/cart'
 import { formatPrice, formatDate } from '@/utils/format'
@@ -218,6 +219,7 @@ import ProductImage from '@/components/common/ProductImage.vue'
 
 const route = useRoute()
 const router = useRouter()
+const cartStore = useCartStore()
 
 const order = ref<Order | null>(null)
 const loading = ref(false)
@@ -285,6 +287,7 @@ async function handleTimeout() {
         await addToCart({ productId: item.productId, skuId: item.skuId ?? 0, quantity: item.quantity })
       } catch { /* 个别商品添加失败不阻塞 */ }
     }
+    cartStore.fetchCart(true)
   }
 }
 
@@ -345,6 +348,7 @@ async function handleConfirmPay() {
   confirming.value = true
   try {
     await confirmPay(order.value!.id)
+    cartStore.fetchCart(true)
     phase.value = 'paid'
     redirectTimer = setTimeout(() => {
       router.push(`/orders/${order.value!.id}`)
@@ -374,6 +378,7 @@ async function handleCancel() {
   cancelling.value = true
   try {
     await cancelOrder(order.value!.id)
+    cartStore.fetchCart(true)
     ElMessage.success('订单已取消')
     router.push(`/orders/${order.value!.id}`)
   } finally {
