@@ -40,7 +40,7 @@
         <strong>{{ orderStats.pendingReceipt }}</strong>
         <span>待收货</span>
       </router-link>
-      <router-link to="/orders?status=4" class="user-sidebar__stat">
+      <router-link to="/orders?reviewFilter=pending" class="user-sidebar__stat">
         <strong>{{ orderStats.pendingReview }}</strong>
         <span>待评价</span>
       </router-link>
@@ -72,13 +72,12 @@
         <span class="user-sidebar__entry-value">&yen;{{ formatPrice(savedAmount) }}</span>
         <span class="user-sidebar__entry-label">已节省</span>
       </div>
-    </div>
-
     <!-- Announcement Ticker -->
     <div v-if="latestAnnouncement" class="user-sidebar__notice" @click="$router.push('/announcements')">
       <el-icon class="user-sidebar__notice-icon"><Bell /></el-icon>
       <span class="user-sidebar__notice-text">{{ latestAnnouncement.title }}</span>
       <el-icon class="user-sidebar__notice-arrow"><ArrowRight /></el-icon>
+    </div>
     </div>
   </div>
 </template>
@@ -88,7 +87,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { UserFilled, Bell, ArrowRight } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
-import { getOrderList } from '@/api/order'
+import { getOrderStats } from '@/api/order'
 import { getUserCoupons } from '@/api/coupon'
 import { getAnnouncements } from '@/api/announcement'
 import { getFavoriteList } from '@/api/favorite'
@@ -111,23 +110,20 @@ const orderStats = reactive({
 
 onMounted(async () => {
   if (userStore.isLoggedIn) {
-    // Fetch order stats
     try {
-      const res = await getOrderList({ page: 1, pageSize: 100 })
-      const orders = res.data.records
-      orderStats.pendingPayment = orders.filter(o => o.status === 0).length
-      orderStats.pendingShipment = orders.filter(o => o.status === 1).length
-      orderStats.pendingReceipt = orders.filter(o => o.status === 2).length
-      orderStats.pendingReview = orders.filter(o => o.status === 4).length
+      const res = await getOrderStats()
+      Object.assign(orderStats, res.data)
     } catch { /* silent */ }
 
-    // Fetch coupon count (status 0 = unused)
+    try {
+      await cartStore.fetchCart()
+    } catch { /* silent */ }
+
     try {
       const res = await getUserCoupons({ status: 0, page: 1, pageSize: 1 })
       couponCount.value = res.data.total
     } catch { /* silent */ }
 
-    // Fetch used coupon savings
     try {
       const usedRes = await getUserCoupons({ status: 1, page: 1, pageSize: 100 })
       savedAmount.value = usedRes.data.records.reduce(
@@ -136,14 +132,12 @@ onMounted(async () => {
       )
     } catch { /* silent */ }
 
-    // Fetch favorites count
     try {
       const favRes = await getFavoriteList()
       favoriteCount.value = favRes.data.length
     } catch { /* silent */ }
   }
 
-  // Fetch latest announcement
   try {
     const res = await getAnnouncements(1)
     if (res.data.length) {
@@ -170,11 +164,12 @@ onMounted(async () => {
 
 /* ── User Info ── */
 .user-sidebar__info {
-  background: linear-gradient(135deg, #E8F6F0 0%, #F0FBF5 50%, #F4F9F7 100%);
+  background: #fff;
   padding: 20px 16px 16px;
   display: flex;
   align-items: center;
   gap: 14px;
+  border-bottom: 1px solid var(--line-light);
 }
 
 .user-sidebar__avatar-link {
@@ -229,9 +224,10 @@ onMounted(async () => {
 
 /* ── Login Guide ── */
 .user-sidebar__login-guide {
-  background: linear-gradient(135deg, #E8F6F0 0%, #F0FBF5 50%, #F4F9F7 100%);
+  background: #fff;
   padding: 24px 20px 20px;
   text-align: center;
+  border-bottom: 1px solid var(--line-light);
 }
 
 .user-sidebar__login-avatar {

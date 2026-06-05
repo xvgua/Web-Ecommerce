@@ -1,9 +1,6 @@
 <template>
   <div class="home">
-    <!-- Announcement Bar -->
-    <AnnouncementBar />
-
-    <!-- Three-column Hero: Categories | Carousel | Promo Cards -->
+    <!-- Three-column Hero: Categories | Carousel | User Sidebar -->
     <section class="hero-three-col">
       <!-- Left: Category Sidebar -->
       <div class="hero-cat" @mouseleave="activeCatId = 0">
@@ -100,6 +97,9 @@
         <UserSidebar />
       </div>
     </section>
+
+    <!-- Announcement Bar -->
+    <AnnouncementBar />
 
     <!-- Trust Features -->
     <section class="features">
@@ -349,7 +349,7 @@ $cat-text: #1A2C26;
 $cat-subtle: #6D9A8E;
 
 .home {
-  max-width: 1280px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 0 64px;
 }
@@ -366,7 +366,7 @@ $cat-subtle: #6D9A8E;
 
 /* ── Left: Category Sidebar ── */
 .hero-cat {
-  width: 240px;
+  width: 200px;
   flex-shrink: 0;
   height: 100%;
   background: #fff;
@@ -548,7 +548,7 @@ $cat-subtle: #6D9A8E;
 
 /* ── Right: User Sidebar ── */
 .hero-right {
-  width: 290px;
+  width: 260px;
   flex-shrink: 0;
   height: 100%;
 
@@ -636,8 +636,8 @@ $cat-subtle: #6D9A8E;
 /* ── Product Grid ── */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
 }
 
 /* ── Home Seckill Section ── */
@@ -695,7 +695,7 @@ $cat-subtle: #6D9A8E;
   &__products {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    gap: 16px;
   }
 }
 
@@ -823,13 +823,14 @@ $cat-subtle: #6D9A8E;
    Responsive
    ══════════════════════════════════════════ */
 @media (max-width: 1280px) {
-  .hero-cat { width: 210px; }
-  .hero-right { width: 250px; }
-  .hero-cat__panel { width: 480px; }
-  .product-grid { grid-template-columns: repeat(4, 1fr); }
+  .hero-cat { width: 180px; }
+  .hero-right { width: 240px; }
+  .hero-cat__panel { width: 440px; }
 }
 
 @media (max-width: 1024px) {
+  .product-grid { grid-template-columns: repeat(3, 1fr); }
+  .home-seckill__products { grid-template-columns: repeat(3, 1fr); }
   .hero-cat {
     width: 180px;
 

@@ -1,28 +1,71 @@
 <template>
   <div class="default-layout">
-    <header class="header">
-      <!-- Row 1: Main bar -->
-      <div class="header__bar">
-        <div class="header__bar-inner">
-          <div class="header__bar-left">
-            <router-link to="/" class="header__logo">
-              <svg class="header__logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="10" width="24" height="19" rx="3" fill="currentColor"/>
-                <path d="M10 10V8a6 6 0 0 1 12 0v2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-                <circle cx="12" cy="22" r="1.5" fill="#fff"/>
-                <circle cx="20" cy="22" r="1.5" fill="#fff"/>
-              </svg>
-              <span>乐购电商平台</span>
-            </router-link>
-            <nav class="header__nav">
-              <router-link to="/" class="header__nav-link" exact-active-class="header__nav-link--active">首页</router-link>
-              <router-link to="/products" class="header__nav-link" active-class="header__nav-link--active">全部商品</router-link>
-              <router-link to="/seckill" class="header__nav-link" active-class="header__nav-link--active">限时秒杀</router-link>
-              <router-link to="/coupon/center" class="header__nav-link" active-class="header__nav-link--active">领券中心</router-link>
-            </nav>
+    <header class="header" :class="{ 'header--scrolled': scrolled }">
+      <!-- Row 1: Top nav bar (hides on scroll) -->
+      <div class="header__top">
+        <div class="header__top-inner">
+          <nav class="header__nav">
+            <router-link to="/" class="header__nav-link" exact-active-class="header__nav-link--active">首页</router-link>
+            <router-link to="/products" class="header__nav-link" active-class="header__nav-link--active">全部商品</router-link>
+            <router-link to="/seckill" class="header__nav-link" active-class="header__nav-link--active">限时秒杀</router-link>
+            <router-link to="/coupon/center" class="header__nav-link" active-class="header__nav-link--active">领券中心</router-link>
+          </nav>
+          <div class="header__top-right">
+            <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
+              <router-link to="/cart" class="header__top-link">
+                <el-icon :size="17"><ShoppingCart /></el-icon>
+                <span>购物车</span>
+              </router-link>
+            </el-badge>
+            <template v-if="userStore.isLoggedIn">
+              <el-dropdown trigger="hover">
+                <span class="header__user">
+                  <el-avatar :size="26" :src="userStore.user?.avatar">
+                    <span>{{ userStore.user?.username?.[0]?.toUpperCase() }}</span>
+                  </el-avatar>
+                  <span class="header__user-name">{{ userStore.user?.username }}</span>
+                  <el-icon class="header__user-arrow"><ArrowDown /></el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="$router.push('/user/profile')">
+                      <el-icon><User /></el-icon> 个人中心
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/orders')">
+                      <el-icon><Document /></el-icon> 我的订单
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="$router.push('/user/favorites')">
+                      <el-icon><Star /></el-icon> 我的收藏
+                    </el-dropdown-item>
+                    <el-dropdown-item divided @click="handleLogout">
+                      <el-icon><SwitchButton /></el-icon> 退出登录
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </template>
+            <template v-else>
+              <router-link to="/login" class="header__top-link">请登录</router-link>
+              <span class="header__pipe">|</span>
+              <router-link to="/register" class="header__top-link">免费注册</router-link>
+            </template>
           </div>
+        </div>
+      </div>
 
-          <div class="header__bar-search">
+      <!-- Row 2: Logo + Search bar -->
+      <div class="header__search-row">
+        <div class="header__search-inner">
+          <router-link to="/" class="header__logo">
+            <svg class="header__logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="10" width="24" height="19" rx="3" fill="currentColor"/>
+              <path d="M10 10V8a6 6 0 0 1 12 0v2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="12" cy="22" r="1.5" fill="#fff"/>
+              <circle cx="20" cy="22" r="1.5" fill="#fff"/>
+            </svg>
+            <span>乐购电商平台</span>
+          </router-link>
+          <div class="search-area">
             <div class="search-box">
               <el-autocomplete
                 v-model="keyword"
@@ -68,50 +111,20 @@
                   </div>
                 </template>
               </el-autocomplete>
-              <button class="search-box__btn" @click="handleSearch" :disabled="!keyword.trim()">
-                <el-icon :size="20"><Search /></el-icon>
+              <button class="search-box__btn" @click="handleSearch">
+                <el-icon :size="18"><Search /></el-icon>
+                <span>搜索</span>
               </button>
             </div>
-          </div>
-
-          <div class="header__bar-right">
-            <el-badge :value="cartStore.totalCount" :hidden="!cartStore.totalCount" :max="99">
-              <router-link to="/cart" class="header__quick-link">
-                <el-icon :size="20"><ShoppingCart /></el-icon>
-                <span>购物车</span>
-              </router-link>
-            </el-badge>
-            <template v-if="userStore.isLoggedIn">
-              <el-dropdown trigger="hover">
-                <span class="header__user">
-                  <el-avatar :size="30" :src="userStore.user?.avatar">
-                    <span>{{ userStore.user?.username?.[0]?.toUpperCase() }}</span>
-                  </el-avatar>
-                  <span class="header__user-name">{{ userStore.user?.username }}</span>
-                  <el-icon class="header__user-arrow"><ArrowDown /></el-icon>
-                </span>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="$router.push('/user/profile')">
-                      <el-icon><User /></el-icon> 个人中心
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="$router.push('/orders')">
-                      <el-icon><Document /></el-icon> 我的订单
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="$router.push('/user/favorites')">
-                      <el-icon><Star /></el-icon> 我的收藏
-                    </el-dropdown-item>
-                    <el-dropdown-item divided @click="handleLogout">
-                      <el-icon><SwitchButton /></el-icon> 退出登录
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </template>
-            <template v-else>
-              <router-link to="/login" class="header__login-btn">登录</router-link>
-              <router-link to="/register" class="header__reg-btn">免费注册</router-link>
-            </template>
+            <div v-if="hotKeywords.length" class="search-hot-tags">
+              <span class="search-hot-tags__label">热门搜索：</span>
+              <span
+                v-for="kw in hotKeywords.slice(0, 5)"
+                :key="kw.keyword"
+                class="search-hot-tags__tag"
+                @click="handleHotClick(kw)"
+              >{{ kw.keyword }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -153,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Search, ShoppingCart, Clock, Close,
@@ -172,6 +185,11 @@ const userStore = useUserStore()
 const cartStore = useCartStore()
 const keyword = ref('')
 const hotKeywords = ref<HotKeyword[]>([])
+const scrolled = ref(false)
+
+function onScroll() {
+  scrolled.value = window.scrollY > 10
+}
 const { getAll: getHistory, add: addHistory, remove: removeHistory, clear: clearHistory } = useSearchHistory()
 
 function findCategoryName(tree: Category[], id: number): string | null {
@@ -254,12 +272,17 @@ watch(() => route.path, (path) => {
 })
 
 onMounted(async () => {
+  window.addEventListener('scroll', onScroll, { passive: true })
   const tasks: Promise<unknown>[] = []
   if (userStore.isLoggedIn) {
     tasks.push(userStore.fetchUser())
   }
   tasks.push(getHotKeywords(10).then(res => hotKeywords.value = res.data))
   await Promise.allSettled(tasks)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
 })
 
 function handleLogout() {
@@ -343,196 +366,168 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 1px 0 var(--line-light), 0 2px 8px rgba(40, 95, 75, 0.05);
+  background: #fff;
+  border-bottom: 1px solid var(--line-light);
 }
 
-/* ── Row 1: Main bar (64px) ── */
-.header__bar {
+/* ── Pipe separator ── */
+.header__pipe {
+  color: #ddd;
+  font-size: 12px;
+  user-select: none;
+}
+
+/* ══════════════════════════════════════════
+   Row 1: Top nav bar (36px, hides on scroll)
+   ══════════════════════════════════════════ */
+.header__top {
+  transition: height .2s, opacity .2s;
+
   &-inner {
-    max-width: 1280px;
+    max-width: 1400px;
     margin: 0 auto;
     display: flex;
     align-items: center;
-    height: 64px;
-    padding: 0 24px;
-  }
-
-  &-left {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: nowrap;
-    min-width: 0;
-  }
-
-  &-search {
-    flex: 1;
-    max-width: 600px;
-    margin: 0 16px;
+    height: 36px;
+    padding: 0 40px;
   }
 
   &-right {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0;
+    gap: 8px;
+    margin-left: auto;
     flex-shrink: 0;
   }
-}
 
-.header__logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  white-space: nowrap;
-  padding: 4px 0;
+  &-link {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+    transition: color .2s;
 
-  span {
-    font-size: 21px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    color: var(--text1);
-    transition: color var(--transition-fast);
-  }
-
-  &:hover span {
-    color: var(--brand-primary);
-  }
-
-  &-icon {
-    width: 34px;
-    height: 34px;
-    color: var(--brand-primary);
-    flex-shrink: 0;
-    transition: transform var(--transition-normal);
-
-    .header__logo:hover & {
-      transform: scale(1.05);
+    &:hover {
+      color: var(--brand-primary);
+      text-decoration: none;
     }
   }
 }
 
+/* ── Nav links (pure text, left-aligned) ── */
 .header__nav {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 2px;
+  align-items: center;
+  gap: 0;
 
   &-link {
-    padding: 6px 14px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text2);
-    border-radius: var(--radius-md);
+    padding: 0 12px;
     white-space: nowrap;
-    font-weight: 500;
-    transition: all var(--transition-fast);
+    transition: color .2s;
+
+    &:first-child { padding-left: 0; }
 
     &:hover {
       color: var(--brand-primary);
-      background: var(--brand-primary-ghost);
       text-decoration: none;
     }
 
     &--active {
-      color: var(--brand-primary) !important;
+      color: var(--brand-primary);
       font-weight: 600;
-      background: var(--brand-primary-ghost);
     }
   }
 }
 
-.header__quick-link {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
-  font-size: 13px;
-  color: var(--text2);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    color: var(--brand-primary);
-    background: var(--brand-primary-ghost);
-  }
-
-  .el-icon {
-    font-size: 17px;
-  }
-}
-
+/* ── User area ── */
 .header__user {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  padding: 4px 10px 4px 4px;
+  padding: 2px 8px 2px 2px;
   border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
+  transition: background .2s;
 
-  &:hover {
-    background: var(--brand-primary-ghost);
-  }
+  &:hover { background: var(--brand-primary-ghost); }
 
   &-name {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--text1);
   }
 }
 
-/* ── Login / Register ── */
-.header__login-btn {
-  padding: 7px 18px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--brand-primary);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: var(--brand-primary-ghost);
-    text-decoration: none;
-  }
-}
-
-.header__reg-btn {
-  padding: 7px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text3);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    color: var(--text1);
-    text-decoration: none;
-  }
-}
-
-/* ── Cart badge ── */
-.header__bar-right :deep(.el-badge__content.is-fixed) {
-  top: 6px;
-  right: 8px;
-}
-
-/* ── User dropdown arrow ── */
 .header__user-arrow {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text3);
-  transition: transform var(--transition-fast);
+  transition: transform .2s;
 }
 
 .header__user:hover .header__user-arrow {
   transform: rotate(180deg);
 }
 
-/* ── Search box ── */
+/* ── Cart badge ── */
+.header__top-right :deep(.el-badge__content.is-fixed) {
+  top: 4px;
+  right: 6px;
+}
+
+/* ══════════════════════════════════════════
+   Row 2: Logo + Search bar
+   ══════════════════════════════════════════ */
+.header__search-row {
+  border-top: 1px solid var(--line-light);
+}
+
+.header__search-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 40px;
+}
+
+/* ── Logo (in search row) ── */
+.header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .2s;
+
+  span {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text1);
+    transition: all .2s;
+  }
+
+  &:hover span { color: var(--brand-primary); }
+
+  &-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--brand-primary);
+    flex-shrink: 0;
+    transition: all .2s;
+  }
+}
+
+.search-area {
+  flex: 1;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+}
+
 .search-box {
-  position: relative;
   display: flex;
   align-items: center;
 
@@ -540,24 +535,21 @@ function handleLogout() {
     flex: 1;
 
     :deep(.el-input__wrapper) {
-      border: 2px solid var(--line-light);
+      border: 2px solid var(--brand-primary);
       border-radius: 24px 0 0 24px;
-      background: var(--bg2);
+      background: #fff;
       box-shadow: none;
       padding-left: 18px;
-      height: 44px;
+      height: 42px;
       border-right: none;
-      transition: all var(--transition-normal);
+      transition: box-shadow var(--transition-normal);
 
       &:hover {
-        border-color: var(--line-regular);
-        background: #fff;
+        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.08);
       }
 
       &.is-focus {
-        border-color: var(--brand-primary);
-        background: #fff;
-        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.08);
+        box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.12);
       }
     }
 
@@ -565,79 +557,107 @@ function handleLogout() {
       color: var(--text1);
       font-size: 14px;
 
-      &::placeholder {
-        color: var(--text4);
-        font-weight: 400;
-      }
+      &::placeholder { color: var(--text4); font-weight: 400; }
     }
 
     :deep(.el-input__prefix) {
       color: var(--brand-primary);
       font-size: 18px;
     }
+
+    :deep(.el-input__suffix) { color: var(--text4); }
   }
 
   &__btn {
-    width: 48px;
-    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 42px;
+    padding: 0 24px;
     border-radius: 0 24px 24px 0;
     background: var(--brand-primary);
     color: #fff;
     border: none;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 15px;
+    font-weight: 500;
     flex-shrink: 0;
     transition: background var(--transition-fast);
 
-    &:hover {
-      background: var(--brand-primary-hover);
-    }
+    &:hover { background: var(--brand-primary-hover); }
+  }
+}
 
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+/* ── Hot search tags ── */
+.search-hot-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+
+  &__label {
+    flex-shrink: 0;
+    color: var(--text4);
+  }
+
+  &__tag {
+    padding: 2px 10px;
+    background: var(--bg3);
+    border-radius: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--brand-primary);
+      background: var(--brand-primary-light);
     }
   }
 }
 
-/* ── Old search input class (kept for search-history-popper) ── */
-.header-search-input {
-  :deep(.el-input__wrapper) {
-    border: 1.5px solid var(--line-light);
-    border-radius: var(--radius-full);
-    background: var(--bg2);
-    box-shadow: none;
-    padding-left: 16px;
-    height: 42px;
-    transition: all var(--transition-normal);
+/* ══════════════════════════════════════════
+   Scrolled state
+   ══════════════════════════════════════════ */
+.header--scrolled {
+  .header__top {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
 
-    &:hover {
-      border-color: var(--line-regular);
-      background: #fff;
+  .search-hot-tags {
+    display: none;
+  }
+
+  .header__search-inner {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .header__logo {
+    gap: 6px;
+
+    span {
+      font-size: 16px;
     }
 
-    &.is-focus {
-      border-color: var(--brand-primary);
-      background: #fff;
-      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
+    &-icon {
+      width: 24px;
+      height: 24px;
     }
   }
 
-  :deep(.el-input__inner) {
-    color: var(--text1);
+  .search-box__input :deep(.el-input__wrapper) {
+    height: 38px;
+  }
+
+  .search-box__btn {
+    height: 38px;
+    padding: 0 20px;
     font-size: 14px;
-
-    &::placeholder {
-      color: var(--text4);
-      font-weight: 400;
-    }
-  }
-
-  :deep(.el-input__prefix) {
-    color: var(--brand-primary);
-    font-size: 18px;
   }
 }
 
@@ -695,48 +715,46 @@ function handleLogout() {
 
 /* ── Responsive ── */
 @media (max-width: 1024px) {
-  .header__bar {
-    &-left { gap: 16px; }
-    &-search { max-width: 340px; margin: 0 12px; }
-  }
-
-  .header__nav-link { padding: 4px 10px; font-size: 13px; }
-  .header__quick-link { padding: 5px 8px; }
-  .header__quick-link span { display: none; }
+  .header__top-inner { padding: 0 24px; }
+  .header__search-inner { padding: 12px 24px; gap: 16px; }
+  .header__nav-link { padding: 0 8px; font-size: 12px; }
   .header__user-name { display: none; }
+  .header--scrolled .header__search-inner { padding: 8px 24px; }
 }
 
 @media (max-width: 768px) {
-  .header__bar {
-    &-inner {
-      gap: 8px;
-      padding: 0 12px;
-      height: 56px;
-    }
-
-    &-left { gap: 8px; }
-    &-search {
-      flex: 1 1 auto;
-      max-width: 200px;
-      margin: 0 6px;
-    }
-  }
-
-  .header__logo {
-    &-icon { width: 26px; height: 26px; }
-
-    span {
-      font-size: 15px;
-      letter-spacing: 0;
-    }
+  .header__top-inner {
+    padding: 0 12px;
+    height: 36px;
   }
 
   .header__nav { display: none; }
-  .header__quick-link { padding: 4px 6px; font-size: 12px; }
+  .header__top-link span { display: none; }
+  .header__top-right { gap: 4px; }
 
-  .main {
-    padding: 12px;
+  .header__search-inner {
+    padding: 10px 12px;
+    gap: 10px;
   }
+
+  .header__logo {
+    span { font-size: 15px; letter-spacing: 0; }
+    &-icon { width: 24px; height: 24px; }
+  }
+
+  .header--scrolled .header__logo {
+    span { font-size: 14px; }
+    &-icon { width: 20px; height: 20px; }
+  }
+
+  .search-box__btn {
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .search-hot-tags { display: none; }
+
+  .main { padding: 12px; }
 
   .footer__inner {
     grid-template-columns: repeat(2, 1fr);

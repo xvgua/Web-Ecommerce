@@ -2,6 +2,17 @@ import request from './request'
 import type { ApiResponse, PageResponse } from '@shared/types'
 import type { Order, OrderQuery, CreateOrderForm, PayIntent, PayStatus } from '@shared/types/order'
 
+export interface OrderStats {
+  pendingPayment: number
+  pendingShipment: number
+  pendingReceipt: number
+  pendingReview: number
+}
+
+export function getOrderStats(): Promise<ApiResponse<OrderStats>> {
+  return request.get('/orders/stats')
+}
+
 export function getOrderList(params: OrderQuery): Promise<ApiResponse<PageResponse<Order>>> {
   return request.get('/orders', { params })
 }
