@@ -6,6 +6,7 @@ import type { User } from '@shared/types/user'
 import type { Coupon, CouponForm } from '@shared/types/coupon'
 import type { SeckillActivity, SeckillActivityForm } from '@shared/types/seckill'
 import type { Feedback } from '@shared/types/feedback'
+import type { Review, ReviewComment } from '@shared/types/product'
 import type { Announcement, Banner } from '@shared/types'
 
 // ===== Auth =====
@@ -20,8 +21,34 @@ export function getDashboardStats(): Promise<ApiResponse<{
   totalSales: number
   todayOrders: number
   todaySales: number
+  pendingOrders: number
+  shippingOrders: number
+  completedOrders: number
+  cancelledOrders: number
 }>> {
   return request.get('/admin/dashboard/stats')
+}
+
+export interface SalesTrendItem {
+  date: string
+  orderCount: number
+  salesAmount: number
+}
+
+export function getSalesTrend(range: string): Promise<ApiResponse<SalesTrendItem[]>> {
+  return request.get('/admin/dashboard/sales-trend', { params: { range } })
+}
+
+export interface HotProductItem {
+  id: number
+  name: string
+  mainImage: string
+  sales: number
+  salesAmount: number
+}
+
+export function getHotProducts(range: string, top?: number): Promise<ApiResponse<HotProductItem[]>> {
+  return request.get('/admin/dashboard/hot-products', { params: { range, top } })
 }
 
 // ===== Product Management =====
@@ -149,6 +176,18 @@ export function toggleHotKeywordStatus(id: number): Promise<ApiResponse<null>> {
   return request.put(`/admin/hot-keywords/${id}/status`)
 }
 
+export function computeHotKeywords(days?: number, limit?: number): Promise<ApiResponse<null>> {
+  return request.post('/admin/hot-keywords/compute', null, { params: { days, limit } })
+}
+
+// ===== Order Management =====
+export function exportOrders(params: OrderQuery): Promise<Blob> {
+  return request.get('/admin/orders/export', {
+    params,
+    responseType: 'blob',
+  })
+}
+
 // ===== Product Import/Export =====
 export function exportProducts(params: ProductQuery): Promise<Blob> {
   return request.get('/admin/products/export', {
@@ -222,6 +261,36 @@ export function updateAnnouncement(id: number, data: { title: string; content: s
 
 export function deleteAnnouncement(id: number): Promise<ApiResponse<null>> {
   return request.delete(`/admin/announcements/${id}`)
+}
+
+// ===== Review Management =====
+export interface ReviewQuery {
+  page: number
+  pageSize: number
+  keyword?: string
+  username?: string
+  rating?: number
+  startDate?: string
+  endDate?: string
+  hasImage?: boolean
+  hasFollowUp?: boolean
+  sort?: string
+}
+
+export function getReviewList(params: ReviewQuery): Promise<ApiResponse<PageResponse<Review>>> {
+  return request.get('/admin/reviews', { params })
+}
+
+export function getReviewDetail(id: number): Promise<ApiResponse<Review>> {
+  return request.get(`/admin/reviews/${id}`)
+}
+
+export function deleteReview(id: number): Promise<ApiResponse<null>> {
+  return request.delete(`/admin/reviews/${id}`)
+}
+
+export function batchDeleteReviews(ids: number[]): Promise<ApiResponse<null>> {
+  return request.delete('/admin/reviews/batch', { data: { ids } })
 }
 
 // ===== Banner Management =====

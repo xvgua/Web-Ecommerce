@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ecommerce.common.BusinessException;
 import com.ecommerce.common.PageResult;
+import com.ecommerce.dto.HotProductDTO;
 import com.ecommerce.dto.PageQuery;
+import com.ecommerce.dto.SalesTrendDTO;
 import com.ecommerce.entity.*;
 import com.ecommerce.mapper.*;
 import com.ecommerce.security.JwtUtils;
@@ -16,9 +18,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +36,10 @@ public class AdminServiceImpl implements AdminService {
     private UserMapper userMapper;
     @Autowired
     private OrderMapper orderMapper;
+    @Autowired
+    private OrderItemMapper orderItemMapper;
+    @Autowired
+    private ProductMapper productMapper;
     @Autowired
     private JwtUtils jwtUtils;
 
@@ -108,6 +118,72 @@ public class AdminServiceImpl implements AdminService {
         stats.put("completedOrders", completedOrders);
         stats.put("cancelledOrders", cancelledOrders);
         return stats;
+    }
+
+    @Override
+    public List<SalesTrendDTO> getSalesTrend(String range) {
+        LocalDateTime start = computeStart(range);
+        List<Map<String, Object>> rows = orderMapper.selectSalesTrend(start);
+
+        LocalDate cursor = start.toLocalDate();
+        LocalDate today = LocalDate.now();
+        Map<String, SalesTrendDTO> map = new LinkedHashMap<>();
+        while (!cursor.isAfter(today)) {
+            String key = cursor.toString();
+            map.put(key, new SalesTrendDTO(key, 0L, BigDecimal.ZERO));
+            cursor = cursor.plusDays(1);
+        }
+
+        for (Map<String, Object> row : rows) {
+            String date = row.get("date").toString();
+            Long orderCount = ((Number) row.get("orderCount")).longValue();
+            BigDecimal salesAmount = (BigDecimal) row.get("salesAmount");
+            map.put(date, new SalesTrendDTO(date, orderCount, salesAmount));
+        }
+
+        return new ArrayList<>(map.values());
+    }
+
+    @Override
+    public List<HotProductDTO> getHotProducts(String range, int top) {
+        if ("all".equals(range)) {
+            LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+            wrapper.orderByDesc(Product::getSales).last("LIMIT " + top);
+            return productMapper.selectList(wrapper).stream()
+                    .map(p -> new HotProductDTO(p.getId(), p.getName(), p.getMainImage(),
+                            p.getSales() != null ? p.getSales() : 0L,
+                            p.getPrice() != null ? p.getPrice().multiply(BigDecimal.valueOf(
+                                    p.getSales() != null ? p.getSales() : 0)) : BigDecimal.ZERO))
+                    .collect(Collectors.toList());
+        }
+
+        LocalDateTime start = computeStart(range);
+        List<Map<String, Object>> rows = orderItemMapper.selectHotProductsByTime(start, top);
+
+        Map<Long, HotProductDTO> dtoMap = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Long productId = ((Number) row.get("productId")).longValue();
+            Long sales = ((Number) row.get("sales")).longValue();
+            BigDecimal salesAmount = (BigDecimal) row.get("salesAmount");
+
+            Product p = productMapper.selectById(productId);
+            if (p != null) {
+                dtoMap.put(productId, new HotProductDTO(
+                        p.getId(), p.getName(), p.getMainImage(), sales, salesAmount));
+            }
+        }
+        return new ArrayList<>(dtoMap.values());
+    }
+
+    private LocalDateTime computeStart(String range) {
+        LocalDate today = LocalDate.now();
+        return switch (range) {
+            case "7d" -> today.minusDays(6).atStartOfDay();
+            case "30d" -> today.minusDays(29).atStartOfDay();
+            case "month" -> today.withDayOfMonth(1).atStartOfDay();
+            case "week" -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay();
+            default -> today.minusDays(6).atStartOfDay();
+        };
     }
 
     @Override

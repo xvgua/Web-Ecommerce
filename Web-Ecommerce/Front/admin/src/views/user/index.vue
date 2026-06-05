@@ -21,7 +21,7 @@
         <el-table-column label="用户" min-width="160">
           <template #default="{ row }">
             <div class="user-cell">
-              <el-avatar :size="36">
+              <el-avatar :size="36" :src="row.avatar || undefined">
                 <span style="font-size:15px">{{ row.username?.[0]?.toUpperCase() }}</span>
               </el-avatar>
               <div>

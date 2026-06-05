@@ -1,101 +1,87 @@
 <template>
   <div class="dashboard">
-    <h1 class="page-title">数据看板</h1>
+    <div class="dashboard-header">
+      <h1 class="page-title">数据看板</h1>
+    </div>
 
+    <!-- Stat Cards -->
     <div class="stat-cards">
       <div class="stat-card stat-card--blue">
-        <div class="stat-card__icon">
-          <el-icon size="28"><User /></el-icon>
-        </div>
+        <div class="stat-card__icon"><el-icon size="28"><User /></el-icon></div>
         <div class="stat-card__body">
           <div class="stat-card__value">{{ stats.totalUsers.toLocaleString() }}</div>
           <div class="stat-card__label">总用户数</div>
         </div>
       </div>
       <div class="stat-card stat-card--green">
-        <div class="stat-card__icon">
-          <el-icon size="28"><Document /></el-icon>
-        </div>
+        <div class="stat-card__icon"><el-icon size="28"><Document /></el-icon></div>
         <div class="stat-card__body">
           <div class="stat-card__value">{{ stats.totalOrders.toLocaleString() }}</div>
           <div class="stat-card__label">总订单数</div>
         </div>
       </div>
       <div class="stat-card stat-card--orange">
-        <div class="stat-card__icon">
-          <el-icon size="28"><Money /></el-icon>
-        </div>
+        <div class="stat-card__icon"><el-icon size="28"><Money /></el-icon></div>
         <div class="stat-card__body">
-          <div class="stat-card__value">&yen;{{ stats.totalSales.toLocaleString() }}</div>
+          <div class="stat-card__value">&yen;{{ formatNum(stats.totalSales) }}</div>
           <div class="stat-card__label">总销售额</div>
         </div>
       </div>
       <div class="stat-card stat-card--purple">
-        <div class="stat-card__icon">
-          <el-icon size="28"><TrendCharts /></el-icon>
-        </div>
+        <div class="stat-card__icon"><el-icon size="28"><TrendCharts /></el-icon></div>
         <div class="stat-card__body">
           <div class="stat-card__value">{{ stats.todayOrders }}</div>
           <div class="stat-card__label">今日订单</div>
         </div>
       </div>
       <div class="stat-card stat-card--teal">
-        <div class="stat-card__icon">
-          <el-icon size="28"><Wallet /></el-icon>
-        </div>
+        <div class="stat-card__icon"><el-icon size="28"><Wallet /></el-icon></div>
         <div class="stat-card__body">
-          <div class="stat-card__value">&yen;{{ stats.todaySales.toLocaleString() }}</div>
+          <div class="stat-card__value">&yen;{{ formatNum(stats.todaySales) }}</div>
           <div class="stat-card__label">今日销售额</div>
         </div>
       </div>
     </div>
 
+    <!-- Sales Trend Chart -->
+    <div class="chart-card" style="margin-top: 24px">
+      <div class="chart-card__header">
+        <h3>销量趋势</h3>
+        <el-radio-group v-model="trendRange" size="small" @change="loadSalesTrend">
+          <el-radio-button value="7d">7天</el-radio-button>
+          <el-radio-button value="30d">30天</el-radio-button>
+          <el-radio-button value="month">本月</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="chart-card__body">
+        <v-chart :option="salesTrendOption" autoresize style="height:320px" />
+      </div>
+    </div>
+
+    <!-- Bottom Row: Hot Products + Order Status -->
     <el-row :gutter="20" style="margin-top: 24px">
       <el-col :span="14">
         <div class="chart-card">
           <div class="chart-card__header">
             <h3>热销商品排行</h3>
-            <el-tag size="small">本周</el-tag>
+            <el-radio-group v-model="hotRange" size="small" @change="loadHotProducts">
+              <el-radio-button value="all">全部</el-radio-button>
+              <el-radio-button value="week">本周</el-radio-button>
+              <el-radio-button value="month">本月</el-radio-button>
+            </el-radio-group>
           </div>
-          <div class="chart-card__body chart-placeholder">
-            <svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
-              <polyline points="10,140 60,100 110,120 160,60 210,80 260,30 310,50 360,20 410,35 460,10"
-                fill="none" stroke="#409eff" stroke-width="3" stroke-linecap="round" />
-              <polygon points="10,140 60,100 110,120 160,60 210,80 260,30 310,50 360,20 410,35 460,10 460,180 10,180"
-                fill="rgba(64,158,255,.08)" />
-            </svg>
-            <p style="text-align:center;color:#999;margin-top:8px;font-size:13px">连接后端后将展示真实销售趋势图表</p>
+          <div class="chart-card__body">
+            <v-chart :option="hotProductsOption" autoresize style="height:320px" />
           </div>
         </div>
       </el-col>
       <el-col :span="10">
         <div class="chart-card">
           <div class="chart-card__header">
-            <h3>订单概览</h3>
+            <h3>订单状态</h3>
           </div>
           <div class="chart-card__body">
-            <div class="order-stats">
-              <div class="order-stat-item">
-                <span class="order-stat-dot" style="background:#409eff" />
-                <span>待支付</span>
-                <strong>{{ stats.pendingOrders || 0 }}</strong>
-              </div>
-              <div class="order-stat-item">
-                <span class="order-stat-dot" style="background:#e6a23c" />
-                <span>待发货</span>
-                <strong>{{ stats.shippingOrders || 0 }}</strong>
-              </div>
-              <div class="order-stat-item">
-                <span class="order-stat-dot" style="background:#67c23a" />
-                <span>已完成</span>
-                <strong>{{ stats.completedOrders || 0 }}</strong>
-              </div>
-              <div class="order-stat-item">
-                <span class="order-stat-dot" style="background:#f56c6c" />
-                <span>已取消</span>
-                <strong>{{ stats.cancelledOrders || 0 }}</strong>
-              </div>
-            </div>
+            <v-chart :option="orderStatusOption" autoresize style="height:320px" />
           </div>
         </div>
       </el-col>
@@ -104,39 +90,180 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
-import {
-  User, Document, Money, TrendCharts, Wallet,
-} from '@element-plus/icons-vue'
-import { getDashboardStats } from '@/api/admin'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { User, Document, Money, TrendCharts, Wallet } from '@element-plus/icons-vue'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { getDashboardStats, getSalesTrend, getHotProducts } from '@/api/admin'
+import type { SalesTrendItem, HotProductItem } from '@/api/admin'
+
+use([CanvasRenderer, BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+
+const trendRange = ref('7d')
+const hotRange = ref('all')
 
 const stats = reactive<Record<string, number>>({
-  totalUsers: 0,
-  totalOrders: 0,
-  totalSales: 0,
-  todayOrders: 0,
-  todaySales: 0,
-  pendingOrders: 0,
-  shippingOrders: 0,
-  completedOrders: 0,
-  cancelledOrders: 0,
+  totalUsers: 0, totalOrders: 0, totalSales: 0, todayOrders: 0, todaySales: 0,
+  pendingOrders: 0, shippingOrders: 0, completedOrders: 0, cancelledOrders: 0,
 })
 
-onMounted(async () => {
-  try {
-    const res = await getDashboardStats()
-    Object.assign(stats, res.data)
-  } catch { /* handled by interceptor */ }
+const trendData = ref<SalesTrendItem[]>([])
+const hotProducts = ref<HotProductItem[]>([])
+
+function formatNum(v: number | string) {
+  if (v == null) return '0'
+  const n = typeof v === 'string' ? parseFloat(v) : v
+  if (isNaN(n)) return '0'
+  return n.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
+
+// ── ECharts Options ──
+
+const salesTrendOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis' as const,
+    axisPointer: { type: 'cross' as const },
+  },
+  legend: { data: ['订单量', '销售额'], bottom: 0 },
+  grid: { left: 60, right: 60, top: 20, bottom: 40 },
+  xAxis: {
+    type: 'category' as const,
+    data: trendData.value.map(d => d.date.slice(5)),
+    axisLabel: { fontSize: 11 },
+  },
+  yAxis: [
+    {
+      type: 'value' as const,
+      name: '订单量',
+      axisLabel: { fontSize: 11 },
+    },
+    {
+      type: 'value' as const,
+      name: '销售额(元)',
+      axisLabel: { fontSize: 11, formatter: (v: number) => `${(v / 1000).toFixed(0)}k` },
+    },
+  ],
+  series: [
+    {
+      name: '订单量',
+      type: 'bar' as const,
+      data: trendData.value.map(d => d.orderCount),
+      itemStyle: { color: '#409eff', borderRadius: [4, 4, 0, 0] },
+      barMaxWidth: 30,
+    },
+    {
+      name: '销售额',
+      type: 'line' as const,
+      yAxisIndex: 1,
+      data: trendData.value.map(d => d.salesAmount),
+      smooth: true,
+      itemStyle: { color: '#e6a23c' },
+      lineStyle: { width: 2 },
+      symbolSize: 6,
+    },
+  ],
+}))
+
+const hotProductsOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis' as const,
+    axisPointer: { type: 'shadow' as const },
+  },
+  legend: { data: ['销量', '销售额'], bottom: 0 },
+  grid: { left: 10, right: 60, top: 10, bottom: 40 },
+  xAxis: {
+    type: 'value' as const,
+    axisLabel: { fontSize: 11 },
+  },
+  yAxis: {
+    type: 'category' as const,
+    inverse: true,
+    data: hotProducts.value.map(p => p.name.length > 10 ? p.name.slice(0, 10) + '...' : p.name),
+    axisLabel: { fontSize: 11 },
+  },
+  series: [
+    {
+      name: '销量',
+      type: 'bar' as const,
+      data: hotProducts.value.map(p => p.sales),
+      itemStyle: { color: '#409eff', borderRadius: [0, 4, 4, 0] },
+      barMaxWidth: 18,
+      label: { show: true, position: 'right' as const, fontSize: 11 },
+    },
+  ],
+}))
+
+const orderStatusOption = computed(() => ({
+  tooltip: { trigger: 'item' as const, formatter: '{b}: {c} 单 ({d}%)' },
+  legend: { orient: 'vertical' as const, right: 10, top: 'center', itemWidth: 10, itemHeight: 10 },
+  series: [{
+    type: 'pie' as const,
+    radius: ['50%', '75%'],
+    center: ['38%', '50%'],
+    avoidLabelOverlap: false,
+    label: { show: false },
+    emphasis: {
+      label: { show: true, fontSize: 14, fontWeight: 'bold' },
+    },
+    data: [
+      { value: stats.pendingOrders, name: '待支付', itemStyle: { color: '#409eff' } },
+      { value: stats.shippingOrders, name: '待发货/已发货', itemStyle: { color: '#e6a23c' } },
+      { value: stats.completedOrders, name: '已完成', itemStyle: { color: '#67c23a' } },
+      { value: stats.cancelledOrders, name: '已取消', itemStyle: { color: '#f56c6c' } },
+    ],
+  }],
+}))
+
+// ── Data Loading ──
+
+async function loadStats() {
+  const res = await getDashboardStats()
+  Object.assign(stats, res.data)
+}
+
+async function loadSalesTrend() {
+  const res = await getSalesTrend(trendRange.value)
+  trendData.value = res.data
+}
+
+async function loadHotProducts() {
+  const res = await getHotProducts(hotRange.value)
+  hotProducts.value = res.data
+}
+
+async function loadAll() {
+  await Promise.all([loadStats(), loadSalesTrend(), loadHotProducts()])
+}
+
+let refreshTimer: number | null = null
+
+onMounted(() => {
+  loadAll()
+  refreshTimer = window.setInterval(loadAll, 30 * 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
 })
 </script>
 
 <style lang="scss" scoped>
 .dashboard { max-width: 1400px; }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
 .page-title {
   font-size: 20px;
   font-weight: 700;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 /* ── Stat Cards ── */
@@ -216,34 +343,5 @@ onMounted(async () => {
   &__body {
     padding: 16px 20px;
   }
-}
-
-.chart-placeholder svg {
-  width: 100%;
-  height: 160px;
-}
-
-.order-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 8px;
-}
-
-.order-stat-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #666;
-
-  strong { margin-left: auto; font-size: 18px; color: #333; }
-}
-
-.order-stat-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 </style>

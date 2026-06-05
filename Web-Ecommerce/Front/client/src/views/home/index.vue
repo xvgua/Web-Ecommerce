@@ -257,18 +257,19 @@ const countdownLabel = computed(() => {
 })
 
 const countdownText = computed(() => {
-  if (!currentSeckill.value) return '--:--:--'
+  if (!currentSeckill.value) return '--:--:--:----'
   const start = new Date(currentSeckill.value.startTime).getTime()
   const end = new Date(currentSeckill.value.endTime).getTime()
   let diff: number
   if (now.value < start) diff = start - now.value
   else if (now.value < end) diff = end - now.value
-  else return '00:00:00'
+  else return '00:00:00:0000'
 
   const h = Math.floor(diff / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   const s = Math.floor((diff % 60000) / 1000)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const ms = diff % 1000
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(ms).padStart(4, '0')}`
 })
 
 function stockPercent(sp: SeckillProduct) {
@@ -373,7 +374,7 @@ onMounted(async () => {
 
   seckillTimer = window.setInterval(() => {
     now.value = Date.now()
-  }, 1000)
+  }, 50)
 })
 
 onUnmounted(() => {
