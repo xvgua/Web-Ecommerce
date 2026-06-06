@@ -157,6 +157,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/system/feedback.vue'),
         meta: { title: '用户反馈' },
       },
+      {
+        path: 'profile',
+        name: 'AdminProfile',
+        component: () => import('@/views/system/profile.vue'),
+        meta: { title: '个人中心' },
+      },
     ],
   },
 ]

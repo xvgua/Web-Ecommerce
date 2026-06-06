@@ -59,37 +59,22 @@
 
       <!-- Center: Carousel -->
       <div class="hero-carousel">
-        <template v-if="banners.length > 1">
-          <el-carousel height="400px" :interval="5000" arrow="always">
-            <el-carousel-item v-for="b in banners" :key="b.id">
-              <a v-if="b.linkUrl" :href="b.linkUrl" class="hero-carousel__link">
-                <el-image :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
-                  <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
-                </el-image>
-              </a>
-              <el-image v-else :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
-                <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
+        <el-carousel height="400px" :interval="5000" :arrow="carouselBanners.length > 1 ? 'always' : 'never'" :indicator-position="carouselBanners.length > 1 ? undefined : 'none'">
+          <el-carousel-item v-for="(b, i) in carouselBanners" :key="i">
+            <!-- Default placeholder banner (CSS gradient) -->
+            <div v-if="b._bg" class="hero-carousel__img" :style="{ background: b._bg }" />
+            <!-- Real banner -->
+            <a v-else-if="b.linkUrl" :href="b.linkUrl" class="hero-carousel__link">
+              <el-image :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
+                <template #error><div class="hero-carousel__fallback">加载失败</div></template>
               </el-image>
-            </el-carousel-item>
-          </el-carousel>
-        </template>
-        <template v-else-if="banners.length === 1">
-          <el-carousel height="400px" :interval="5000" arrow="never" indicator-position="none">
-            <el-carousel-item>
-              <a v-if="banners[0].linkUrl" :href="banners[0].linkUrl" class="hero-carousel__link">
-                <el-image :src="banners[0].imageUrl" :alt="banners[0].title" fit="cover" class="hero-carousel__img">
-                  <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
-                </el-image>
-              </a>
-              <el-image v-else :src="banners[0].imageUrl" :alt="banners[0].title" fit="cover" class="hero-carousel__img">
-                <template #error><div class="hero-carousel__placeholder">加载失败</div></template>
-              </el-image>
-            </el-carousel-item>
-          </el-carousel>
-        </template>
-        <div v-else class="hero-carousel__placeholder hero-carousel__placeholder--full">
-          <span>暂无轮播</span>
-        </div>
+            </a>
+            <el-image v-else :src="b.imageUrl" :alt="b.title" fit="cover" class="hero-carousel__img">
+              <template #error><div class="hero-carousel__fallback">加载失败</div></template>
+            </el-image>
+            <span v-if="b._label" class="hero-carousel__label">{{ b._label }}</span>
+          </el-carousel-item>
+        </el-carousel>
       </div>
 
       <!-- Right: User Sidebar -->
@@ -291,6 +276,16 @@ const activePanelCat = computed(() =>
 )
 
 const banners = ref<Banner[]>([])
+
+const defaultBanners = [
+  { imageUrl: '', title: '新品上市',    _bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', _label: '新品上市 · 品质之选' },
+  { imageUrl: '', title: '限时特惠',    _bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', _label: '限时特惠 · 狂欢抢购' },
+  { imageUrl: '', title: '精选好物',    _bg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', _label: '精选好物 · 每日推荐' },
+]
+
+const carouselBanners = computed(() => {
+  return banners.value.length > 0 ? banners.value : defaultBanners
+})
 
 const featureList = [
   { icon: '🛡', label: '品质保证', desc: '正品保障 假一赔十' },
@@ -522,8 +517,13 @@ $cat-subtle: #777777;
   box-shadow: var(--shadow-sm);
 
   :deep(.el-carousel),
-  :deep(.el-carousel__container) {
-    height: 100% !important;
+  :deep(.el-carousel__container),
+  :deep(.el-carousel__item) {
+    height: 400px !important;
+  }
+
+  :deep(.el-carousel__item) {
+    position: relative;
   }
 
   &__link {
@@ -534,22 +534,42 @@ $cat-subtle: #777777;
 
   &__img {
     width: 100%;
-    height: 100%;
+    height: 400px;
 
-    :deep(img) { object-fit: cover; }
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
 
-  &__placeholder {
+  :deep(.el-image) {
+    width: 100%;
+    height: 400px;
+  }
+
+  &__fallback {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.04);
+    height: 400px;
+    background: var(--bg2);
     color: var(--text3);
     font-size: 14px;
+  }
 
-    &--full { height: 400px; }
+  &__label {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    white-space: nowrap;
   }
 }
 

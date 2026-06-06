@@ -40,24 +40,38 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="商品主图" prop="mainImage">
-          <div class="upload-area">
-            <div class="upload-preview" v-if="form.mainImage">
-              <img :src="form.mainImage" class="main-image-preview" />
+        <el-form-item label="商品图片" prop="images">
+          <div class="images-upload">
+            <div
+              v-for="(img, i) in form.images"
+              :key="i"
+              class="images-upload__item"
+            >
+              <img :src="img" class="images-upload__thumb" />
+              <span class="images-upload__tag" v-if="i === 0">主图</span>
+              <el-button
+                class="images-upload__remove"
+                type="danger"
+                :icon="Delete"
+                circle
+                size="small"
+                @click="removeImage(i)"
+              />
             </div>
             <el-upload
               action="/api/admin/upload"
               :headers="uploadHeaders"
               :show-file-list="false"
-              :on-success="handleMainImageSuccess"
+              :on-success="handleImageUploadSuccess"
               :on-error="handleUploadError"
               :before-upload="beforeUpload"
             >
-              <el-button :type="form.mainImage ? '' : 'primary'">
-                {{ form.mainImage ? '更换主图' : '上传主图' }}
+              <el-button :type="form.images.length ? '' : 'primary'" :disabled="form.images.length >= 9">
+                {{ form.images.length ? '+ 添加图片' : '上传图片' }}
               </el-button>
             </el-upload>
           </div>
+          <div class="field-hint">{{ form.images.length ? `已选 ${form.images.length} 张，第一张为主图` : '请上传商品图片（最多 9 张）' }}</div>
         </el-form-item>
         <el-form-item label="商品状态" prop="status">
           <el-radio-group v-model="form.status">
@@ -74,14 +88,16 @@
         <el-form-item label="商品规格">
           <div class="sku-list">
             <div class="sku-list__header">
-              <span class="sku-list__label">规格名</span>
+              <span class="sku-list__label">规格组</span>
+              <span class="sku-list__label">规格值</span>
               <span class="sku-list__label sku-list__label--img">图片</span>
               <span class="sku-list__label">价格</span>
               <span class="sku-list__label">库存</span>
               <span class="sku-list__label"></span>
             </div>
             <div v-for="(sku, index) in form.skus" :key="index" class="sku-row">
-              <el-input v-model="sku.specName" placeholder="如：7921：2克+顺丰包邮" />
+              <el-input v-model="sku.specName" placeholder="如：颜色分类" />
+              <el-input v-model="sku.specValue" placeholder="如：深棕色" />
               <div class="sku-row__img">
                 <img v-if="sku.image" :src="sku.image" class="sku-row__thumb" />
                 <el-upload
@@ -168,9 +184,20 @@ function syncPriceAndStock() {
 
 watch(() => form.skus, syncPriceAndStock, { deep: true })
 
-function handleMainImageSuccess(response: { data: { url: string } }) {
-  form.mainImage = response.data.url
-  ElMessage.success('主图上传成功')
+function handleImageUploadSuccess(response: { data: { url: string } }) {
+  const url = response.data.url
+  if (!url) {
+    ElMessage.error('图片上传失败')
+    return
+  }
+  form.images.push(url)
+  if (!form.mainImage) form.mainImage = url
+  ElMessage.success('图片上传成功')
+}
+
+function removeImage(index: number) {
+  form.images.splice(index, 1)
+  form.mainImage = form.images[0] || ''
 }
 
 function handleUploadError() {
@@ -261,24 +288,49 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.upload-area {
+.images-upload {
   display: flex;
-  align-items: flex-end;
-  gap: 16px;
-}
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
 
-.upload-preview {
-  width: 120px;
-  height: 120px;
-  border-radius: var(--org-radius-md);
-  overflow: hidden;
-  border: 1px solid var(--org-border);
-}
+  &__item {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: var(--org-radius-md);
+    overflow: hidden;
+    border: 1px solid var(--org-border);
+    flex-shrink: 0;
+  }
 
-.main-image-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  &__thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__tag {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--brand-primary);
+    color: #fff;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+
+  &__remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  &__item:hover &__remove { opacity: 1; }
 }
 
 .sku-list {
@@ -295,9 +347,10 @@ onMounted(async () => {
     color: var(--org-text-muted);
     font-weight: 600;
     &:nth-child(1) { flex: 1; }
-    &:nth-child(2) { width: 80px; }
-    &:nth-child(3) { width: 130px; }
-    &:nth-child(4) { width: 110px; }
+    &:nth-child(2) { flex: 1; }
+    &:nth-child(3) { width: 70px; }
+    &:nth-child(4) { width: 130px; }
+    &:nth-child(5) { width: 110px; }
   }
 }
 
@@ -311,7 +364,7 @@ onMounted(async () => {
   border-radius: var(--org-radius-md);
   border: 1px solid var(--org-border-soft);
 
-  .el-input { flex: 1; }
+  .el-input { flex: 1; min-width: 0; }
   .el-input-number { width: 130px; }
   .el-input-number + .el-input-number { width: 110px; }
 

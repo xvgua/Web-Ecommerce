@@ -28,7 +28,7 @@ request.interceptors.response.use(
       if (!skipToast) {
         ElMessage.error(res.message || '请求失败')
       }
-      if (res.code === 401) {
+      if (res.code === 401 && !skipToast) {
         localStorage.removeItem(TOKEN_KEY)
         router.push('/login')
       }

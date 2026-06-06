@@ -25,6 +25,14 @@
         </div>
       </div>
 
+      <div class="detail-block" v-if="order.status >= 1 && order.status <= 3">
+        <LogisticsTracker
+          :status="order.status"
+          :pay-time="order.payTime"
+          :deal-time="order.dealTime"
+        />
+      </div>
+
       <div class="detail-block">
         <h2 class="detail-block__title">商品清单</h2>
         <div class="product-list">
@@ -116,6 +124,7 @@ import { formatPrice, formatDate } from '@/utils/format'
 import { ORDER_STATUS_COLOR } from '@shared/constants'
 import type { Order } from '@shared/types/order'
 import ProductImage from '@/components/common/ProductImage.vue'
+import LogisticsTracker from '@/components/business/LogisticsTracker.vue'
 const route = useRoute()
 const router = useRouter()
 const order = ref<Order | null>(null)

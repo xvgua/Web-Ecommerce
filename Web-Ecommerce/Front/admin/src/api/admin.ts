@@ -139,6 +139,23 @@ export function toggleUserStatus(id: number, status: number): Promise<ApiRespons
   return request.put(`/admin/users/${id}/status`, { status })
 }
 
+// ===== Admin Profile =====
+export interface AdminInfo {
+  id: number
+  username: string
+  role: string
+  status: number
+  createTime: string
+}
+
+export function getAdminProfile(): Promise<ApiResponse<AdminInfo>> {
+  return request.get('/admin/profile')
+}
+
+export function changeAdminPassword(data: { oldPassword: string; newPassword: string }): Promise<ApiResponse<null>> {
+  return request.put('/admin/profile/password', data)
+}
+
 // ===== Coupon Management =====
 export function getCouponList(params: PageQuery & { keyword?: string; type?: number; status?: number }): Promise<ApiResponse<PageResponse<Coupon>>> {
   return request.get('/admin/coupons', { params })

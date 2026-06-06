@@ -1059,13 +1059,15 @@ onUnmounted(() => {
   z-index: 40;
   background: var(--bg1);
   border-bottom: 1px solid var(--line-light);
-  margin: 0 -24px;
+  max-width: 52.5%;
+  margin: 0 auto;
   padding: 0 24px;
 }
 
 .sticky-nav__tabs {
   display: flex;
   gap: 0;
+  width: 100%;
 }
 
 .sticky-nav__tab {
@@ -1336,7 +1338,7 @@ onUnmounted(() => {
     border-left: none;
     border-right: none;
   }
-  .detail-sticky-nav { margin: 0 -12px; padding: 0 12px; }
+  .detail-sticky-nav { max-width: 100%; margin: 0 -12px; padding: 0 12px; }
   .sticky-nav__tab { padding: 12px 16px; font-size: 14px; }
   .detail-info {
     &__name { font-size: 18px; }

@@ -9,6 +9,7 @@ export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
 
   const isLoggedIn = computed(() => !!token.value)
+  const role = computed(() => user.value?.role || 'USER')
 
   function setToken(val: string) {
     token.value = val
@@ -17,6 +18,10 @@ export const useUserStore = defineStore('user', () => {
 
   function setUser(val: User) {
     user.value = val
+  }
+
+  function hasRole(requiredRole: string): boolean {
+    return role.value === requiredRole
   }
 
   async function login(credentials: { username: string; password: string }) {
@@ -36,5 +41,5 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem(TOKEN_KEY)
   }
 
-  return { token, user, isLoggedIn, login, fetchUser, logout, setToken, setUser }
+  return { token, user, isLoggedIn, role, hasRole, login, fetchUser, logout, setToken, setUser }
 })

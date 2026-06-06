@@ -80,6 +80,8 @@
           <span>热门搜索词</span>
         </el-menu-item>
 
+        <div class="admin-menu__divider"></div>
+
         <el-sub-menu index="cs-group">
           <template #title>
             <el-icon><ChatDotSquare /></el-icon>
@@ -126,7 +128,11 @@
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="handleLogout">
+                <el-dropdown-item @click="router.push('/profile')">
+                  <el-icon><User /></el-icon>
+                  个人中心
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
                 </el-dropdown-item>
@@ -237,6 +243,12 @@ function handleLogout() {
   overflow-x: hidden;
   padding: 16px 8px;
   border-right: none;
+
+  &__divider {
+    height: 1px;
+    background: var(--sidebar-divider);
+    margin: 12px 8px;
+  }
 
   :deep(.el-menu-item),
   :deep(.el-sub-menu__title) {

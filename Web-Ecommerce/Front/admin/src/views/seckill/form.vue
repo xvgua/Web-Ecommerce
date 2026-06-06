@@ -118,7 +118,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ElMessage } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getSeckillActivityById, createSeckillActivity, updateSeckillActivity, getProductList } from '@/api/admin'
