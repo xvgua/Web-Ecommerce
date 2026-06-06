@@ -7,3 +7,20 @@ screenshot-*.png
 .claude/settings.local.json
 target/
 upload/
+
+# 设计参考文件（非源码）
+ref/
+
+# 截图
+screenshots/
+*.png
+
+# Agent / IDE 配置
+.agents/
+.claude/
+skills-lock.json
+Web-Ecommerce/Front/client/.agents/
+Web-Ecommerce/Front/client/skills-lock.json
+
+# 项目文档（非源码，根目录）
+/*.md
