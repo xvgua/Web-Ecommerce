@@ -194,4 +194,30 @@ onMounted(fetchList)
     white-space: pre-wrap;
   }
 }
+
+@media (max-width: 768px) {
+  .announcement-page {
+    padding: 0 8px;
+  }
+
+  .item {
+    padding: 14px 16px;
+
+    &__header {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    &__title {
+      font-size: 14px;
+      flex: 1 1 100%;
+      order: 1;
+    }
+
+    &__date {
+      order: 2;
+      margin-left: auto;
+    }
+  }
+}
 </style>

@@ -38,19 +38,32 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public Map<String, Object> getDashboardStats() {
-        // User count — try Feign, fall back if unavailable
         Long totalUsers = 0L;
         try {
             Result<List<com.ecommerce.entity.User>> ur = userFeignClient.getAllUsers();
             if (ur.isSuccess() && ur.getData() != null) totalUsers = (long) ur.getData().size();
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("Failed to fetch user count from user-service", e);
+        }
+
+        Long totalProducts = 0L;
+        try {
+            Result<Long> pr = productFeignClient.getProductCount();
+            if (pr.isSuccess() && pr.getData() != null) totalProducts = pr.getData();
+        } catch (Exception e) {
+            log.warn("Failed to fetch product count from product-service", e);
+        }
 
         Long totalOrders = orderMapper.selectCount(null);
 
-        List<Order> orders = orderMapper.selectList(null);
         BigDecimal totalSales = BigDecimal.ZERO;
-        for (Order o : orders) {
-            if (o.getTotalAmount() != null) totalSales = totalSales.add(o.getTotalAmount());
+        List<Order> allOrders = orderMapper.selectList(
+                new LambdaQueryWrapper<Order>().ne(Order::getStatus, OrderStatus.CANCELLED));
+        for (Order o : allOrders) {
+            if (o.getPayAmount() != null && o.getPayAmount().compareTo(BigDecimal.ZERO) > 0)
+                totalSales = totalSales.add(o.getPayAmount());
+            else if (o.getTotalAmount() != null)
+                totalSales = totalSales.add(o.getTotalAmount());
         }
 
         LocalDate today = LocalDate.now();
@@ -72,6 +85,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", totalUsers);
+        stats.put("totalProducts", totalProducts);
         stats.put("totalOrders", totalOrders);
         stats.put("totalSales", totalSales);
         stats.put("todayOrders", todayOrders);
@@ -106,8 +120,41 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<HotProductDTO> getHotProducts(String range, int top) {
+        if ("all".equals(range)) {
+            return getHotProductsFromProductSales(top);
+        }
+
         List<Map<String, Object>> rows = orderItemMapper.selectHotProductsByTime(
-                "all".equals(range) ? LocalDateTime.of(2000, 1, 1, 0, 0) : computeStart(range), top);
+                computeStart(range), top);
+
+        if (rows.isEmpty()) {
+            log.info("No order data for range={}, falling back to product sales", range);
+            return getHotProductsFromProductSales(top);
+        }
+
+        return mapHotProductRows(rows);
+    }
+
+    private List<HotProductDTO> getHotProductsFromProductSales(int top) {
+        try {
+            Result<List<Product>> res = productFeignClient.getTopProductsBySales(top);
+            if (res.isSuccess() && res.getData() != null) {
+                return res.getData().stream()
+                        .map(p -> new HotProductDTO(
+                                p.getId(), p.getName(), p.getMainImage(),
+                                p.getSales() != null ? p.getSales().longValue() : 0L,
+                                p.getPrice() != null ? p.getPrice().multiply(
+                                        BigDecimal.valueOf(p.getSales() != null ? p.getSales() : 0))
+                                        : BigDecimal.ZERO))
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch hot products from product-service", e);
+        }
+        return Collections.emptyList();
+    }
+
+    private List<HotProductDTO> mapHotProductRows(List<Map<String, Object>> rows) {
         Map<Long, HotProductDTO> dtoMap = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
             Long productId = ((Number) row.get("productId")).longValue();
@@ -125,6 +172,17 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
         return new ArrayList<>(dtoMap.values());
+    }
+
+    @Override
+    public List<com.ecommerce.dto.CategorySalesDTO> getCategorySales() {
+        try {
+            Result<List<com.ecommerce.dto.CategorySalesDTO>> res = productFeignClient.getCategorySales();
+            if (res.isSuccess() && res.getData() != null) return res.getData();
+        } catch (Exception e) {
+            log.warn("Failed to fetch category sales from product-service", e);
+        }
+        return Collections.emptyList();
     }
 
     private LocalDateTime computeStart(String range) {

@@ -7,15 +7,15 @@
           <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="reg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#43e97b" />
-                <stop offset="100%" style="stop-color:#38f9d7" />
+                <stop offset="0%" style="stop-color:#D4745B" />
+                <stop offset="100%" style="stop-color:#E89076" />
               </linearGradient>
             </defs>
             <circle cx="150" cy="150" r="130" fill="url(#reg-grad)" opacity="0.12" />
             <circle cx="150" cy="150" r="100" fill="url(#reg-grad)" opacity="0.2" />
             <circle cx="150" cy="150" r="65" fill="url(#reg-grad)" opacity="0.35" />
             <text x="150" y="145" text-anchor="middle" font-size="56" fill="#fff" font-family="system-ui">&#x1F31F;</text>
-            <text x="150" y="210" text-anchor="middle" font-size="14" fill="#43e97b" font-weight="600" font-family="system-ui">加入我们 探索无限可能</text>
+            <text x="150" y="210" text-anchor="middle" font-size="14" fill="#D4745B" font-weight="600" font-family="system-ui">加入我们 探索无限可能</text>
           </svg>
         </div>
         <p class="auth-card__slogan">注册即享专属优惠</p>
@@ -167,7 +167,7 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: var(--bg2);
   padding: 24px;
 }
 
@@ -176,14 +176,14 @@ async function handleRegister() {
   max-width: 880px;
   width: 100%;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  border: 1px solid var(--line-light);
+  border: none;
   overflow: hidden;
 
   &__brand {
     flex: 1;
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    background: linear-gradient(145deg, #D4745B 0%, #E89076 100%);
     padding: 48px 40px;
     display: flex;
     flex-direction: column;
@@ -226,7 +226,7 @@ async function handleRegister() {
   }
 
   &__sub {
-    color: #909399;
+    color: var(--text3);
     font-size: 14px;
     margin-bottom: 28px;
   }
@@ -234,11 +234,11 @@ async function handleRegister() {
   &__switch {
     text-align: center;
     font-size: 14px;
-    color: #909399;
+    color: var(--text3);
     margin-top: 4px;
 
     a {
-      color: #409eff;
+      color: var(--brand-primary);
       font-weight: 500;
     }
   }
@@ -264,7 +264,7 @@ async function handleRegister() {
     height: 44px;
     font-size: 16px;
     letter-spacing: 4px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 }
 

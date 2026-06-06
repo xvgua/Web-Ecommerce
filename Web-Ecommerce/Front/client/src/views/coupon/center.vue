@@ -104,10 +104,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getCouponList, receiveCoupon } from '@/api/coupon'
 import { useUserStore } from '@/stores/user'
+import { useCouponStore } from '@/stores/coupon'
 import type { Coupon } from '@shared/types/coupon'
 
 const router = useRouter()
 const userStore = useUserStore()
+const couponStore = useCouponStore()
 const coupons = ref<Coupon[]>([])
 const loading = ref(false)
 const page = ref(1)
@@ -145,6 +147,7 @@ async function handleReceive(coupon: Coupon) {
     coupon.received = true
     coupon.userCouponStatus = 0
     coupon.remainQty = Math.max(0, coupon.remainQty - 1)
+    couponStore.notifyClaimed()
     ElMessage.success('领取成功')
   } catch {
     // handled by interceptor
@@ -213,6 +216,10 @@ onMounted(() => { loadCoupons() })
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   min-height: 200px;
+
+  @media (max-width: 1024px) {
+    gap: 12px;
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;

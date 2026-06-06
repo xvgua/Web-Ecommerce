@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Swiss Minimalism — Global Base
+   Claymorphism — Global Base
    ═══════════════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -31,7 +31,7 @@ img {
   height: auto;
 }
 
-/* ── Element Plus overrides — Swiss Minimalism ── */
+/* ── Element Plus overrides — Claymorphism ── */
 .el-empty {
   padding: 60px 0;
 }
@@ -40,14 +40,21 @@ img {
   color: var(--text3);
 }
 
+/* ── Buttons — puffy 3D clay look ── */
 .el-button {
   border-radius: var(--radius-md);
   font-weight: 500;
   letter-spacing: -0.01em;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 
   &:active {
     transform: translateY(1px);
+    box-shadow: none;
+  }
+
+  &:hover {
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -58,6 +65,15 @@ img {
   --el-button-hover-border-color: var(--brand-primary-hover);
   --el-button-active-bg-color: var(--brand-primary-active);
   --el-button-active-border-color: var(--brand-primary-active);
+  box-shadow: 2px 2px 8px rgba(160, 135, 110, 0.3);
+
+  &:hover {
+    box-shadow: 3px 3px 10px rgba(160, 135, 110, 0.4);
+  }
+
+  &:active {
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.15);
+  }
 }
 
 .el-button--danger {
@@ -75,36 +91,49 @@ img {
   --el-button-border-color: var(--color-warning);
 }
 
+/* ── Tags — soft rounded pills ── */
+.el-tag {
+  border-radius: var(--radius-full);
+}
+
 .el-tag--success {
-  --el-tag-bg-color: rgba(46, 125, 50, 0.08);
-  --el-tag-border-color: rgba(46, 125, 50, 0.16);
+  --el-tag-bg-color: rgba(107, 175, 123, 0.12);
+  --el-tag-border-color: rgba(107, 175, 123, 0.2);
   --el-tag-text-color: var(--color-success);
 }
 
 .el-tag--warning {
-  --el-tag-bg-color: rgba(230, 81, 0, 0.08);
-  --el-tag-border-color: rgba(230, 81, 0, 0.16);
+  --el-tag-bg-color: rgba(224, 164, 91, 0.12);
+  --el-tag-border-color: rgba(224, 164, 91, 0.2);
   --el-tag-text-color: var(--color-warning);
 }
 
 .el-tag--danger {
-  --el-tag-bg-color: rgba(198, 40, 40, 0.08);
-  --el-tag-border-color: rgba(198, 40, 40, 0.16);
+  --el-tag-bg-color: rgba(212, 116, 107, 0.12);
+  --el-tag-border-color: rgba(212, 116, 107, 0.2);
   --el-tag-text-color: var(--color-danger);
 }
 
 .el-tag--info {
-  --el-tag-bg-color: rgba(21, 101, 192, 0.06);
-  --el-tag-border-color: rgba(21, 101, 192, 0.12);
+  --el-tag-bg-color: rgba(107, 158, 200, 0.1);
+  --el-tag-border-color: rgba(107, 158, 200, 0.18);
   --el-tag-text-color: var(--color-info);
 }
 
+/* ── Cards — soft clay raised look ── */
 .el-card {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line-light);
-  box-shadow: none;
+  box-shadow: var(--shadow-sm);
+  background: var(--bg1);
+  overflow: hidden;
+
+  .el-card__header {
+    border-bottom: 1px solid var(--line-light);
+  }
 }
 
+/* ── Table — clean with soft lines ── */
 .el-table {
   --el-table-border-color: var(--line-light);
   --el-table-bg-color: var(--bg1);
@@ -113,6 +142,8 @@ img {
   --el-table-row-hover-bg-color: var(--bg2);
   --el-table-text-color: var(--text1);
   --el-table-header-text-color: var(--text2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .el-tabs__nav-wrap::after { height: 1px; }
@@ -123,12 +154,22 @@ img {
   }
 }
 
-/* ── Input — clean ── */
+/* ── Input — inset (pressed-in clay) look ── */
 .el-input__wrapper {
   background: var(--bg1);
-  box-shadow: none;
+  box-shadow: var(--shadow-inset);
   border: 1px solid var(--line-regular);
   border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--text4);
+  }
+
+  &.is-focus {
+    border-color: var(--brand-primary);
+    box-shadow: var(--shadow-inset);
+  }
 }
 
 .el-input__inner {
@@ -139,18 +180,33 @@ img {
   }
 }
 
-/* ── Dialog — flat ── */
+/* ── Select — match input style ── */
+.el-select {
+  .el-input__wrapper {
+    box-shadow: var(--shadow-inset);
+  }
+}
+
+/* ── Input number — match input style ── */
+.el-input-number {
+  .el-input__wrapper {
+    box-shadow: var(--shadow-inset);
+  }
+}
+
+/* ── Dialog — soft raised panel ── */
 .el-dialog {
   --el-dialog-bg-color: var(--bg1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
 }
 
 .el-message-box {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
 }
 
-/* ── Pagination ── */
+/* ── Pagination — soft buttons ── */
 .el-pagination {
   --el-pagination-bg-color: transparent;
   --el-pagination-button-color: var(--text2);
@@ -158,21 +214,79 @@ img {
   --el-pagination-button-disabled-color: var(--text4);
   --el-pagination-button-disabled-bg-color: var(--bg2);
   --el-pagination-hover-color: var(--brand-primary);
+
+  .el-pager li {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--line-light);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    &.is-active {
+      background: var(--brand-primary);
+      color: #fff;
+      border-color: var(--brand-primary);
+      box-shadow: 2px 2px 6px rgba(160, 135, 110, 0.3);
+    }
+  }
+
+  .btn-prev,
+  .btn-next {
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--line-light);
+    background: var(--bg1);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      box-shadow: var(--shadow-md);
+    }
+  }
 }
 
-/* ── Loading — light overlay ── */
+/* ── Loading — soft overlay ── */
 .el-loading-mask {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(254, 250, 246, 0.75);
+  border-radius: var(--radius-lg);
 }
 
-/* ── Scrollbar — thin and minimal ── */
+/* ── Popover / Dropdown — soft lift ── */
+.el-popover,
+.el-dropdown-menu {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line-light);
+}
+
+/* ── Checkbox — match clay aesthetic ── */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+/* ── Radio — match clay aesthetic ── */
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+/* ── Switch — softer ── */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+/* ── Scrollbar — thin and soft ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: #CCCCCC; border-radius: 0; }
-::-webkit-scrollbar-thumb:hover { background: #AAAAAA; }
+::-webkit-scrollbar-thumb { background: #D4C8BC; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #BFB2A6; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ── Selection ── */
+/* ── Selection — warm ── */
 ::selection {
-  background: rgba(196, 30, 58, 0.12);
+  background: rgba(212, 116, 91, 0.15);
   color: var(--text1);
 }

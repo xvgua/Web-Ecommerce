@@ -306,4 +306,37 @@ onMounted(async () => {
   gap: 12px;
   padding: 0 0 40px;
 }
+
+@media (max-width: 768px) {
+  .refund-apply-page {
+    padding: 0 8px;
+  }
+
+  .order-summary {
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .section {
+    padding: 16px;
+  }
+
+  .refund-item {
+    padding: 10px 12px;
+    gap: 8px;
+
+    &__name {
+      font-size: 13px;
+    }
+  }
+
+  .submit-row {
+    flex-direction: column;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+}
 </style>

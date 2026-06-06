@@ -22,6 +22,11 @@ public class AdminUserController {
         return Result.success(adminService.getUserPage(query));
     }
 
+    @GetMapping("/{id}")
+    public Result<User> getById(@PathVariable Long id) {
+        return Result.success(adminService.getUserById(id));
+    }
+
     @PutMapping("/{id}/status")
     public Result<Void> toggleStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
         adminService.toggleUserStatus(id, body.get("status"));

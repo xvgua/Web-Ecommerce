@@ -421,6 +421,10 @@ onUnmounted(() => {
   gap: 20px;
   align-items: flex-start;
 
+  @media (max-width: 1024px) {
+    gap: 14px;
+  }
+
   @media (max-width: 768px) {
     flex-direction: column;
   }

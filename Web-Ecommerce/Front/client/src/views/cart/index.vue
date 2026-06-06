@@ -197,9 +197,10 @@ onMounted(() => { cartStore.fetchCart() })
 
 .cart-content {
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid var(--line-light);
+  border: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .cart-toolbar {
@@ -225,7 +226,7 @@ onMounted(() => { cartStore.fetchCart() })
   align-items: center;
   gap: 16px;
   padding: 16px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--line-light);
 
   &:last-child { border-bottom: none; }
 
@@ -259,28 +260,28 @@ onMounted(() => { cartStore.fetchCart() })
     align-items: center;
     gap: 4px;
     font-size: 12px;
-    color: #666;
+    color: var(--text3);
     margin-top: 4px;
     padding: 2px 8px;
-    border-radius: 4px;
-    background: #f5f5f5;
+    border-radius: var(--radius-sm);
+    background: var(--bg3);
     cursor: pointer;
     user-select: none;
     transition: all .2s;
     max-width: 100%;
 
     &:hover {
-      background: #e8e8e8;
-      color: #333;
+      background: var(--line-regular);
+      color: var(--text1);
     }
 
     &.is-open {
-      background: #e8e8e8;
-      color: #409eff;
+      background: var(--line-regular);
+      color: var(--brand-primary);
     }
 
     &--empty {
-      color: #e6a23c;
+      color: var(--color-warning);
     }
 
     span {
@@ -313,7 +314,7 @@ onMounted(() => { cartStore.fetchCart() })
     width: 100px;
     font-size: 15px;
     font-weight: 600;
-    color: #e6423a;
+    color: var(--brand-primary);
     text-align: center;
   }
 
@@ -325,8 +326,8 @@ onMounted(() => { cartStore.fetchCart() })
   justify-content: space-between;
   align-items: center;
   padding: 18px 20px;
-  background: #fafafa;
-  border-top: 1px solid #f0f0f0;
+  background: var(--bg2);
+  border-top: 1px solid var(--line-light);
 
   &__right {
     display: flex;
@@ -336,14 +337,14 @@ onMounted(() => { cartStore.fetchCart() })
 
   &__label {
     font-size: 14px;
-    color: #666;
-    strong { color: #333; }
+    color: var(--text3);
+    strong { color: var(--text1); }
   }
 
   &__price {
     font-size: 24px;
     font-weight: 700;
-    color: #e6423a;
+    color: var(--brand-primary);
     font-family: 'SF Mono', monospace;
   }
 
@@ -351,14 +352,19 @@ onMounted(() => { cartStore.fetchCart() })
     height: 44px;
     padding: 0 32px;
     font-size: 16px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #ff6f3f, #e6423a);
+    border-radius: var(--radius-md);
+    background: var(--brand-primary);
     border: none;
+    box-shadow: 2px 2px 6px rgba(160, 135, 110, 0.25);
 
-    &:hover { background: linear-gradient(135deg, #e85d2f, #d63a32); }
+    &:hover {
+      background: var(--brand-primary-hover);
+      box-shadow: 3px 3px 8px rgba(160, 135, 110, 0.35);
+    }
 
     &.is-disabled {
-      background: #e0e0e0;
+      background: var(--bg3);
+      box-shadow: none;
     }
   }
 }
@@ -374,35 +380,35 @@ onMounted(() => { cartStore.fetchCart() })
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  border: 1px solid #eee;
-  border-radius: 6px;
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 13px;
   transition: all .2s;
 
   &:hover {
-    border-color: #409eff;
+    border-color: var(--brand-primary);
   }
 
   &--active {
-    border-color: #409eff;
-    background: rgba(64, 158, 255, .08);
+    border-color: var(--brand-primary);
+    background: var(--brand-primary-ghost);
   }
 
   &--disabled {
     opacity: .45;
     cursor: not-allowed;
 
-    &:hover { border-color: #eee; }
+    &:hover { border-color: var(--line-light); }
   }
 
   &__img {
     width: 48px;
     height: 48px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--line-light);
   }
 
   &__info {
@@ -416,19 +422,25 @@ onMounted(() => { cartStore.fetchCart() })
   &__name {
     font-size: 13px;
     font-weight: 600;
-    color: #333;
+    color: var(--text1);
   }
 
   &__label {
     font-size: 11px;
-    color: #999;
+    color: var(--text4);
   }
 
   &__price {
     font-size: 12px;
-    color: #e6423a;
+    color: var(--brand-primary);
     font-family: 'SF Mono', monospace;
     flex-shrink: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cart-page {
+    padding: 0 16px;
   }
 }
 

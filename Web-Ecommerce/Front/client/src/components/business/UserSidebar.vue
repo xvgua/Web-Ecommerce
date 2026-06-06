@@ -82,12 +82,14 @@ import { useRoute } from 'vue-router'
 import { UserFilled, Bell, ArrowRight } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
+import { useCouponStore } from '@/stores/coupon'
 import request from '@/api/request'
 import { formatPrice } from '@/utils/format'
 
 const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
+const couponStore = useCouponStore()
 
 const couponCount = ref(0)
 const savedAmount = ref(0)
@@ -144,11 +146,21 @@ async function loadSidebarData() {
 
 onMounted(() => { loadSidebarData() })
 
-// Refresh when navigating back to home (after order/payment flow)
+// Refresh sidebar data when returning from key flows (order, payment, review, etc.)
 watch(() => route.path, (path) => {
-  if (path === '/' && userStore.isLoggedIn) {
+  if (!userStore.isLoggedIn) return
+  if (path === '/' || path.startsWith('/orders') || path.startsWith('/user')) {
     loadSidebarData()
   }
+})
+
+// Refresh coupon count when a coupon is claimed elsewhere
+watch(() => couponStore.version, () => {
+  if (!userStore.isLoggedIn) return
+  const skipOpt = { _skipErrorToast: true } as Record<string, unknown>
+  request.get('/user/coupons', { params: { status: 0, page: 1, pageSize: 1 }, ...skipOpt } as any)
+    .then(res => { couponCount.value = res.data?.total || 0 })
+    .catch(() => {})
 })
 </script>
 

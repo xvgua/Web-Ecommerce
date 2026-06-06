@@ -27,9 +27,12 @@ public class AuthFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/auth", "/api/products", "/api/categories",
         "/api/banners", "/api/announcements", "/api/seckill",
-        "/api/coupons", "/api/admin/auth", "/api/upload",
-        "/api/reviews", "/api/hot-keywords", "/upload"
+        "/api/admin/auth", "/api/upload",
+        "/api/hot-keywords", "/upload"
     );
+
+    // GET-only public: reading doesn't need auth, but writing does
+    private static final List<String> GET_ONLY_PUBLIC = List.of("/api/coupons");
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, org.springframework.cloud.gateway.filter.GatewayFilterChain chain) {
@@ -38,6 +41,14 @@ public class AuthFilter implements GlobalFilter, Ordered {
         boolean isPublic = PUBLIC_PATHS.stream().anyMatch(p ->
             path.equals(p) || path.startsWith(p + "/"));
         if (isPublic) {
+            return chain.filter(exchange);
+        }
+
+        // GET requests to review paths are public (reading reviews)
+        boolean isGetOnlyPublic = "GET".equalsIgnoreCase(exchange.getRequest().getMethod().name())
+            && GET_ONLY_PUBLIC.stream().anyMatch(p ->
+                path.equals(p) || path.startsWith(p + "/"));
+        if (isGetOnlyPublic) {
             return chain.filter(exchange);
         }
 

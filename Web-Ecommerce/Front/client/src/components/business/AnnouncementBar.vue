@@ -287,4 +287,29 @@ onUnmounted(() => {
     white-space: pre-wrap;
   }
 }
+
+@media (max-width: 768px) {
+  .announcement-bar {
+    &__inner {
+      height: auto;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      gap: 6px;
+    }
+
+    &__label {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    &__carousel {
+      flex: 1 1 100%;
+      order: 1;
+    }
+
+    &__more {
+      margin-left: auto;
+    }
+  }
+}
 </style>

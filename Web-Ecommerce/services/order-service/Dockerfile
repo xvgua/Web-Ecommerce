@@ -1,5 +1,6 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
+COPY settings-docker.xml /root/.m2/settings.xml
 COPY pom.xml .
 COPY common/pom.xml common/
 COPY services/user-service/pom.xml services/user-service/

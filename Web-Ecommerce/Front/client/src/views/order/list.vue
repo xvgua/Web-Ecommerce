@@ -756,4 +756,139 @@ onMounted(() => {
   gap: 8px;
   align-items: center;
 }
+
+@media (max-width: 1024px) {
+  .order-list-page {
+    padding: 0 16px;
+  }
+
+  .order-card__header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .order-card__footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .order-card__actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-list-page {
+    padding: 0 8px;
+  }
+
+  .page-title {
+    font-size: 18px;
+    margin-bottom: 14px;
+  }
+
+  .order-tabs {
+    padding: 4px 8px 0;
+    overflow-x: auto;
+
+    :deep(.el-tabs__nav-wrap) {
+      overflow-x: auto;
+    }
+
+    :deep(.el-tabs__nav) {
+      white-space: nowrap;
+    }
+  }
+
+  .order-list {
+    padding: 0 12px 12px;
+  }
+
+  .order-card {
+    margin-top: 12px;
+
+    &__header {
+      gap: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    &__item {
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 0;
+
+      &-img {
+        width: 48px;
+        height: 48px;
+      }
+
+      &-info {
+        flex: 1 1 calc(100% - 70px);
+      }
+
+      &-name {
+        font-size: 13px;
+      }
+
+      &-price, &-qty {
+        font-size: 12px;
+      }
+    }
+
+    &__footer {
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
+      align-items: stretch;
+    }
+
+    &__actions {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  }
+
+  .review-list {
+    padding: 0 12px;
+  }
+
+  .review-card {
+    padding: 14px 0;
+
+    &__product-img {
+      width: 48px;
+      height: 48px;
+    }
+
+    &__product-name {
+      font-size: 13px;
+    }
+
+    &__rating {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    &__actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  .followup-item {
+    &__header {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  }
+
+  .pagination-wrap {
+    :deep(.el-pagination) {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  }
+}
 </style>

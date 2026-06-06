@@ -302,4 +302,21 @@ watch(messages, () => {
   opacity: 0;
   transform: translateY(20px);
 }
+
+@media (max-width: 768px) {
+  .chat-panel {
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .chat-panel {
+    width: 340px;
+    height: 460px;
+  }
+}
 </style>

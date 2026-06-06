@@ -342,12 +342,12 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-$cat-accent: #C41E3A;
-$cat-accent-hover: #A01830;
-$cat-bg: #F7F7F7;
-$cat-hover-bg: #EEEEEE;
-$cat-text: #111111;
-$cat-subtle: #777777;
+$cat-accent: #D4745B;
+$cat-accent-hover: #C06048;
+$cat-bg: #F9F2EA;
+$cat-hover-bg: #F2E6DB;
+$cat-text: #3D3028;
+$cat-subtle: #98897C;
 
 .home {
   max-width: 1400px;
@@ -371,8 +371,9 @@ $cat-subtle: #777777;
   flex-shrink: 0;
   height: 100%;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-light);
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: visible;
   display: flex;
@@ -514,12 +515,17 @@ $cat-subtle: #777777;
   height: 100%;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 
   :deep(.el-carousel),
   :deep(.el-carousel__container),
   :deep(.el-carousel__item) {
     height: 400px !important;
+  }
+
+  :deep(.el-carousel__container) {
+    white-space: nowrap !important;
+    overflow: hidden !important;
   }
 
   :deep(.el-carousel__item) {
@@ -595,16 +601,18 @@ $cat-subtle: #777777;
 
   .feature-item {
     background: var(--bg1);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     padding: 24px 20px;
     display: flex;
     align-items: center;
     gap: 14px;
-    transition: border-color var(--transition-fast);
-    border: 1px solid var(--line-light);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    border: none;
+    box-shadow: var(--shadow-sm);
 
     &:hover {
-      border-color: var(--line-regular);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
     }
 
     &__icon { font-size: 28px; flex-shrink: 0; }
@@ -742,13 +750,15 @@ $cat-subtle: #777777;
 /* Seckill Product Card (reused from seckill page) */
 .seckill-product-card {
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid var(--line-light);
-  transition: border-color var(--transition-fast);
+  border: none;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 
   &:hover {
-    border-color: var(--line-regular);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
   }
 
   &__image {

@@ -1,3 +1,4 @@
+USE ecommerce_user;
 -- ============================================
 CREATE TABLE IF NOT EXISTS `user` (
     id                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '用户ID',

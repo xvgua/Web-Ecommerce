@@ -1,41 +1,32 @@
 # =============================================================================
-#  电商平台 — Docker Compose 部署
-#  数据层（独立容器）：MySQL 8.0 + Redis 7
-#  应用层：Spring Boot Backend
-#  前端：本地 Vite 开发服务器（不在此 Compose 中）
+#  Ecommerce — Docker Compose (Microservices)
+#  MySQL 8.0 + Redis 7 + Gateway + 3 Services + 2 Frontends
 # =============================================================================
 
-version: "3.8"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 数据层（独立数据库容器，Volume 持久化，不随应用重启丢失）
-# ─────────────────────────────────────────────────────────────────────────────
 services:
 
-  # 独立数据库容器 — MySQL 8.0
+  # ====== Data Layer ======
+
   mysql:
     image: mysql:8.0
     container_name: ecommerce-mysql
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
-      MYSQL_DATABASE: ecommerce
+      MYSQL_DATABASE: ecommerce_user
       TZ: Asia/Shanghai
     ports:
       - "3306:3306"
     volumes:
-      # 独立数据卷 — docker compose down 不会删除（除非加 -v）
       - mysql-data:/var/lib/mysql
-      # 首次启动自动执行 init.sql 初始化库表 + 种子数据
-      - ./Back/src/main/resources/sql:/docker-entrypoint-initdb.d
-      # MySQL 自定义配置
+      - ./db/init:/docker-entrypoint-initdb.d
       - ./docker/mysql/conf.d:/etc/mysql/conf.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -44,11 +35,10 @@ services:
     networks:
       - ecommerce-net
 
-  # 独立缓存容器 — Redis 7
   redis:
     image: redis:7-alpine
     container_name: ecommerce-redis
-    restart: always
+    restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
     ports:
@@ -60,40 +50,126 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
     networks:
       - ecommerce-net
 
-  # ───────────────────────────────────────────────────────────────────────────
-  # 应用层
-  # ───────────────────────────────────────────────────────────────────────────
+  # ====== Microservices ======
 
-  backend:
-    build: ./Back
-    container_name: ecommerce-backend
-    restart: always
-    ports:
-      - "8081:8080"
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: ecommerce-user-service
+    restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       DB_PASSWORD: ${DB_PASSWORD:-123456}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
       JAVA_OPTS: -Duser.timezone=Asia/Shanghai
     depends_on:
       mysql:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - upload-data:/app/upload
     networks:
       - ecommerce-net
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 独立数据卷（数据库和上传文件独立存储）
-# ─────────────────────────────────────────────────────────────────────────────
+  product-service:
+    build:
+      context: .
+      dockerfile: services/product-service/Dockerfile
+    container_name: ecommerce-product-service
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      DB_PASSWORD: ${DB_PASSWORD:-123456}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      JAVA_OPTS: -Duser.timezone=Asia/Shanghai
+    volumes:
+      - upload-data:/app/upload
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    container_name: ecommerce-order-service
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      DB_PASSWORD: ${DB_PASSWORD:-123456}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      USER_SERVICE_URL: http://user-service:8082
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      JAVA_OPTS: -Duser.timezone=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: ecommerce-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      USER_SERVICE_URL: http://user-service:8082
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      ORDER_SERVICE_URL: http://order-service:8084
+      JAVA_OPTS: -Duser.timezone=Asia/Shanghai
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - ecommerce-net
+
+  # ====== Frontends ======
+
+  client-frontend:
+    build:
+      context: ./Front
+      dockerfile: client/Dockerfile
+    container_name: ecommerce-client
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+    networks:
+      - ecommerce-net
+
+  admin-frontend:
+    build:
+      context: ./Front
+      dockerfile: admin/Dockerfile
+    container_name: ecommerce-admin
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - gateway
+    networks:
+      - ecommerce-net
+
+# ====== Volumes ======
+
 volumes:
   mysql-data:
     name: ecommerce-mysql-data
@@ -102,9 +178,8 @@ volumes:
   upload-data:
     name: ecommerce-upload-data
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 内部网络
-# ─────────────────────────────────────────────────────────────────────────────
+# ====== Network ======
+
 networks:
   ecommerce-net:
     name: ecommerce-net

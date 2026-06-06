@@ -1,5 +1,6 @@
 package com.ecommerce.service;
 
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.HotProductDTO;
 import com.ecommerce.dto.SalesTrendDTO;
 
@@ -10,4 +11,5 @@ public interface DashboardService {
     Map<String, Object> getDashboardStats();
     List<SalesTrendDTO> getSalesTrend(String range);
     List<HotProductDTO> getHotProducts(String range, int top);
+    List<CategorySalesDTO> getCategorySales();
 }

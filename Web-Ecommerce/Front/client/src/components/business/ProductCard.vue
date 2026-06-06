@@ -44,14 +44,16 @@ function goDetail() {
 <style lang="scss" scoped>
 .product-card {
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid var(--line-light);
-  transition: border-color var(--transition-fast);
+  border: none;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 
   &:hover {
-    border-color: var(--line-regular);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 
     .product-card__image :deep(.product-placeholder),
     .product-card__image :deep(.el-image img) {
@@ -137,6 +139,27 @@ function goDetail() {
     display: flex;
     align-items: center;
     gap: 1px;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-card {
+    &__info {
+      padding: 10px 12px 12px;
+    }
+
+    &__name {
+      font-size: 13px;
+      -webkit-line-clamp: 2;
+    }
+
+    &__price {
+      font-size: 17px;
+    }
+
+    &__meta {
+      font-size: 11px;
+    }
   }
 }
 </style>

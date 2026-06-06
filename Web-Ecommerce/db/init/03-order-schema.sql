@@ -1,3 +1,4 @@
+USE ecommerce_order;
 -- ============================================
 CREATE TABLE IF NOT EXISTS `order` (
     id                      BIGINT         NOT NULL AUTO_INCREMENT COMMENT '订单ID',

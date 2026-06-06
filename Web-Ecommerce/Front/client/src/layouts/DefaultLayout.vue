@@ -337,56 +337,59 @@ function handleLogout() {
    ═══════════════════════════════════════════════════════════ */
 :root {
   /* ═══════════════════════════════════════════════════════════
-     Swiss Minimalism — Design Tokens
-     Monochrome + single accent. No gradients, no glow.
+     Claymorphism — Design Tokens
+     Soft, puffy, 3D elements with double shadows and warm tones.
      ═══════════════════════════════════════════════════════════ */
 
-  /* Brand — Swiss Red */
-  --brand-primary: #C41E3A;
-  --brand-primary-rgb: 196, 30, 58;
-  --brand-primary-hover: #A01830;
-  --brand-primary-active: #8B1528;
-  --brand-primary-light: rgba(196, 30, 58, 0.06);
-  --brand-primary-ghost: rgba(196, 30, 58, 0.04);
+  /* Brand — Warm Terracotta */
+  --brand-primary: #D4745B;
+  --brand-primary-rgb: 212, 116, 91;
+  --brand-primary-hover: #C06048;
+  --brand-primary-active: #AD503A;
+  --brand-primary-light: rgba(212, 116, 91, 0.08);
+  --brand-primary-ghost: rgba(212, 116, 91, 0.05);
 
-  /* Text — high-contrast monochrome */
-  --text1: #111111;
-  --text2: #444444;
-  --text3: #777777;
-  --text4: #AAAAAA;
+  /* Text — soft earthy tones (never pure black) */
+  --text1: #3D3028;
+  --text2: #6B5C50;
+  --text3: #98897C;
+  --text4: #BFB2A6;
 
-  /* Background — pure white / near-white */
-  --bg1: #FFFFFF;
-  --bg2: #F7F7F7;
-  --bg3: #EEEEEE;
+  /* Background — warm clay tones */
+  --bg1: #FEFAF6;
+  --bg2: #F9F2EA;
+  --bg3: #F2E6DB;
 
-  /* Border — hairline gray */
-  --line-light: #E8E8E8;
-  --line-regular: #D4D4D4;
+  /* Border — warm tone */
+  --line-light: #EBE0D4;
+  --line-regular: #D9CCC0;
 
-  /* Radius — restrained */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-xl: 8px;
-  --radius-full: 20px;
+  /* Radius — pillowy */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 40px;
 
-  /* Transition — snappy */
-  --transition-fast: 0.12s ease;
-  --transition-normal: 0.18s ease;
-  --transition-slow: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transition */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Shadow — none or barely there */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 1px 4px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.08);
+  /* Shadow — claymorphism double shadows (dark outer + light inner highlight) */
+  --shadow-sm: 2px 2px 6px rgba(160, 135, 110, 0.18), -2px -2px 4px rgba(255, 255, 255, 0.7);
+  --shadow-md: 4px 4px 10px rgba(160, 135, 110, 0.22), -3px -3px 6px rgba(255, 255, 255, 0.75);
+  --shadow-lg: 6px 6px 14px rgba(160, 135, 110, 0.25), -4px -4px 8px rgba(255, 255, 255, 0.8);
+  --shadow-xl: 8px 8px 20px rgba(160, 135, 110, 0.3), -5px -5px 12px rgba(255, 255, 255, 0.85);
 
-  /* Semantic — restrained */
-  --color-success: #2E7D32;
-  --color-warning: #E65100;
-  --color-danger: #C62828;
-  --color-info: #1565C0;
+  /* Inset — for inputs / pressed elements */
+  --shadow-inset: inset 2px 2px 5px rgba(160, 135, 110, 0.15), inset -1px -1px 3px rgba(255, 255, 255, 0.6);
+
+  /* Semantic — soft */
+  --color-success: #6BAF7B;
+  --color-warning: #E0A45B;
+  --color-danger: #D4746B;
+  --color-info: #6B9EC8;
 }
 </style>
 
@@ -404,7 +407,7 @@ function handleLogout() {
   top: 0;
   z-index: 100;
   background: var(--bg1);
-  border-bottom: 1px solid var(--line-light);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── Pipe separator ── */
@@ -577,22 +580,22 @@ function handleLogout() {
     flex: 1;
 
     :deep(.el-input__wrapper) {
-      border: 1px solid var(--text1);
-      border-radius: 2px 0 0 2px;
+      border: 2px solid var(--line-regular);
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
       background: var(--bg1);
-      box-shadow: none;
+      box-shadow: var(--shadow-inset);
       padding-left: 16px;
       height: 44px;
       border-right: none;
       transition: border-color var(--transition-fast);
 
       &:hover {
-        border-color: var(--text1);
+        border-color: var(--brand-primary);
       }
 
       &.is-focus {
-        border-color: var(--text1);
-        box-shadow: none;
+        border-color: var(--brand-primary);
+        box-shadow: var(--shadow-inset);
       }
     }
 
@@ -618,18 +621,27 @@ function handleLogout() {
     gap: 4px;
     height: 44px;
     padding: 0 28px;
-    border-radius: 0 2px 2px 0;
-    background: var(--text1);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    background: var(--brand-primary);
     color: #fff;
     border: none;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     flex-shrink: 0;
     letter-spacing: -0.01em;
-    transition: background var(--transition-fast);
+    transition: all var(--transition-fast);
+    box-shadow: 2px 2px 6px rgba(160, 135, 110, 0.25);
 
-    &:hover { background: #333; }
+    &:hover {
+      background: var(--brand-primary-hover);
+      box-shadow: 3px 3px 8px rgba(160, 135, 110, 0.35);
+    }
+
+    &:active {
+      transform: translateY(1px);
+      box-shadow: 1px 1px 3px rgba(160, 135, 110, 0.2);
+    }
   }
 }
 
@@ -647,9 +659,9 @@ function handleLogout() {
   }
 
   &__tag {
-    padding: 2px 10px;
+    padding: 3px 12px;
     background: var(--bg3);
-    border-radius: 2px;
+    border-radius: var(--radius-full);
     color: var(--text2);
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -714,7 +726,7 @@ function handleLogout() {
 /* ── Footer ── */
 .footer {
   background: var(--bg1);
-  border-top: 1px solid var(--line-light);
+  box-shadow: 0 -2px 8px rgba(160, 135, 110, 0.08);
   color: var(--text2);
   padding: 48px 24px 28px;
 
@@ -827,7 +839,7 @@ function handleLogout() {
   .el-autocomplete-suggestion {
     background: var(--bg1);
     border: 1px solid var(--line-light);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
   }
 

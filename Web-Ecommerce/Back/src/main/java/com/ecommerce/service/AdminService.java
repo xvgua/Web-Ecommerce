@@ -5,6 +5,7 @@ import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.HotProductDTO;
 import com.ecommerce.dto.PageQuery;
 import com.ecommerce.dto.SalesTrendDTO;
+import com.ecommerce.entity.Admin;
 import com.ecommerce.entity.User;
 
 import java.util.List;
@@ -19,4 +20,6 @@ public interface AdminService {
     PageResult<User> getUserPage(PageQuery query);
     User getUserById(Long userId);
     void toggleUserStatus(Long userId, Integer status);
+    Admin getCurrentAdmin(Long adminId);
+    void changePassword(Long adminId, String oldPassword, String newPassword);
 }

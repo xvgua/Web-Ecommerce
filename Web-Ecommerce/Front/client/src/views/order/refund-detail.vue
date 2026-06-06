@@ -256,4 +256,24 @@ onMounted(() => { loadDetail() })
   padding-bottom: 40px;
   text-align: center;
 }
+
+@media (max-width: 768px) {
+  .refund-detail-page {
+    padding: 0 8px;
+  }
+
+  .section {
+    padding: 16px;
+  }
+
+  .info-row {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+  }
+
+  .info-label {
+    width: auto;
+  }
+}
 </style>

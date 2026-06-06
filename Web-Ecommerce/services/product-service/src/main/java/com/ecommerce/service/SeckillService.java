@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface SeckillService {
 
+    List<SeckillActivity> getAllActivities();
     List<SeckillActivity> getActiveActivities();
     SeckillActivity getActivityDetail(Long activityId);
     SeckillProduct getSeckillProductDetail(Long seckillProductId);

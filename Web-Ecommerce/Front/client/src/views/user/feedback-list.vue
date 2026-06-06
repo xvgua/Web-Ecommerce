@@ -383,8 +383,39 @@ defineExpose({ loadList })
 }
 
 @media (max-width: 768px) {
-  .feedback-card__top {
-    flex-wrap: wrap;
+  .feedback-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .feedback-card {
+    &__top {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    &__title {
+      flex: 1 1 100%;
+    }
+
+    &__summary {
+      padding: 14px 16px;
+    }
+
+    &__detail {
+      padding: 0 16px 16px;
+    }
+  }
+
+  .feedback-pagination {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 1024px) {
+  .feedback-section {
+    padding: 16px;
   }
 }
 </style>

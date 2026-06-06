@@ -227,4 +227,34 @@ onMounted(() => {
     margin-left: 16px;
   }
 }
+
+@media (max-width: 768px) {
+  .address-page {
+    padding: 0 8px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .address-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+
+    &__actions {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    &__contact {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+}
 </style>

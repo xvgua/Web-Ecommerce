@@ -640,25 +640,78 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 1024px) {
+  .profile-page {
+    padding: 0 16px;
+  }
+
+  .profile-sidebar {
+    width: 200px;
+  }
+
+  .profile-form {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
+  .profile-page {
+    padding: 0 8px;
+  }
+
+  .page-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
   .profile-layout {
     flex-direction: column;
   }
+
   .profile-sidebar {
     width: 100%;
   }
+
+  .profile-avatar {
+    padding: 24px 16px 16px;
+  }
+
   .profile-nav {
     display: flex;
     overflow-x: auto;
+
     &__item {
       white-space: nowrap;
       border-right: none !important;
       border-bottom: 3px solid transparent;
-      &--active { border-bottom-color: #409eff; }
+      padding: 12px 16px;
+
+      &--active {
+        border-bottom-color: #409eff;
+      }
     }
   }
+
   .profile-form {
     max-width: 100%;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .address-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    &__actions {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-end;
+    }
   }
 }
 </style>

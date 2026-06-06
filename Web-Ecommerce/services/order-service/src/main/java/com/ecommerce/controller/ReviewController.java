@@ -38,6 +38,15 @@ public class ReviewController {
         return Result.success(review);
     }
 
+    @GetMapping("/products/{productId}/reviews")
+    public Result<PageResult<Review>> getProductReviewsByPath(@PathVariable Long productId,
+                                                               @RequestParam(defaultValue = "1") int page,
+                                                               @RequestParam(defaultValue = "10") int pageSize,
+                                                               @RequestParam(required = false) Integer ratingMin,
+                                                               @RequestParam(required = false) Integer ratingMax) {
+        return Result.success(reviewService.getProductReviews(productId, page, pageSize, ratingMin, ratingMax));
+    }
+
     @GetMapping("/reviews")
     public Result<PageResult<Review>> getProductReviews(@RequestParam Long productId,
                                                         @RequestParam(defaultValue = "1") int page,

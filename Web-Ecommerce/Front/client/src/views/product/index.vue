@@ -181,8 +181,9 @@ onMounted(() => { loadProducts(); loadSubCategories() })
   margin-bottom: 12px;
   padding: 14px 20px;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line-light);
+  border-radius: var(--radius-md);
+  border: none;
+  box-shadow: var(--shadow-sm);
 
   &__label {
     font-size: 13px;
@@ -194,36 +195,38 @@ onMounted(() => { loadProducts(); loadSubCategories() })
 .subcat-tag {
   display: inline-block;
   padding: 5px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   font-size: 13px;
   cursor: pointer;
   color: var(--text2);
-  background: var(--bg2);
+  background: var(--bg3);
   transition: all .15s;
 
   &:hover {
     color: var(--text1);
-    background: var(--bg3);
+    background: var(--line-regular);
   }
 
   &--active {
     color: #fff;
-    background: var(--text1);
+    background: var(--brand-primary);
     font-weight: 500;
+    box-shadow: 2px 2px 5px rgba(160, 135, 110, 0.25);
 
     &:hover {
       color: #fff;
-      background: #333;
+      background: var(--brand-primary-hover);
     }
   }
 }
 
 .filter-bar {
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 20px 24px;
   margin-bottom: 20px;
-  border: 1px solid var(--line-light);
+  border: none;
+  box-shadow: var(--shadow-sm);
 
   &__sort {
     display: flex;
@@ -233,25 +236,26 @@ onMounted(() => { loadProducts(); loadSubCategories() })
 
 .sort-btn {
   padding: 6px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   font-size: 14px;
-  color: #666;
+  color: var(--text2);
   transition: all .15s;
 
   &:hover {
-    color: #409eff;
-    background: rgba(64,158,255,.06);
+    color: var(--brand-primary);
+    background: var(--brand-primary-ghost);
   }
 
   &--active {
     color: #fff;
-    background: #409eff;
+    background: var(--brand-primary);
     font-weight: 500;
+    box-shadow: 2px 2px 5px rgba(160, 135, 110, 0.25);
 
     &:hover {
       color: #fff;
-      background: #409eff;
+      background: var(--brand-primary-hover);
     }
 
     .sort-arrow {

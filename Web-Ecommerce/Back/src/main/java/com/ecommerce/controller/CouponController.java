@@ -38,8 +38,14 @@ public class CouponController {
     }
 
     @PostMapping("/coupons/{id}/receive")
-    public Result<Void> receive(@PathVariable Long id) {
+    public Result<Void> receive(@PathVariable Long id, HttpServletRequest request) {
         Long userId = UserContext.getUserId();
+        if (userId == null) {
+            userId = tryParseUserId(request);
+        }
+        if (userId == null) {
+            return Result.error(401, "请先登录");
+        }
         couponService.receiveCoupon(userId, id);
         return Result.success();
     }

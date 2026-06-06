@@ -301,6 +301,12 @@ onMounted(() => { loadFavorites() })
   }
 }
 
+@media (max-width: 1024px) {
+  .favorites-page {
+    padding: 0 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .favorite-item {
     flex-wrap: wrap;

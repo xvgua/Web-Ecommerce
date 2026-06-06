@@ -153,7 +153,7 @@ async function handleReset() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: var(--bg2);
   padding: 24px;
 }
 
@@ -162,9 +162,9 @@ async function handleReset() {
   max-width: 880px;
   width: 100%;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  border: 1px solid var(--line-light);
+  border: none;
   overflow: hidden;
   justify-content: center;
 
@@ -183,7 +183,7 @@ async function handleReset() {
   }
 
   &__sub {
-    color: #909399;
+    color: var(--text3);
     font-size: 14px;
     margin-bottom: 32px;
   }
@@ -191,11 +191,11 @@ async function handleReset() {
   &__switch {
     text-align: center;
     font-size: 14px;
-    color: #909399;
+    color: var(--text3);
     margin-top: 8px;
 
     a {
-      color: #409eff;
+      color: var(--brand-primary);
       font-weight: 500;
     }
   }
@@ -207,11 +207,15 @@ async function handleReset() {
     height: 44px;
     font-size: 16px;
     letter-spacing: 4px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 }
 
 @media (max-width: 768px) {
+  .auth-card {
+    max-width: 420px;
+  }
+
   .auth-card__form {
     padding: 32px 28px;
 

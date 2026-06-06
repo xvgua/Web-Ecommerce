@@ -10,8 +10,13 @@
           <el-input v-model="form.name" placeholder="请输入商品名称" maxlength="60" show-word-limit />
         </el-form-item>
         <el-form-item label="商品分类" prop="categoryId">
-          <el-select v-model="form.categoryId" placeholder="请输入关键词搜索或下拉选择" filterable clearable>
-            <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
+          <el-select v-model="form.categoryId" placeholder="请选择二级分类" filterable clearable>
+            <el-option
+              v-for="cat in subCategories"
+              :key="cat.id"
+              :label="cat.label"
+              :value="cat.id"
+            />
           </el-select>
         </el-form-item>
         <el-row :gutter="20">
@@ -148,6 +153,27 @@ const formRef = ref<FormInstance>()
 const isEdit = computed(() => !!route.params.id)
 const submitting = ref(false)
 const categories = ref<Category[]>([])
+
+interface FlatCategory {
+  id: number
+  label: string
+}
+
+const subCategories = computed<FlatCategory[]>(() => {
+  const result: FlatCategory[] = []
+  function walk(list: Category[], parentName?: string) {
+    for (const cat of list) {
+      const fullName = parentName ? `${parentName} > ${cat.name}` : cat.name
+      if (cat.children && cat.children.length > 0) {
+        walk(cat.children, fullName)
+      } else {
+        result.push({ id: cat.id, label: fullName })
+      }
+    }
+  }
+  walk(categories.value)
+  return result
+})
 
 interface ProductFormState extends Omit<ProductForm, 'categoryId'> {
   categoryId: number | undefined

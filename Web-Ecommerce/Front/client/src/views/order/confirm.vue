@@ -621,4 +621,57 @@ onMounted(async () => {
     }
   }
 }
+
+@media (max-width: 1024px) {
+  .order-confirm {
+    padding: 0 16px;
+  }
+
+  .address-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-confirm {
+    padding: 0 8px;
+
+    .page-title {
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+
+    .confirm-section {
+      padding: 16px;
+    }
+  }
+
+  .address-list {
+    grid-template-columns: 1fr;
+  }
+
+  .address-card {
+    padding: 12px 14px;
+  }
+
+  .order-product {
+    gap: 8px;
+
+    &__img {
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  .confirm-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+}
 </style>

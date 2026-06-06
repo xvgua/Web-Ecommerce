@@ -7,15 +7,15 @@
           <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="auth-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#667eea" />
-                <stop offset="100%" style="stop-color:#764ba2" />
+                <stop offset="0%" style="stop-color:#D4745B" />
+                <stop offset="100%" style="stop-color:#E89076" />
               </linearGradient>
             </defs>
             <circle cx="150" cy="150" r="130" fill="url(#auth-grad)" opacity="0.12" />
             <circle cx="150" cy="150" r="100" fill="url(#auth-grad)" opacity="0.2" />
             <circle cx="150" cy="150" r="65" fill="url(#auth-grad)" opacity="0.35" />
             <text x="150" y="145" text-anchor="middle" font-size="56" fill="#fff" font-family="system-ui">&#x1F6E1;</text>
-            <text x="150" y="210" text-anchor="middle" font-size="14" fill="#667eea" font-weight="600" font-family="system-ui">安全 · 便捷 · 信赖</text>
+            <text x="150" y="210" text-anchor="middle" font-size="14" fill="#D4745B" font-weight="600" font-family="system-ui">安全 · 便捷 · 信赖</text>
           </svg>
         </div>
         <p class="auth-card__slogan">海量好物，尽在掌握</p>
@@ -125,7 +125,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: var(--bg2);
   padding: 24px;
 }
 
@@ -134,14 +134,14 @@ async function handleLogin() {
   max-width: 880px;
   width: 100%;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  border: 1px solid var(--line-light);
+  border: none;
   overflow: hidden;
 
   &__brand {
     flex: 1;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(145deg, #D4745B 0%, #E89076 100%);
     padding: 48px 40px;
     display: flex;
     flex-direction: column;
@@ -183,7 +183,7 @@ async function handleLogin() {
   }
 
   &__sub {
-    color: #909399;
+    color: var(--text3);
     font-size: 14px;
     margin-bottom: 32px;
   }
@@ -191,11 +191,11 @@ async function handleLogin() {
   &__switch {
     text-align: center;
     font-size: 14px;
-    color: #909399;
+    color: var(--text3);
     margin-top: 8px;
 
     a {
-      color: #409eff;
+      color: var(--brand-primary);
       font-weight: 500;
     }
   }
@@ -209,7 +209,7 @@ async function handleLogin() {
     align-items: center;
 
     a {
-      color: #409eff;
+      color: var(--brand-primary);
       font-size: 13px;
     }
   }
@@ -219,7 +219,7 @@ async function handleLogin() {
     height: 44px;
     font-size: 16px;
     letter-spacing: 4px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 }
 

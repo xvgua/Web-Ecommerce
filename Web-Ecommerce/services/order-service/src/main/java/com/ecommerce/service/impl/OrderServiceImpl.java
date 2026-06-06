@@ -111,6 +111,7 @@ public class OrderServiceImpl implements OrderService {
         order.setAddressId(req.getAddressId());
         order.setStatus(OrderStatus.PENDING_PAY);
         order.setRemark(req.getRemark());
+        order.setCreateTime(LocalDateTime.now());
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> items = new ArrayList<>();
@@ -138,6 +139,10 @@ public class OrderServiceImpl implements OrderService {
                     stock = sku.getStock();
                     specDesc = sku.getSpecName() + ":" + sku.getSpecValue();
                 }
+            }
+
+            if (price == null) {
+                throw new BusinessException("商品「" + product.getName() + "」价格异常，请联系客服");
             }
 
             if (cart.getQuantity() > stock) {

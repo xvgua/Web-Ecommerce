@@ -116,8 +116,14 @@ onMounted(async () => {
   finally { loading.value = false }
 })
 
-function handleUploadSuccess(response: { data: { url: string } }) {
-  form.value.imageUrl = response.data.url
+function handleUploadSuccess(response: any) {
+  // el-upload 返回原始 JSON: { code, message, data: { url } }
+  const url = response?.data?.url || response?.url || ''
+  if (!url) {
+    ElMessage.error('图片上传异常，未获取到文件地址')
+    return
+  }
+  form.value.imageUrl = url
   ElMessage.success('上传成功')
 }
 

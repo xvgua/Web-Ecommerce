@@ -1,3 +1,4 @@
+USE ecommerce_product;
 -- ============================================
 CREATE TABLE IF NOT EXISTS `category` (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '分类ID',
@@ -75,13 +76,14 @@ CREATE TABLE IF NOT EXISTS `favorite` (
 -- Run this SQL against the ecommerce database
 
 CREATE TABLE IF NOT EXISTS seckill_activity (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL COMMENT '活动名称',
-    start_time  DATETIME NOT NULL COMMENT '开始时间',
-    end_time    DATETIME NOT NULL COMMENT '结束时间',
-    status      TINYINT DEFAULT 0 COMMENT '0=未开始 1=进行中 2=已结束',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name             VARCHAR(100) NOT NULL COMMENT '活动名称',
+    background_image VARCHAR(500) DEFAULT NULL COMMENT '活动背景图URL',
+    start_time       DATETIME NOT NULL COMMENT '开始时间',
+    end_time         DATETIME NOT NULL COMMENT '结束时间',
+    status           TINYINT DEFAULT 0 COMMENT '0=未开始 1=进行中 2=已结束',
+    create_time      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS seckill_product (
@@ -122,6 +124,16 @@ CREATE TABLE IF NOT EXISTS hot_keyword (
     UNIQUE KEY uk_keyword (keyword)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='热门搜索词';
 
--- Add FULLTEXT index on product.name for Chinese (ngram) + English search
--- ngram parser is available in MySQL 5.7.6+/8.0+
-ALTER TABLE product ADD FULLTEXT INDEX ft_product_name (name) WITH PARSER ngram;
+-- Add background_image column to seckill_activity (safe on re-run)
+DROP PROCEDURE IF EXISTS migrate_seckill_bg;
+DELIMITER //
+CREATE PROCEDURE migrate_seckill_bg()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seckill_activity' AND COLUMN_NAME = 'background_image') THEN
+        ALTER TABLE seckill_activity ADD COLUMN background_image VARCHAR(500) DEFAULT NULL COMMENT '活动背景图URL' AFTER name;
+    END IF;
+END //
+DELIMITER ;
+CALL migrate_seckill_bg();
+DROP PROCEDURE IF EXISTS migrate_seckill_bg;

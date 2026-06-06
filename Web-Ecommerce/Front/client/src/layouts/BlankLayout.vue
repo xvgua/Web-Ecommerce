@@ -11,5 +11,10 @@
   align-items: center;
   justify-content: center;
   background: var(--bg2);
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+    padding-top: 40px;
+  }
 }
 </style>

@@ -16,55 +16,61 @@ spring:
       routes:
         # ===== User Service =====
         - id: user-auth-public
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/auth/**
         - id: user-service
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/user/**,/api/feedback/**,/api/conversations/**
         - id: announcement-public
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/announcements/**
         - id: admin-auth-public
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/admin/auth/**
         - id: admin-user
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/admin/users/**,/api/admin/feedback/**,/api/admin/feedbacks/**,/api/admin/conversations/**,/api/admin/announcements/**,/api/admin/quick-replies/**
+            - Path=/api/admin/users/**,/api/admin/feedback/**,/api/admin/feedbacks/**,/api/admin/conversations/**,/api/admin/announcements/**,/api/admin/quick-replies/**,/api/admin/profile/**
+
+        # ===== Product reviews (route to order-service) =====
+        - id: product-reviews
+          uri: ${ORDER_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/products/*/reviews
 
         # ===== Product Service =====
         - id: product-public
-          uri: http://localhost:8083
+          uri: ${PRODUCT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/products/**,/api/categories/**,/api/banners/**,/api/seckill/**,/api/upload/**
         - id: upload-files
-          uri: http://localhost:8083
+          uri: ${PRODUCT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/upload/**
         - id: product-auth
-          uri: http://localhost:8083
+          uri: ${PRODUCT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/favorites/**,/api/hot-keywords/**
         - id: admin-product
-          uri: http://localhost:8083
+          uri: ${PRODUCT_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/admin/products/**,/api/admin/categories/**,/api/admin/banners/**,/api/admin/seckill/**,/api/admin/upload/**,/api/admin/hot-keywords/**
 
-        # ===== Order Service =====
+        # ===== Coupons (order-service) =====
         - id: coupon-public
-          uri: http://localhost:8084
+          uri: ${ORDER_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/coupons/**
+            - Path=/api/coupons/**,/api/user/coupons/**
         - id: order-service
-          uri: http://localhost:8084
+          uri: ${ORDER_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/cart/**,/api/orders/**,/api/reviews/**,/api/user/coupons/**
+            - Path=/api/cart/**,/api/orders/**,/api/reviews/**
         - id: admin-order
-          uri: http://localhost:8084
+          uri: ${ORDER_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/admin/orders/**,/api/admin/reviews/**,/api/admin/coupons/**,/api/admin/dashboard/**
 

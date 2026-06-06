@@ -1,6 +1,7 @@
 package com.ecommerce.feign;
 
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.DeductStockRequest;
 import com.ecommerce.dto.RestoreStockRequest;
 import com.ecommerce.entity.Product;
@@ -46,6 +47,21 @@ public class ProductFeignFallbackFactory implements FallbackFactory<ProductFeign
 
             @Override
             public Result<Void> updateRating(Long id, java.math.BigDecimal avgRating, Integer reviewCount) {
+                return Result.error(503, "商品服务暂不可用");
+            }
+
+            @Override
+            public Result<List<CategorySalesDTO>> getCategorySales() {
+                return Result.error(503, "商品服务暂不可用");
+            }
+
+            @Override
+            public Result<List<Product>> getTopProductsBySales(int limit) {
+                return Result.error(503, "商品服务暂不可用");
+            }
+
+            @Override
+            public Result<Long> getProductCount() {
                 return Result.error(503, "商品服务暂不可用");
             }
         };

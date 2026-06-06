@@ -64,6 +64,12 @@
             <artifactId>easyexcel</artifactId>
             <version>4.0.3</version>
         </dependency>
+        <!-- Fix: POI 5.2.5 requires commons-io 2.14.0+ for UnsynchronizedByteArrayOutputStream.builder() -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.14.0</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

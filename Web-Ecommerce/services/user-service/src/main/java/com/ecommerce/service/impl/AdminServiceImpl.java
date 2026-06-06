@@ -76,11 +76,39 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public User getUserById(Long id) {
+        User user = userMapper.selectById(id);
+        if (user == null) throw new BusinessException(404, "用户不存在");
+        user.setPassword(null);
+        return user;
+    }
+
+    @Override
     public void toggleUserStatus(Long userId, Integer status) {
         User user = userMapper.selectById(userId);
         if (user == null) throw new BusinessException(404, "用户不存在");
         user.setStatus(status);
         userMapper.updateById(user);
         log.info("User status toggled: userId={}, status={}", userId, status);
+    }
+
+    @Override
+    public Admin getCurrentAdmin(Long adminId) {
+        Admin admin = adminMapper.selectById(adminId);
+        if (admin == null) throw new BusinessException(404, "管理员不存在");
+        admin.setPassword(null);
+        return admin;
+    }
+
+    @Override
+    public void changePassword(Long adminId, String oldPassword, String newPassword) {
+        Admin admin = adminMapper.selectById(adminId);
+        if (admin == null) throw new BusinessException(404, "管理员不存在");
+        if (!encoder.matches(oldPassword, admin.getPassword())) {
+            throw new BusinessException("旧密码不正确");
+        }
+        admin.setPassword(encoder.encode(newPassword));
+        adminMapper.updateById(admin);
+        log.info("Admin password changed: adminId={}", adminId);
     }
 }

@@ -16,6 +16,11 @@ public class SeckillController {
     @Autowired
     private SeckillService seckillService;
 
+    @GetMapping("/activities/all")
+    public Result<List<SeckillActivity>> getAllActivities() {
+        return Result.success(seckillService.getAllActivities());
+    }
+
     @GetMapping("/activities")
     public Result<List<SeckillActivity>> getActiveActivities() {
         return Result.success(seckillService.getActiveActivities());

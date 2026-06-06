@@ -1,17 +1,21 @@
 package com.ecommerce.controller.internal;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.DeductStockRequest;
 import com.ecommerce.dto.RestoreStockRequest;
+import com.ecommerce.entity.Category;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.ProductSku;
+import com.ecommerce.mapper.CategoryMapper;
 import com.ecommerce.mapper.ProductMapper;
 import com.ecommerce.mapper.ProductSkuMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/internal")
@@ -21,6 +25,8 @@ public class InternalProductController {
     private ProductMapper productMapper;
     @Autowired
     private ProductSkuMapper skuMapper;
+    @Autowired
+    private CategoryMapper categoryMapper;
 
     @GetMapping("/products/{id}")
     public Result<Product> getProductById(@PathVariable Long id) {
@@ -103,5 +109,47 @@ public class InternalProductController {
         product.setReviewCount(reviewCount);
         productMapper.updateById(product);
         return Result.success(null);
+    }
+
+    @GetMapping("/products/top-sales")
+    public Result<List<Product>> getTopProductsBySales(@RequestParam(defaultValue = "10") int limit) {
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(Product::getSales).last("LIMIT " + limit);
+        List<Product> products = productMapper.selectList(wrapper);
+        return Result.success(products);
+    }
+
+    @GetMapping("/products/count")
+    public Result<Long> getProductCount() {
+        return Result.success(productMapper.selectCount(null));
+    }
+
+    @GetMapping("/products/category-sales")
+    public Result<List<CategorySalesDTO>> getCategorySales() {
+        List<CategorySalesDTO> result = new ArrayList<>();
+        List<Category> categories = categoryMapper.selectList(null);
+        Map<Long, String> nameMap = new HashMap<>();
+        for (Category c : categories) {
+            nameMap.put(c.getId(), c.getName());
+        }
+
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(Product::getCategoryId, Product::getSales)
+                .isNotNull(Product::getSales)
+                .gt(Product::getSales, 0);
+        List<Product> products = productMapper.selectList(wrapper);
+
+        Map<Long, Long> salesMap = new LinkedHashMap<>();
+        for (Product p : products) {
+            Long catId = p.getCategoryId();
+            salesMap.merge(catId, (long) (p.getSales() != null ? p.getSales() : 0), Long::sum);
+        }
+
+        for (Map.Entry<Long, Long> entry : salesMap.entrySet()) {
+            String name = nameMap.getOrDefault(entry.getKey(), "未知分类");
+            result.add(new CategorySalesDTO(name, entry.getValue()));
+        }
+        result.sort((a, b) -> b.getSales().compareTo(a.getSales()));
+        return Result.success(result);
     }
 }

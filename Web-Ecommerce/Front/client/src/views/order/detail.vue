@@ -333,4 +333,74 @@ onMounted(() => { loadOrder() })
     margin-left: 4px;
   }
 }
+
+@media (max-width: 1024px) {
+  .order-detail-page {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-detail-page {
+    padding: 0 8px;
+  }
+
+  .page-title-row {
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+
+  .detail-block {
+    padding: 16px;
+  }
+
+  .product-item {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px;
+
+    &__info {
+      flex: 1 1 calc(100% - 80px);
+    }
+
+    &__price, &__qty {
+      width: auto;
+      text-align: left;
+    }
+
+    &__subtotal {
+      width: auto;
+      margin-left: auto;
+    }
+
+    &__action {
+      width: 100%;
+      text-align: right;
+    }
+  }
+
+  .product-list__footer {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+
+    strong {
+      font-size: 16px;
+    }
+  }
+
+  .info-list__row {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 4px;
+  }
+
+  .info-list__label {
+    width: auto;
+  }
+}
 </style>

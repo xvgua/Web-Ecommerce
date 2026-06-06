@@ -78,4 +78,13 @@ onUnmounted(() => {
     line-height: 1.4;
   }
 }
+
+@media (max-width: 768px) {
+  .chat-float {
+    right: 12px;
+    bottom: 100px;
+    width: 48px;
+    height: 48px;
+  }
+}
 </style>

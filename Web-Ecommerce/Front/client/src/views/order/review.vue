@@ -402,4 +402,39 @@ onMounted(() => {
     gap: 12px;
   }
 }
+
+@media (max-width: 768px) {
+  .review-page {
+    padding: 0 8px;
+  }
+
+  .review-card {
+    padding: 16px;
+
+    &__product {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+
+      &-img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+      }
+    }
+
+    &__rating-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    &__actions {
+      flex-direction: column;
+
+      .el-button {
+        width: 100%;
+      }
+    }
+  }
+}
 </style>

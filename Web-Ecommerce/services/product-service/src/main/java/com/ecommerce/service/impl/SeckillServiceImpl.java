@@ -32,6 +32,18 @@ public class SeckillServiceImpl implements SeckillService {
     private ProductSkuMapper skuMapper;
 
     @Override
+    public List<SeckillActivity> getAllActivities() {
+        syncActivityStatuses();
+        List<SeckillActivity> activities = activityMapper.selectList(
+                new LambdaQueryWrapper<SeckillActivity>()
+                        .orderByDesc(SeckillActivity::getStartTime));
+        for (SeckillActivity activity : activities) {
+            fillActivityProducts(activity);
+        }
+        return activities;
+    }
+
+    @Override
     public List<SeckillActivity> getActiveActivities() {
         syncActivityStatuses();
         LocalDateTime now = LocalDateTime.now();

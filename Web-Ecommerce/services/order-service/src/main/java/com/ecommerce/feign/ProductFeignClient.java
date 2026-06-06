@@ -1,6 +1,7 @@
 package com.ecommerce.feign;
 
 import com.ecommerce.common.Result;
+import com.ecommerce.dto.CategorySalesDTO;
 import com.ecommerce.dto.DeductStockRequest;
 import com.ecommerce.dto.RestoreStockRequest;
 import com.ecommerce.entity.Product;
@@ -33,4 +34,13 @@ public interface ProductFeignClient {
     Result<Void> updateRating(@PathVariable("id") Long id,
                               @RequestParam("avgRating") java.math.BigDecimal avgRating,
                               @RequestParam("reviewCount") Integer reviewCount);
+
+    @GetMapping("/api/internal/products/category-sales")
+    Result<List<CategorySalesDTO>> getCategorySales();
+
+    @GetMapping("/api/internal/products/top-sales")
+    Result<List<Product>> getTopProductsBySales(@RequestParam("limit") int limit);
+
+    @GetMapping("/api/internal/products/count")
+    Result<Long> getProductCount();
 }

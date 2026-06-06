@@ -192,12 +192,14 @@ onUnmounted(() => {
 .seckill-section {
   margin-bottom: 32px;
   background: var(--bg1);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 
   &--upcoming {
     .seckill-section__bar {
-      background: linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 100%);
+      background: linear-gradient(135deg, var(--bg3) 0%, var(--line-regular) 100%);
+      color: var(--text1);
     }
   }
 }
@@ -207,8 +209,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-  border-radius: 10px 10px 0 0;
+  background: linear-gradient(135deg, #D4745B 0%, #E89076 100%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   color: #fff;
   flex-wrap: wrap;
   gap: 12px;
@@ -229,7 +231,7 @@ onUnmounted(() => {
 .seckill-section__badge {
   font-size: 12px;
   padding: 2px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-full);
   font-weight: 600;
 
   &--active {
@@ -237,8 +239,8 @@ onUnmounted(() => {
   }
 
   &--upcoming {
-    background: rgba(0, 0, 0, 0.1);
-    color: #666;
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text2);
   }
 }
 
@@ -272,10 +274,10 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
-  background: #eee;
-  border: 1px solid #eee;
+  background: var(--line-light);
+  border: none;
   border-top: none;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   overflow: hidden;
 
   @media (max-width: 1024px) {
@@ -288,7 +290,7 @@ onUnmounted(() => {
 }
 
 .seckill-product-card {
-  background: #fff;
+  background: var(--bg1);
 
   &__image {
     position: relative;
@@ -296,7 +298,7 @@ onUnmounted(() => {
     aspect-ratio: 1;
     cursor: pointer;
     overflow: hidden;
-    background: #f5f5f5;
+    background: var(--bg2);
   }
 
   &__info {
@@ -308,10 +310,10 @@ onUnmounted(() => {
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.5);
   color: #fff;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
 }
 
@@ -323,13 +325,13 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  &:hover { color: #ff4d4f; }
+  &:hover { color: var(--brand-primary); }
 }
 
 .spec-desc {
   margin: 0 0 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--text4);
 }
 
 .price-row {
@@ -340,20 +342,20 @@ onUnmounted(() => {
 }
 
 .seckill-price {
-  color: #ff4d4f;
+  color: var(--brand-primary);
   font-size: 18px;
   font-weight: 700;
 }
 
 .original-price {
-  color: #999;
+  color: var(--text4);
   font-size: 13px;
   text-decoration: line-through;
 }
 
 .stock-bar {
   height: 6px;
-  background: #ffe0e0;
+  background: var(--bg3);
   border-radius: 3px;
   margin-bottom: 6px;
   overflow: hidden;
@@ -361,7 +363,7 @@ onUnmounted(() => {
 
 .stock-bar__inner {
   height: 100%;
-  background: #ff4d4f;
+  background: var(--brand-primary);
   border-radius: 3px;
   transition: width 0.3s;
 }
@@ -370,7 +372,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #999;
+  color: var(--text3);
   margin-bottom: 10px;
 }
 

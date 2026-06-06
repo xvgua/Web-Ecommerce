@@ -7,9 +7,11 @@ import com.ecommerce.common.PageResult;
 import com.ecommerce.entity.ChatMessage;
 import com.ecommerce.entity.Conversation;
 import com.ecommerce.entity.QuickReply;
+import com.ecommerce.entity.User;
 import com.ecommerce.mapper.ChatMessageMapper;
 import com.ecommerce.mapper.ConversationMapper;
 import com.ecommerce.mapper.QuickReplyMapper;
+import com.ecommerce.mapper.UserMapper;
 import com.ecommerce.service.ConversationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,13 +34,21 @@ public class ConversationServiceImpl implements ConversationService {
     private ChatMessageMapper chatMessageMapper;
     @Autowired
     private QuickReplyMapper quickReplyMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     @Transactional
     public Conversation createConversation(Long userId, Integer sourceType, Long sourceId,
                                             String sourceName, String firstMessage) {
+        User user = userMapper.selectById(userId);
+        if (user == null) throw new BusinessException("用户不存在");
+
         Conversation conv = new Conversation();
         conv.setUserId(userId);
+        conv.setUsername(user.getUsername());
+        conv.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
+        conv.setSubject(sourceName != null ? sourceName : "在线咨询");
         conv.setSourceType(sourceType != null ? sourceType : 3);
         conv.setSourceId(sourceId);
         conv.setSourceName(sourceName != null ? sourceName : "");

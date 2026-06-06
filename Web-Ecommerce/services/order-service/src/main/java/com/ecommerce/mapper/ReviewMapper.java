@@ -40,10 +40,8 @@ public interface ReviewMapper extends BaseMapper<Review> {
             "WHERE product_id = #{productId} AND is_followup = 0 GROUP BY rating")
     List<Map<String, Object>> getRatingDistribution(@Param("productId") Long productId);
 
-    @Select("SELECT r.*, p.name AS product_name, p.main_image AS product_image, p.price AS product_price " +
-            "FROM review r LEFT JOIN product p ON r.product_id = p.id " +
-            "WHERE r.user_id = #{userId} AND r.is_followup = 0 " +
-            "ORDER BY r.create_time DESC LIMIT #{offset}, #{pageSize}")
+    @Select("SELECT * FROM review WHERE user_id = #{userId} AND is_followup = 0 " +
+            "ORDER BY create_time DESC LIMIT #{offset}, #{pageSize}")
     List<Review> selectByUserId(@Param("userId") Long userId,
                                 @Param("offset") int offset,
                                 @Param("pageSize") int pageSize);
